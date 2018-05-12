@@ -3,7 +3,26 @@ pragma solidity ^0.4.23;
 contract MyVerifySig {
     event Logger(address ecaddress);
 
-	function recoverAddressFromSignature(bytes signature,bytes32 dataHash) public  returns (address)
+
+    function recoverAddressFromSignature(
+        address addressA,
+        address addressB,
+        uint256 balanceA,
+        uint256 balanceB,
+        bytes signature
+        ) public returns(address)  {
+
+        bytes32 data_hash;
+        address recover_addr;
+        data_hash=keccak256(addressA,addressB,balanceA,balanceB);
+        recover_addr=_recoverAddressFromSignature(signature,data_hash);
+        Logger(recover_addr);
+        return recover_addr;
+
+    }
+
+
+	function _recoverAddressFromSignature(bytes signature,bytes32 dataHash) public  returns (address)
     {
 
         bytes32 r;
