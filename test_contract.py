@@ -151,6 +151,7 @@ def deploy_contract(contract_source_code,addressFrom,privtKey):
 # pub=binascii.hexlify(add)
 # 
 # 
+
 tx = Transaction(
     nonce=w3.eth.getTransactionCount("0x3aE88fe370c39384FC16dA2C9e768Cf5d2495b48"),
     gasprice=w3.eth.gasPrice,
@@ -239,19 +240,19 @@ class Client(object):
 
 
 
-# address="0x3387384EC65C74455F4F779dEed18B5e7E06A192"
-# abi=[ { "constant": False, "inputs": [ { "name": "amount", "type": "uint256" }, { "name": "to", "type": "address" } ], "name": "depoist1", "outputs": [], "payable": False, "stateMutability": "nonpayable", "type": "function" }, { "constant": True, "inputs": [], "name": "Mytoken", "outputs": [ { "name": "", "type": "address", "value": "0x8ab0fc62b95aa25ee0fbd80edc1252dda670aa6c" } ], "payable": False, "stateMutability": "view", "type": "function" }, { "constant": False, "inputs": [ { "name": "amount", "type": "uint256" } ], "name": "depoist", "outputs": [], "payable": False, "stateMutability": "nonpayable", "type": "function" }, { "constant": False, "inputs": [ { "name": "amount", "type": "uint256" } ], "name": "depoist2", "outputs": [], "payable": False, "stateMutability": "nonpayable", "type": "function" }, { "inputs": [ { "name": "token_address", "type": "address", "index": 0, "typeShort": "address", "bits": "", "displayName": "token&thinsp;<span class=\"punctuation\">_</span>&thinsp;address", "template": "elements_input_address", "value": "" } ], "payable": False, "stateMutability": "nonpayable", "type": "constructor" }, { "anonymous": False, "inputs": [ { "indexed": False, "name": "value", "type": "uint256" } ], "name": "Logger", "type": "event" } ]
-# store_var_contract = w3.eth.contract(address=address,abi=abi)
-# ddd=dir(store_var_contract.functions)
+address="0x8AB0FC62b95AA25EE0FBd80eDc1252DDa670Aa6C"
+abi=[ { "constant": True, "inputs": [], "name": "name", "outputs": [ { "name": "", "type": "string", "value": "TNC1" } ], "payable": False, "stateMutability": "view", "type": "function" }, { "constant": False, "inputs": [ { "name": "_spender", "type": "address" }, { "name": "_value", "type": "uint256" } ], "name": "approve", "outputs": [ { "name": "success", "type": "bool" } ], "payable": False, "stateMutability": "nonpayable", "type": "function" }, { "constant": True, "inputs": [], "name": "totalSupply", "outputs": [ { "name": "", "type": "uint256", "value": "1e+36" } ], "payable": False, "stateMutability": "view", "type": "function" }, { "constant": False, "inputs": [ { "name": "_from", "type": "address" }, { "name": "_to", "type": "address" }, { "name": "_value", "type": "uint256" } ], "name": "transferFrom", "outputs": [ { "name": "success", "type": "bool" } ], "payable": False, "stateMutability": "nonpayable", "type": "function" }, { "constant": True, "inputs": [], "name": "decimals", "outputs": [ { "name": "", "type": "uint8", "value": "18" } ], "payable": False, "stateMutability": "view", "type": "function" }, { "constant": False, "inputs": [ { "name": "_value", "type": "uint256" } ], "name": "burn", "outputs": [ { "name": "success", "type": "bool" } ], "payable": False, "stateMutability": "nonpayable", "type": "function" }, { "constant": True, "inputs": [ { "name": "", "type": "address" } ], "name": "balanceOf", "outputs": [ { "name": "", "type": "uint256", "value": "0" } ], "payable": False, "stateMutability": "view", "type": "function" }, { "constant": False, "inputs": [ { "name": "_from", "type": "address" }, { "name": "_value", "type": "uint256" } ], "name": "burnFrom", "outputs": [ { "name": "success", "type": "bool" } ], "payable": False, "stateMutability": "nonpayable", "type": "function" }, { "constant": True, "inputs": [], "name": "symbol", "outputs": [ { "name": "", "type": "string", "value": "TNC1" } ], "payable": False, "stateMutability": "view", "type": "function" }, { "constant": False, "inputs": [ { "name": "_to", "type": "address" }, { "name": "_value", "type": "uint256" } ], "name": "transfer", "outputs": [], "payable": False, "stateMutability": "nonpayable", "type": "function" }, { "constant": False, "inputs": [ { "name": "_spender", "type": "address" }, { "name": "_value", "type": "uint256" }, { "name": "_extraData", "type": "bytes" } ], "name": "approveAndCall", "outputs": [ { "name": "success", "type": "bool" } ], "payable": False, "stateMutability": "nonpayable", "type": "function" }, { "constant": True, "inputs": [ { "name": "", "type": "address" }, { "name": "", "type": "address" } ], "name": "allowance", "outputs": [ { "name": "", "type": "uint256", "value": "0" } ], "payable": False, "stateMutability": "view", "type": "function" }, { "inputs": [ { "name": "initialSupply", "type": "uint256", "index": 0, "typeShort": "uint", "bits": "256", "displayName": "initial Supply", "template": "elements_input_uint", "value": "1000000000000000000" }, { "name": "tokenName", "type": "string", "index": 1, "typeShort": "string", "bits": "", "displayName": "token Name", "template": "elements_input_string", "value": "TNC1" }, { "name": "tokenSymbol", "type": "string", "index": 2, "typeShort": "string", "bits": "", "displayName": "token Symbol", "template": "elements_input_string", "value": "TNC1" } ], "payable": False, "stateMutability": "nonpayable", "type": "constructor" }, { "anonymous": False, "inputs": [ { "indexed": True, "name": "from", "type": "address" }, { "indexed": True, "name": "to", "type": "address" }, { "indexed": False, "name": "value", "type": "uint256" } ], "name": "Transfer", "type": "event" }, { "anonymous": False, "inputs": [ { "indexed": False, "name": "value", "type": "uint256" } ], "name": "Logger", "type": "event" }, { "anonymous": False, "inputs": [ { "indexed": True, "name": "from", "type": "address" }, { "indexed": False, "name": "value", "type": "uint256" } ], "name": "Burn", "type": "event" } ]
 
-# ddddd=store_var_contract.events.Logger.createFilter(fromBlock=5000,toBlock="latest")
+store_var_contract = w3.eth.contract(address=address,abi=abi)
 
-# transfer_filter = store_var_contract.eventFilter('Logger')
-# while True:
-#     aa=transfer_filter.get_new_entries()
-#     for a in aa:
-#         print(a.args)
-#     time.sleep(2)
+ddddd=store_var_contract.events.Logger.createFilter(fromBlock=0,toBlock="latest")
+
+transfer_filter = store_var_contract.eventFilter('Transfer')
+while True:
+    aa=transfer_filter.get_new_entries()
+    for a in aa:
+        print(a.args)
+    time.sleep(2)
 
 
 pass

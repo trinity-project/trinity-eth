@@ -7,7 +7,8 @@ from eth_hash.backends.pysha3 import keccak256
 from py_ecc.secp256k1 import privtopub
 from solc import compile_source, compile_files
 from ethereum import utils
-from ethereum.utils import ecsign, ecrecover_to_pub, privtoaddr, ecsign_return_signature, normalize_key
+from ethereum.utils import ecsign, ecrecover_to_pub, privtoaddr, ecsign_return_signature, normalize_key, \
+    int_to_big_endian
 from web3 import Web3, HTTPProvider
 import rlp
 from ethereum.transactions import Transaction
@@ -53,6 +54,20 @@ class Client(object):
 
     def broadcast(self, raw_data):
         return self.web3.eth.sendRawTransaction(raw_data)
+
+
+    def sign_args(self,typeList, valueList, privtKey):
+        '''
+
+        :param typeList: ['bytes32', 'bytes32', 'uint256', 'uint256']
+        :param valueList: ["0x3ae88fe370c39384fc16da2c9e768cf5d2495b48", "0x9da26fc2e1d6ad9fdd46138906b0104ae68a65d8", 1, 1]
+        :param privtKey: "095e53c9c20e23fd01eaad953c01da9e9d3ed9bebcfed8e5b2c2fce94037d963"
+        :return:
+        '''
+        data_hash = Web3.soliditySha3(typeList, valueList)
+        v, r, s = ecsign(data_hash, normalize_key(privtKey))
+        signature = binascii.hexlify(int_to_big_endian(r) + int_to_big_endian(s) + bytes(chr(v - 27).encode()))
+        return signature
 
 
 if __name__ == "__main__":
