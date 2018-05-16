@@ -157,9 +157,27 @@ if __name__ == "__main__":
                                                                                          "name": "Burn",
                                                                                          "type": "event"}])
 
-    tx = myclient.invoke_contract(invoker="0x9dA26FC2E1D6Ad9FDD46138906b0104ae68a65D8", contract=contract,
-                                  method="approve", args=("0x3aE88fe370c39384FC16dA2C9e768Cf5d2495b48", 300))
-    rawdata = myclient.sign(tx, privtKey= "b6a03207128827eaae0d31d97a7a6243de31f2baf99eabd764e33389ecf436fc")
-    tx_id = myclient.broadcast(rawdata)
+    # tx = myclient.invoke_contract(invoker="0x9dA26FC2E1D6Ad9FDD46138906b0104ae68a65D8", contract=contract,
+    #                               method="approve", args=("0x3aE88fe370c39384FC16dA2C9e768Cf5d2495b48", 300))
+    # rawdata = myclient.sign(tx, privtKey= "b6a03207128827eaae0d31d97a7a6243de31f2baf99eabd764e33389ecf436fc")
+    # tx_id = myclient.broadcast(rawdata)
 
+    a=myclient.sign_args(typeList=['bytes32', 'bytes32', 'uint256', 'uint256'],
+                         valueList=["0x3ae88fe370c39384fc16da2c9e768cf5d2495b48","0x537C8f3d3E18dF5517a58B3fB9D9143697996802",20,20],
+                         privtKey="095e53c9c20e23fd01eaad953c01da9e9d3ed9bebcfed8e5b2c2fce94037d963")
+    b=myclient.sign_args(typeList=['bytes32', 'bytes32', 'uint256', 'uint256',"uint256"],
+                         valueList=["0x3ae88fe370c39384fc16da2c9e768cf5d2495b48","0x537C8f3d3E18dF5517a58B3fB9D9143697996802",20,20,0],
+                         privtKey="34c50c398a4aad207e25eeca7d799b966805d48c8fd47a2a9dbc66d9224ff7c1")
+
+    c=myclient.sign_args(typeList=['bytes32', 'bytes32', 'uint256', 'uint256',"uint256"],
+                         valueList=["0x3ae88fe370c39384fc16da2c9e768cf5d2495b48","0x9dA26FC2E1D6Ad9FDD46138906b0104ae68a65D8",10,10,0],
+                         privtKey="095e53c9c20e23fd01eaad953c01da9e9d3ed9bebcfed8e5b2c2fce94037d963")
+
+    d=myclient.sign_args(typeList=['bytes32', 'bytes32', 'uint256', 'uint256',"uint256"],
+                         valueList=["0x3ae88fe370c39384fc16da2c9e768cf5d2495b48","0x9dA26FC2E1D6Ad9FDD46138906b0104ae68a65D8",10,10,0],
+                         privtKey="b6a03207128827eaae0d31d97a7a6243de31f2baf99eabd764e33389ecf436fc")
+    print(a)
+    print(b)
+    # print(c)
+    # print(d)
     pass
