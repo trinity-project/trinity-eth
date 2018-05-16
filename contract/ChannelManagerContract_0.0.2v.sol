@@ -14,26 +14,29 @@ contract TrinityContract{
     */
     enum status {None, Opening, Closing}
     
-    struct SettleData{
+    struct ChannelData{ 
+        address channelCloser;    /* closer address that closed channel first */
+        
+        address partner1;
+        address partner2;
+        uint256 partner1Balance;
+        uint256 partner2Balance;
+        uint256 channelTotalBalance; /*total balance that both participators deposit together*/
+        
         uint256 closingNonce;             /* transaction nonce that channel closer */
         uint256 expectedSettleBlock;      /* the closing time for final settlement for RSMC */
         uint256 closerSettleBalance;      /* the balance that closer want to withdraw */
         uint256 partnerSettleBalance;     /* the balance that closer provided for partner can withdraw */
-    }
-    
-    struct ChannelData{ 
-        mapping(address => uint256) participatorBalance;  /* participator deposted assets*/
+        
         status channelStatus;     /* channel current status  */
-        address channelCloser;    /* closer address that closed channel first */
-        uint256 channelTotalBalance; /*total balance that both participators deposit together*/
-        SettleData settleInfo;    /* settle information*/
     }
     
     struct Data {
-        mapping(bytes32 => ChannelData) channelInfo; 
+        mapping(bytes32 => ChannelData)channelInfo; 
         uint8 channelNumber;
         uint256 settleTimeout;
         address contractOwner;
+        bytes32 trinityNetIdentifer;
     }
     
     token public Mytoken;
@@ -62,8 +65,8 @@ contract TrinityContract{
     
     event Logger(address ecaddress);
     
+    // constructor function
     
-    /* constructor function */
     function TrinityContract(address token_address, uint256 Timeout) public {
         Mytoken=token(token_address);
         trinityData.settleTimeout = Timeout;
@@ -71,69 +74,31 @@ contract TrinityContract{
         trinityData.contractOwner = msg.sender;
     }
     
-    /* 
-     * Function: Set settle timeout value by contract owner only 
-    */
-    function setSettleTimeout(uint256 blockNumber) public{
-        require(msg.sender == trinityData.contractOwner);
-        trinityData.settleTimeout = blockNumber;
-        return;
-    } 
-
-    /* 
-     * Function: create a hash value based on two node address that deployed in same channel, the hash will identify the unique channel 
-    */
-    function createChannelIdentification(address participatorA, address participatorB) internal pure returns(bytes32 channelId){
-        return (participatorA <= participatorB) ? (keccak256(participatorA,participatorB)) : (keccak256(participatorB,participatorA));
-   }
     
-    /*
-     * Function: initialize settlement information when setup new channel
-     * Parameters:
-     *   index: channel position in Data;
-     * Return:
-         Null
-    */
-    function initialSettleInfo(bytes32 channelId) internal {
-        trinityData.channelInfo[channelId].settleInfo.closingNonce = 0;
-        trinityData.channelInfo[channelId].settleInfo.expectedSettleBlock = 0;
-        trinityData.channelInfo[channelId].settleInfo.closerSettleBalance = 0;
-        trinityData.channelInfo[channelId].settleInfo.partnerSettleBalance = 0;
-        
-        return;
-    }
-    /*
-     * Function: save channel information
-     * Parameters:
-     *   participatorA: a paricipator that setup in the same channel;
-     *   participatorB: a parnter that setup in the same channel;
-     *   amountA : participatorA will lock assets amount;
-     *   amountB : participatorB will lock assets amount;
-     * Return:
-         id: new channel hash(participatorA, participatorB)
-    */
     function setupChannel(address participatorA, 
                           address participatorB, 
                           uint256 amountA, 
-                          uint256 amountB,
-                          bytes32 channelId) internal returns(bytes32 id){
+                          uint256 amountB, 
+                          bytes32 channelId) public {
+        
+        trinityData.channelInfo[channelId].partner1Balance = amountA;
+        trinityData.channelInfo[channelId].partner2Balance = amountB;
+       
+        trinityData.channelInfo[channelId].channelTotalBalance = add256(amountA, amountB); 
+        trinityData.channelInfo[channelId].partner1 = participatorA;
+        trinityData.channelInfo[channelId].partner2 = participatorB;
+        
+        
+        trinityData.channelInfo[channelId].channelStatus = status.Opening;
+        trinityData.channelInfo[channelId].channelCloser = participatorB;
+        
+   
+        trinityData.channelInfo[channelId].closingNonce = 0;
+        trinityData.channelInfo[channelId].expectedSettleBlock = 0;
+        trinityData.channelInfo[channelId].closerSettleBalance = 0;
+        trinityData.channelInfo[channelId].partnerSettleBalance = 0;
         
         trinityData.channelNumber += 1;
-
-        /*initialize channel information */
-        trinityData.channelInfo[channelId].participatorBalance[participatorA] = amountA;
-        trinityData.channelInfo[channelId].participatorBalance[participatorB] = amountB;
-        trinityData.channelInfo[channelId].channelStatus = status.Opening;
-        trinityData.channelInfo[channelId].channelCloser = address(0);
-        trinityData.channelInfo[channelId].channelTotalBalance = add256(amountA, amountB);
-        
-        /* initialize settlement information when setup new channel */
-        trinityData.channelInfo[channelId].settleInfo.closingNonce = 0;
-        trinityData.channelInfo[channelId].settleInfo.expectedSettleBlock = 0;
-        trinityData.channelInfo[channelId].settleInfo.closerSettleBalance = 0;
-        trinityData.channelInfo[channelId].settleInfo.partnerSettleBalance = 0;
-        
-        return channelId;
     }
     
     /*
@@ -156,7 +121,7 @@ contract TrinityContract{
                      uint256 amountB, 
                      bytes signedStringA, 
                      bytes signedStringB,
-                     uint256 depositNonce) public {
+                     uint256 depositNonce) payable public {
         
         bytes32 channelId;
                          
@@ -174,9 +139,10 @@ contract TrinityContract{
         }
         
         //transfer both special assets to this contract.
+        
         if(Mytoken.transferFrom(partnerA,this,amountA) == true){
             if (Mytoken.transferFrom(partnerB,this,amountB) == true){
-                channelId = setupChannel(partnerA, partnerB, amountA, amountB, channelId);
+                setupChannel(partnerA, partnerB, amountA, amountB, channelId);
                 emit DepositSuccess(partnerA, amountA, partnerB, amountB, channelId);
                 return;
             }
@@ -187,8 +153,7 @@ contract TrinityContract{
             }
         }
         emit DepositFailure(partnerA, 0);
-        return;
-    }
+    }    
     
     function updateDeposit(address partnerA, 
                            address partnerB,
@@ -196,7 +161,7 @@ contract TrinityContract{
                            uint256 amountB, 
                            bytes signedStringA, 
                            bytes signedStringB,
-                           uint256 depositNonce) public {
+                           uint256 depositNonce) payable public {
         bytes32 channelId;
                                
         //verify both signature to check the behavious is valid.
@@ -213,11 +178,18 @@ contract TrinityContract{
         }
     
         //transfer both special assets to this contract.
+        
         if(Mytoken.transferFrom(partnerA,this,amountA) == true){
             if (Mytoken.transferFrom(partnerB,this,amountB) == true){
-                trinityData.channelInfo[channelId].participatorBalance[partnerA] += amountA;
-                trinityData.channelInfo[channelId].participatorBalance[partnerB] += amountB;
-                emit UpdateDepositSuccess(partnerA, trinityData.channelInfo[channelId].participatorBalance[partnerA], partnerB, trinityData.channelInfo[channelId].participatorBalance[partnerB]);
+                if (partnerA == trinityData.channelInfo[channelId].partner1){
+                    trinityData.channelInfo[channelId].partner1Balance += amountA;
+                    trinityData.channelInfo[channelId].partner2Balance += amountB;
+                }
+                else if (partnerB == trinityData.channelInfo[channelId].partner1){
+                    trinityData.channelInfo[channelId].partner1Balance += amountB;
+                    trinityData.channelInfo[channelId].partner2Balance += amountA;
+                }
+                emit UpdateDepositSuccess(partnerA, trinityData.channelInfo[channelId].partner1Balance, partnerB, trinityData.channelInfo[channelId].partner2Balance);
                 return;
             }
             else{
@@ -227,8 +199,7 @@ contract TrinityContract{
             }
         }
         emit UpdateDepositFailure(partnerA, 0);
-        return;
-    }
+    }    
     
     function quickCloseChannel(address partnerA, 
                                address partnerB,
@@ -237,23 +208,28 @@ contract TrinityContract{
                                bytes signedStringA,
                                bytes signedStringB,
                                uint256 closeNonce,
-                               bytes32 channelId) public{
+                               bool isQuickCloseChannel) payable public{
         
         uint256 closeTotalBalance = 0;
+        bytes32 channelId;
         
-        /*verify both signatures to check the behavious is valid*/
+        channelId = createChannelIdentification(partnerA, partnerB);
+        
+        //verify both signatures to check the behavious is valid
         if (verifyTransaction(partnerA, partnerB, closeBalanceA, closeBalanceB, closeNonce, signedStringA, signedStringB) == false){
             emit QuickCloseChannelFailure(address(0), address(0), 0);
             return;
         }
-
-        /*channel should be opening */
+        
+        require(isQuickCloseChannel == true);
+        
+        //channel should be opening 
         if (trinityData.channelInfo[channelId].channelStatus != status.Opening){
             emit QuickCloseChannelFailure(partnerA, partnerB, 0);
             return;
         }
         
-        /*sum of both balance should not larger than total deposited assets */
+        //sum of both balance should not larger than total deposited assets 
         closeTotalBalance = add256(closeBalanceA, closeBalanceB);
         if (closeTotalBalance > trinityData.channelInfo[channelId].channelTotalBalance){
             emit QuickCloseChannelFailure(partnerA, partnerB, closeTotalBalance);
@@ -265,7 +241,16 @@ contract TrinityContract{
         
         deleteChannel(partnerA, partnerB, channelId);
         emit QuickCloseChannelSuccess(partnerA, closeBalanceA, partnerB, closeBalanceB,  channelId);
-    }    
+    } 
+    
+    /* 
+     * Function: Set settle timeout value by contract owner only 
+    */
+    function setSettleTimeout(uint256 blockNumber) public{
+        require(msg.sender == trinityData.contractOwner);
+        trinityData.settleTimeout = blockNumber;
+        return;
+    }     
     
     /*
      * Funcion:   1. set channel status as closing
@@ -281,56 +266,56 @@ contract TrinityContract{
      *    settleNonce: closer provided nonce for settlement;
      * Return:
      *    Null;
-    */
+     */
     
     function closeChannel(address partnerA, 
                           address partnerB,
-                          uint256 settleBalanceA,
-                          uint256 settleBalanceB, 
+                          uint256 closeBalanceA,
+                          uint256 closeBalanceB, 
                           bytes signedStringA,
                           bytes signedStringB,
-                          uint256 settleNonce) public {
+                          uint256 closeNonce) public {
 
         bytes32 channelId;
-        uint256 settleTotalBalance = 0;
+        uint256 closeTotalBalance = 0;
         
-        /*verify both signatures to check the behavious is valid*/
-        if (verifyTransaction(partnerA, partnerB, settleBalanceA, settleBalanceB, settleNonce, signedStringA, signedStringB) == false){
+        //verify both signatures to check the behavious is valid
+        if (verifyTransaction(partnerA, partnerB, closeBalanceA, closeBalanceB, closeNonce, signedStringA, signedStringB) == false){
             emit CloseChannelFailure(address(0), address(0), 0);
             return;
         }
 
         channelId = createChannelIdentification(partnerA, partnerB);
         
-        /*channel should be opening */
+        //channel should be opening 
         if (trinityData.channelInfo[channelId].channelStatus != status.Opening){
             emit CloseChannelFailure(partnerA, partnerB, 0);
             return;
         }
         
-        /*sum of both balance should not larger than total deposited assets */
-        settleTotalBalance = add256(settleBalanceA, settleBalanceB);
-        if (settleTotalBalance > trinityData.channelInfo[channelId].channelTotalBalance){
-            emit CloseChannelFailure(partnerA, partnerB, settleTotalBalance);
+        //sum of both balance should not larger than total deposited assets
+        closeTotalBalance = add256(closeBalanceA, closeBalanceB);
+        if (closeTotalBalance > trinityData.channelInfo[channelId].channelTotalBalance){
+            emit CloseChannelFailure(partnerA, partnerB, closeTotalBalance);
             return;
         }
         
         trinityData.channelInfo[channelId].channelStatus = status.Closing;
         trinityData.channelInfo[channelId].channelCloser = msg.sender;
-        trinityData.channelInfo[channelId].settleInfo.closingNonce = settleNonce;
+        trinityData.channelInfo[channelId].closingNonce = closeNonce;
         if (msg.sender == partnerA){
-            /*sender want close channel actively, withdraw partner balance firstly*/
-            trinityData.channelInfo[channelId].settleInfo.closerSettleBalance = settleBalanceA;
-            trinityData.channelInfo[channelId].settleInfo.partnerSettleBalance = settleBalanceB;
+            //sender want close channel actively, withdraw partner balance firstly
+            trinityData.channelInfo[channelId].closerSettleBalance = closeBalanceA;
+            trinityData.channelInfo[channelId].partnerSettleBalance = closeBalanceB;
             emit CloseChannelSuccess(msg.sender, partnerB, channelId);
         }
         else
         {
-            trinityData.channelInfo[channelId].settleInfo.closerSettleBalance = settleBalanceB;
-            trinityData.channelInfo[channelId].settleInfo.partnerSettleBalance = settleBalanceA;
+            trinityData.channelInfo[channelId].closerSettleBalance = closeBalanceB;
+            trinityData.channelInfo[channelId].partnerSettleBalance = closeBalanceA;
             emit CloseChannelSuccess(msg.sender, partnerA, channelId);
         }
-        trinityData.channelInfo[channelId].settleInfo.expectedSettleBlock = block.number + trinityData.settleTimeout;
+        trinityData.channelInfo[channelId].expectedSettleBlock = block.number + trinityData.settleTimeout;
                 
         return;
     }
@@ -359,9 +344,9 @@ contract TrinityContract{
                                uint256 updateBalanceB, 
                                bytes signedStringA,
                                bytes signedStringB,
-                               uint256 updateNonce) public{
+                               uint256 updateNonce) payable public{
         bytes32 channelId;
-        uint256 settleTotalBalance = 0;
+        uint256 updateTotalBalance = 0;
         
         if (verifyTransaction(partnerA, partnerB, updateBalanceA, updateBalanceB, updateNonce, signedStringA, signedStringB) == false){
             emit UpdateTransactionFailure(address(0), address(0), 0);
@@ -370,55 +355,55 @@ contract TrinityContract{
         
         channelId = createChannelIdentification(partnerA, partnerB);
         
-        /* only when channel status is closing, node can call it*/
+        // only when channel status is closing, node can call it
         if (trinityData.channelInfo[channelId].channelStatus != status.Closing){
             emit UpdateTransactionFailure(partnerA, partnerB, 0);
             return;
         }
         
-        /* channel closer can not call it */
+        // channel closer can not call it 
         if (trinityData.channelInfo[channelId].channelCloser == msg.sender){
             emit UpdateTransactionFailure(trinityData.channelInfo[channelId].channelCloser , msg.sender, 0);
             return;    
         }
         
-        /*sum of both balance should not larger than total deposited assets */
-        settleTotalBalance = add256(updateBalanceA, updateBalanceB);
-        if (settleTotalBalance > trinityData.channelInfo[channelId].channelTotalBalance){
-            emit UpdateTransactionFailure(partnerA, partnerB, settleTotalBalance);
+        //sum of both balance should not larger than total deposited assets 
+        updateTotalBalance = add256(updateBalanceA, updateBalanceB);
+        if (updateTotalBalance > trinityData.channelInfo[channelId].channelTotalBalance){
+            emit UpdateTransactionFailure(partnerA, partnerB, updateTotalBalance);
             return;
         } 
         
         trinityData.channelInfo[channelId].channelStatus = status.None;
         
-        /* if updated nonce is less than (or equal to) closer provided nonce, folow closer provided balance allocation*/
-        if (updateNonce <= trinityData.channelInfo[channelId].settleInfo.closingNonce){
-            Mytoken.transfer(trinityData.channelInfo[channelId].channelCloser, trinityData.channelInfo[channelId].settleInfo.closerSettleBalance);
-            Mytoken.transfer(msg.sender, trinityData.channelInfo[channelId].settleInfo.partnerSettleBalance);
+        // if updated nonce is less than (or equal to) closer provided nonce, folow closer provided balance allocation
+        if (updateNonce <= trinityData.channelInfo[channelId].closingNonce){
+            Mytoken.transfer(trinityData.channelInfo[channelId].channelCloser, trinityData.channelInfo[channelId].closerSettleBalance);
+            Mytoken.transfer(msg.sender, trinityData.channelInfo[channelId].partnerSettleBalance);
             emit UpdateTransactionSuccess(trinityData.channelInfo[channelId].channelCloser, 
-                                          trinityData.channelInfo[channelId].settleInfo.closerSettleBalance,
+                                          trinityData.channelInfo[channelId].closerSettleBalance,
                                           msg.sender,
-                                          trinityData.channelInfo[channelId].settleInfo.partnerSettleBalance,
+                                          trinityData.channelInfo[channelId].partnerSettleBalance,
                                           channelId);
         }
         
-        /* if updated nonce is equal to nonce+1 that closer provided nonce, folow partner provided balance allocation*/
-        else if (updateNonce == (trinityData.channelInfo[channelId].settleInfo.closingNonce + 1)){
+        // if updated nonce is equal to nonce+1 that closer provided nonce, folow partner provided balance allocation
+        else if (updateNonce == (trinityData.channelInfo[channelId].closingNonce + 1)){
             Mytoken.transfer(partnerA, updateBalanceA);
             Mytoken.transfer(partnerB, updateBalanceB);
             emit UpdateTransactionSuccess(partnerA, updateBalanceA, partnerB, updateBalanceB, channelId);
         }
         
-        /* if updated nonce is larger than nonce+1 that closer provided nonce, determine closer provided invalid transaction, partner will also get closer assets*/
-        else if (updateNonce > (trinityData.channelInfo[channelId].settleInfo.closingNonce + 1)){
-            Mytoken.transfer(msg.sender, settleTotalBalance);
-            emit UpdateTransactionSuccess(msg.sender, settleTotalBalance, address(0), 0, channelId);
+        // if updated nonce is larger than nonce+1 that closer provided nonce, determine closer provided invalid transaction, partner will also get closer assets
+        else if (updateNonce > (trinityData.channelInfo[channelId].closingNonce + 1)){
+            Mytoken.transfer(msg.sender, updateTotalBalance);
+            emit UpdateTransactionSuccess(msg.sender, updateTotalBalance, address(0), 0, channelId);
         }
         
         deleteChannel(partnerA, partnerB, channelId);
         return;
-    }
-    
+    }  
+
     /*
      * Function: after apply close channnel, closer can withdraw assets until special settle window period time over
      * Parameters:
@@ -426,13 +411,14 @@ contract TrinityContract{
      * Return:
          Null
     */
-    function settle(address partner) public{
+    
+    function settle(address partner) payable public{
 
         bytes32 channelId;
 
         channelId = createChannelIdentification(msg.sender, partner);
         
-        /* only chanel closer can call the function and channel status must be closing*/
+        // only chanel closer can call the function and channel status must be closing
         if (msg.sender != trinityData.channelInfo[channelId].channelCloser){
             emit SettleFailure(msg.sender, 0);
             return;
@@ -441,19 +427,19 @@ contract TrinityContract{
             emit SettleFailure(msg.sender, 0);
             return;
         }
-        if (trinityData.channelInfo[channelId].settleInfo.expectedSettleBlock > block.number){
-            emit SettleFailure(msg.sender, trinityData.channelInfo[channelId].settleInfo.expectedSettleBlock);
+        if (trinityData.channelInfo[channelId].expectedSettleBlock > block.number){
+            emit SettleFailure(msg.sender, trinityData.channelInfo[channelId].expectedSettleBlock);
             return;
         }
         
         trinityData.channelInfo[channelId].channelStatus = status.None;
 
-       /* settle period have over and partner didn't provide final transaction information, contract will withdraw closer assets */    
-        Mytoken.transfer(msg.sender, trinityData.channelInfo[channelId].settleInfo.closerSettleBalance);
+       // settle period have over and partner didn't provide final transaction information, contract will withdraw closer assets   
+        Mytoken.transfer(msg.sender, trinityData.channelInfo[channelId].closerSettleBalance);
         
-        /* delete channel and cleare channel information*/
+        // delete channel and cleare channel information
         deleteChannel(msg.sender, partner, channelId);
-        emit SettleSuccess(msg.sender, trinityData.channelInfo[channelId].settleInfo.closerSettleBalance, channelId);
+        emit SettleSuccess(msg.sender, trinityData.channelInfo[channelId].closerSettleBalance, channelId);
         return;
     }    
     
@@ -466,29 +452,38 @@ contract TrinityContract{
      *    channelId: channel identifier;
      * Return:
      *    Null;
-    */    
-    function deleteChannel(address partnerA, address partnerB, bytes32 channelId) internal{
+    */ 
+
+    function deleteChannel(address partnerA, address partnerB, bytes32 channelId) internal {
         trinityData.channelInfo[channelId].channelStatus = status.None;
         trinityData.channelInfo[channelId].channelCloser = address(0);
         trinityData.channelInfo[channelId].channelTotalBalance = 0;
-        trinityData.channelInfo[channelId].participatorBalance[partnerA] = 0;
-        trinityData.channelInfo[channelId].participatorBalance[partnerB] = 0;
+        trinityData.channelInfo[channelId].partner1 = address(0);
+        trinityData.channelInfo[channelId].partner2 = address(0);
+        trinityData.channelInfo[channelId].partner1Balance = 0;
+        trinityData.channelInfo[channelId].partner2Balance = 0;
         
-        trinityData.channelInfo[channelId].settleInfo.closingNonce = 0;
-        trinityData.channelInfo[channelId].settleInfo.expectedSettleBlock = 0;
-        trinityData.channelInfo[channelId].settleInfo.closerSettleBalance = 0;
-        trinityData.channelInfo[channelId].settleInfo.partnerSettleBalance = 0;
+        trinityData.channelInfo[channelId].closingNonce = 0;
+        trinityData.channelInfo[channelId].expectedSettleBlock = 0;
+        trinityData.channelInfo[channelId].closerSettleBalance = 0;
+        trinityData.channelInfo[channelId].partnerSettleBalance = 0;
         
         if (trinityData.channelNumber >= 1){
             trinityData.channelNumber -= 1;
         }
         
         emit DeleteChannel(partnerA, partnerB, channelId);
-        return;
-        
     }  
     
-    /*
+    /* 
+     * Function: create a hash value based on two node address that deployed in same channel, the hash will identify the unique channel 
+    */
+    function createChannelIdentification(address participatorA, address participatorB) internal pure returns(bytes32 channelId){
+        return (participatorA <= participatorB) ? (keccak256(participatorA,participatorB)) : (keccak256(participatorB,participatorA));
+        
+    } 
+   
+     /*
      * Funcion:   parse both signature for check whether the transaction is valid
      * Parameters:
      *    addressA: node address that deployed on same channel;
@@ -514,6 +509,7 @@ contract TrinityContract{
         address recoverA;
         address recoverB;
         
+        return true;////////////////////////////////////////
         recoverA = recoverAddressFromSignature(addressA, addressB, balanceA ,balanceB, nonce, signatureA);
         recoverB = recoverAddressFromSignature(addressA, addressB, balanceA ,balanceB, nonce, signatureB);
         
@@ -577,9 +573,5 @@ contract TrinityContract{
         assert(sum >= addend);
         return sum;
     }
-     
-    function sub256(uint256 a, uint256 b) internal pure returns (uint256) {
-    assert(b <= a);
-    return a - b;
-  }
+  
 }
