@@ -90,7 +90,7 @@ contract TrinityContract{
         
         
         trinityData.channelInfo[channelId].channelStatus = status.Opening;
-        trinityData.channelInfo[channelId].channelCloser = participatorB;
+        trinityData.channelInfo[channelId].channelCloser = address(0);
         
    
         trinityData.channelInfo[channelId].closingNonce = 0;
