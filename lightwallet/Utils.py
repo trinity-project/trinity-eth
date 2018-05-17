@@ -1,17 +1,9 @@
 import itertools
-from eth_utils import (
-    add_0x_prefix,
-    big_endian_to_int,
-    decode_hex,
-    encode_hex,
-    int_to_big_endian,
-    is_boolean,
-    is_bytes,
-    is_hex,
-    is_integer,
-    remove_0x_prefix,
-    to_hex,
-)
+from eth_utils import decode_hex,\
+    is_boolean,\
+    is_integer,\
+    remove_0x_prefix,\
+    to_hex
 
 from eth_utils.crypto import keccak
 
@@ -58,3 +50,15 @@ def assert_one_val(*args, **kwargs):
             "Exactly one of the passed values can be specified. "
             "Instead, values were: %r, %r" % (args, kwargs)
         )
+
+def get_arg(arguments, index=0, convert_to_int=False, do_parse=False):
+    try:
+        arg = arguments[index]
+        if convert_to_int:
+            return int(arg)
+        if do_parse:
+            return parse_param(arg)
+        return arg
+    except Exception as e:
+        pass
+    return None

@@ -160,6 +160,13 @@ class Account(object):
             return None
 
     @property
+    def pubkey_safe(self):
+        if not self.locked:
+            return encode_hex(bitcoin.privtopub(self.privkey))
+        else:
+            return None
+
+    @property
     def address(self):
         """
 

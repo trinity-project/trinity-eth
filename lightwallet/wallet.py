@@ -57,18 +57,21 @@ class Wallet(object):
             self._passwordHash=binascii.hexlify(passwordHash)
         else:
             walletInfo=self.fromJsonFile(path)
-            passwordHash=binascii.unhexlify(walletInfo["extra"]['passwordHash'])
+            passwordHash=binascii.unhexlify(walletInfo['password']['passwordHash'])
             if passwordHash is None:
                 raise Exception("Password hash not found in database")
             if passwordHash is not None and passwordHash != hashlib.sha256(passwordKey.encode('utf-8')).digest():
                 raise Exception("Incorrect Password")
             self._passwordHash = passwordHash
+            self._key = Account(walletInfo['keystore'])
+            self._key.unlock(passwordKey)
             del passwordKey
+
 
     @staticmethod
     def Open(path, password):
 
-        return Nep6Wallet(path=path, passwordKey=password, create=False)
+        return Wallet(path=path, passwordKey=password, create=False)
 
     @staticmethod
     def Create(path, password):
@@ -84,11 +87,11 @@ class Wallet(object):
         """
         wallet = Wallet(path=path, passwordKey=password, create=True)
         wallet.Name=path.split(".")[0]
-        wallet.CreateKeyStore()
-        wallet.ToJsonFile(path,password)
+        wallet.CreateKeyStore(password)
+        wallet.ToJsonFile(path)
         return wallet
 
-    def CreateKeyStore(self, key=None):
+    def CreateKeyStore(self, passwordkey, key=None):
         """
         Create a KeyPair and store it encrypted in the database.
 
@@ -98,47 +101,8 @@ class Wallet(object):
         Returns:
             KeyPair: a KeyPair instance.
         """
-        self._key = Account.new(self._passwordHash,key, uuid=self.uuid)
+        self._key = Account.new(passwordkey ,key, uuid=self.uuid)
         return self._key
-
-
-    @staticmethod
-    def ToAddress(scripthash):
-        """
-        Transform a script hash to an address.
-
-        Args:
-            script_hash (UInt160): a bytearray (len 20) representing the public key.
-
-        Returns:
-            address (str): the base58check encoded address.
-        """
-        return scripthash_to_address(scripthash)
-
-    def ToScriptHash(self, address):
-        """
-        Retrieve the script_hash based from an address.
-
-        Args:
-            address (str): a base58 encoded address.
-
-        Raises:
-            ValuesError: if an invalid address is supplied or the coin version is incorrect.
-            Exception: if the address checksum fails.
-
-        Returns:
-            UInt160: script hash.
-        """
-        data = b58decode(address)
-        if len(data) != 25:
-            raise ValueError('Not correct Address, wrong length.')
-        if data[0] != self.AddressVersion:
-            raise ValueError('Not correct Coin Version')
-
-        checksum = Crypto.Default().Hash256(data[:21])[:4]
-        if checksum != data[21:]:
-            raise Exception('Address format error')
-        return UInt160(data=data[1:21])
 
     def ValidatePassword(self, password):
         """
@@ -217,33 +181,20 @@ class Wallet(object):
 
         jsn = {}
         jsn['path'] = self._path
-        jsn['accounts']=[]
-        for item in self._accounts:
-            res=get_balance(item["account"].GetAddress())
-            tmp_dict={
-                "address":item["account"].GetAddress(),
-                "pubkey":item["account"].PublicKey.encode_point(True).decode(),
-                "assets":{
-                    "NEO":res["result"]["neoBalance"],
-                    "GAS":res["result"]["gasBalance"],
-                    "TNC":res["result"]["tncBalance"]
-                }
-            }
-            jsn['accounts'].append(tmp_dict)
+        jsn['address'] = self._key.address
+        jsn["publickey"] = self._key.pubkey
+
         return jsn
 
     def ToJsonFile(self, path):
         jsn={}
-        jsn["extra"]={"passwordHash":self._passwordHash.decode()}
+        jsn["password"]={"passwordHash":self._passwordHash.decode()}
         jsn["name"]=self.Name
-        jsn['keystore'] = self._key
+        jsn['keystore'] = self._key.toJson()
         jsn['extra'] ={}
 
         with open(path,"wb") as f:
             f.write(json.dumps(jsn).encode())
-
-
-
         return None
 
     def fromJsonFile(self,path):
