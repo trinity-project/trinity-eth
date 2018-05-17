@@ -1,3 +1,4 @@
+import asyncio
 import binascii
 
 import time
@@ -14,7 +15,7 @@ from ethereum.transactions import Transaction
 w3 = Web3(HTTPProvider('http://192.168.214.178:8545'))
 # w3 = Web3(HTTPProvider('http://192.168.28.139:8545'))
 
-method=binascii.hexlify( w3.sha3(text="depoist2(uint256)"))
+method=binascii.hexlify( w3.sha3(text="Mike(address)"))
 
 
 
@@ -241,18 +242,45 @@ class Client(object):
 
 
 address="0x8AB0FC62b95AA25EE0FBd80eDc1252DDa670Aa6C"
-abi=[ { "constant": True, "inputs": [], "name": "name", "outputs": [ { "name": "", "type": "string", "value": "TNC1" } ], "payable": False, "stateMutability": "view", "type": "function" }, { "constant": False, "inputs": [ { "name": "_spender", "type": "address" }, { "name": "_value", "type": "uint256" } ], "name": "approve", "outputs": [ { "name": "success", "type": "bool" } ], "payable": False, "stateMutability": "nonpayable", "type": "function" }, { "constant": True, "inputs": [], "name": "totalSupply", "outputs": [ { "name": "", "type": "uint256", "value": "1e+36" } ], "payable": False, "stateMutability": "view", "type": "function" }, { "constant": False, "inputs": [ { "name": "_from", "type": "address" }, { "name": "_to", "type": "address" }, { "name": "_value", "type": "uint256" } ], "name": "transferFrom", "outputs": [ { "name": "success", "type": "bool" } ], "payable": False, "stateMutability": "nonpayable", "type": "function" }, { "constant": True, "inputs": [], "name": "decimals", "outputs": [ { "name": "", "type": "uint8", "value": "18" } ], "payable": False, "stateMutability": "view", "type": "function" }, { "constant": False, "inputs": [ { "name": "_value", "type": "uint256" } ], "name": "burn", "outputs": [ { "name": "success", "type": "bool" } ], "payable": False, "stateMutability": "nonpayable", "type": "function" }, { "constant": True, "inputs": [ { "name": "", "type": "address" } ], "name": "balanceOf", "outputs": [ { "name": "", "type": "uint256", "value": "0" } ], "payable": False, "stateMutability": "view", "type": "function" }, { "constant": False, "inputs": [ { "name": "_from", "type": "address" }, { "name": "_value", "type": "uint256" } ], "name": "burnFrom", "outputs": [ { "name": "success", "type": "bool" } ], "payable": False, "stateMutability": "nonpayable", "type": "function" }, { "constant": True, "inputs": [], "name": "symbol", "outputs": [ { "name": "", "type": "string", "value": "TNC1" } ], "payable": False, "stateMutability": "view", "type": "function" }, { "constant": False, "inputs": [ { "name": "_to", "type": "address" }, { "name": "_value", "type": "uint256" } ], "name": "transfer", "outputs": [], "payable": False, "stateMutability": "nonpayable", "type": "function" }, { "constant": False, "inputs": [ { "name": "_spender", "type": "address" }, { "name": "_value", "type": "uint256" }, { "name": "_extraData", "type": "bytes" } ], "name": "approveAndCall", "outputs": [ { "name": "success", "type": "bool" } ], "payable": False, "stateMutability": "nonpayable", "type": "function" }, { "constant": True, "inputs": [ { "name": "", "type": "address" }, { "name": "", "type": "address" } ], "name": "allowance", "outputs": [ { "name": "", "type": "uint256", "value": "0" } ], "payable": False, "stateMutability": "view", "type": "function" }, { "inputs": [ { "name": "initialSupply", "type": "uint256", "index": 0, "typeShort": "uint", "bits": "256", "displayName": "initial Supply", "template": "elements_input_uint", "value": "1000000000000000000" }, { "name": "tokenName", "type": "string", "index": 1, "typeShort": "string", "bits": "", "displayName": "token Name", "template": "elements_input_string", "value": "TNC1" }, { "name": "tokenSymbol", "type": "string", "index": 2, "typeShort": "string", "bits": "", "displayName": "token Symbol", "template": "elements_input_string", "value": "TNC1" } ], "payable": False, "stateMutability": "nonpayable", "type": "constructor" }, { "anonymous": False, "inputs": [ { "indexed": True, "name": "from", "type": "address" }, { "indexed": True, "name": "to", "type": "address" }, { "indexed": False, "name": "value", "type": "uint256" } ], "name": "Transfer", "type": "event" }, { "anonymous": False, "inputs": [ { "indexed": False, "name": "value", "type": "uint256" } ], "name": "Logger", "type": "event" }, { "anonymous": False, "inputs": [ { "indexed": True, "name": "from", "type": "address" }, { "indexed": False, "name": "value", "type": "uint256" } ], "name": "Burn", "type": "event" } ]
+abi=[ { "constant": False, "inputs": [], "name": "emit_log", "outputs": [], "payable": False, "stateMutability": "nonpayable", "type": "function" }, { "inputs": [ { "name": "m", "type": "address", "index": 0, "typeShort": "address", "bits": "", "displayName": "m", "template": "elements_input_address", "value": "0x3aE88fe370c39384FC16dA2C9e768Cf5d2495b48" }, { "name": "j", "type": "address", "index": 1, "typeShort": "address", "bits": "", "displayName": "j", "template": "elements_input_address", "value": "0x9dA26FC2E1D6Ad9FDD46138906b0104ae68a65D8" }, { "name": "n", "type": "address", "index": 2, "typeShort": "address", "bits": "", "displayName": "n", "template": "elements_input_address", "value": "0x537C8f3d3E18dF5517a58B3fB9D9143697996802" } ], "payable": False, "stateMutability": "nonpayable", "type": "constructor" }, { "anonymous": False, "inputs": [ { "indexed": False, "name": "a", "type": "address" } ], "name": "Mike", "type": "event" }, { "anonymous": False, "inputs": [ { "indexed": False, "name": "b", "type": "address" } ], "name": "Jack", "type": "event" }, { "anonymous": False, "inputs": [ { "indexed": False, "name": "c", "type": "address" } ], "name": "John", "type": "event" } ]
+my_contract = w3.eth.contract(address=address,abi=abi)
 
-store_var_contract = w3.eth.contract(address=address,abi=abi)
+# ddddd=my_contract.events.Mike
+# print(dir(ddddd))
+# _filter = my_contract.eventFilter("Mike")
+# while True:
+#     aa=_filter.get_new_entries()
+#     for a in aa:
+#         print(a.args)
+#     time.sleep(2)
 
-ddddd=store_var_contract.events.Logger.createFilter(fromBlock=0,toBlock="latest")
 
-transfer_filter = store_var_contract.eventFilter('Transfer')
-while True:
-    aa=transfer_filter.get_new_entries()
-    for a in aa:
-        print(a.args)
-    time.sleep(2)
+# aa=w3.eth.getFilterLogs()
+
+
+
+def handle_event(event):
+    print(event)
+    # and whatever
+
+async def log_loop(event_filter, poll_interval):
+    while True:
+        for event in event_filter.get_new_entries():
+            handle_event(event)
+        await asyncio.sleep(poll_interval)
+
+def main():
+    block_filter = w3.eth.filter({"address":"0x445E08fCE1E43606f8D39B14E372eA084B75C5f1"})
+    loop = asyncio.get_event_loop()
+    try:
+        loop.run_until_complete(
+            asyncio.gather(
+                log_loop(block_filter, 2)))
+    finally:
+        loop.close()
+
+if __name__ == '__main__':
+    main()
 
 
 pass

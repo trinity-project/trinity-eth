@@ -162,8 +162,8 @@ if __name__ == "__main__":
     # rawdata = myclient.sign(tx, privtKey= "b6a03207128827eaae0d31d97a7a6243de31f2baf99eabd764e33389ecf436fc")
     # tx_id = myclient.broadcast(rawdata)
 
-    a=myclient.sign_args(typeList=['bytes32', 'bytes32', 'uint256', 'uint256'],
-                         valueList=["0x3ae88fe370c39384fc16da2c9e768cf5d2495b48","0x537C8f3d3E18dF5517a58B3fB9D9143697996802",20,20],
+    a=myclient.sign_args(typeList=['bytes32', 'bytes32', 'uint256', 'uint256',"uint256"],
+                         valueList=["0x3ae88fe370c39384fc16da2c9e768cf5d2495b48","0x537C8f3d3E18dF5517a58B3fB9D9143697996802",20,20,0],
                          privtKey="095e53c9c20e23fd01eaad953c01da9e9d3ed9bebcfed8e5b2c2fce94037d963")
     b=myclient.sign_args(typeList=['bytes32', 'bytes32', 'uint256', 'uint256',"uint256"],
                          valueList=["0x3ae88fe370c39384fc16da2c9e768cf5d2495b48","0x537C8f3d3E18dF5517a58B3fB9D9143697996802",20,20,0],
