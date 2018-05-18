@@ -2,6 +2,7 @@ import binascii
 
 import time
 
+import requests
 from eth_account.datastructures import AttributeDict
 from eth_hash.backends.pysha3 import keccak256
 from py_ecc.secp256k1 import privtopub
@@ -14,6 +15,25 @@ import rlp
 from ethereum.transactions import Transaction
 
 
+def get_privtKey_from_keystore(filename,password):
+    with open(filename) as keyfile:
+        encrypted_key = keyfile.read()
+        private_key = w3.eth.account.decrypt(encrypted_key, password)
+        print(private_key)
+        return binascii.hexlify(private_key).decode()
+
+from enum import Enum
+class ASSET_TYPE(Enum):
+    TNC=2443
+    NEO=1376
+    GAS=1785
+    ETH=1027
+
+def get_price_from_coincapmarket(asset_type):
+    coincapmarket_api="https://api.coinmarketcap.com/v2/ticker/{0}/?convert=CNY".format(asset_type)
+    print(coincapmarket_api)
+    res=requests.get(coincapmarket_api).json()
+    return res.get("data").get("quotes").get("CNY").get("price")
 
 
 class Client(object):
@@ -69,6 +89,11 @@ class Client(object):
         signature = binascii.hexlify(int_to_big_endian(r) + int_to_big_endian(s) + bytes(chr(v - 27).encode()))
         return signature
 
+    def get_balance_of_eth(self,address):
+        return self.web3.getBalance(address)
+
+    def get_balance_of_erc20(self,contract,address):
+        return contract.functions.balanceOf(address).call()
 
 if __name__ == "__main__":
     myclient = Client("http://192.168.214.178:8545")
