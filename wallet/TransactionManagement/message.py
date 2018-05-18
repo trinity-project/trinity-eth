@@ -1349,7 +1349,8 @@ class SettleMessage(TransactionMessage):
       "TxNonce": 10,
       "ChannelName":"090A8E08E0358305035709403",
       "MessageBody": {
-                   "Commitment":{}
+                   "Balance":{},
+                   "Settlement":{}
 
     }
     }
@@ -1424,8 +1425,9 @@ class SettleMessage(TransactionMessage):
         receiver_pubkey = receiver.split("@")[0].strip()
         sender_balance = balance.get(sender_pubkey).get(asset_type.upper())
         receiver_balance = balance.get(receiver_pubkey).get(asset_type.upper())
+        assert_id = get_asset_type_id(asset_type)
         settlement_tx = createRefundTX(address_founder,float(sender_balance),receiver_balance,sender_pubkey,receiver_pubkey,
-                                    founder_script)
+                                    founder_script,assert_id)
 
         message = { "MessageType":"Settle",
           "Sender": sender,

@@ -212,3 +212,4 @@ class RpcInteraceApi(object):
                                                        role_index=int(params[6]))
 
             return rsmc_message
+
