@@ -10,13 +10,11 @@ from prompt_toolkit.history import FileHistory
 from prompt_toolkit.shortcuts import print_tokens
 from prompt_toolkit.styles import style_from_dict
 from prompt_toolkit.token import Token
-from neocore.KeyPair import KeyPair
-from lightwallet.Utils import get_arg, get_asset_id,show_tx,get_block_height
-
+from lightwallet.Utils import get_arg
 from lightwallet.Settings import settings
+from lightwallet.wallet import Wallet
 
 from lightwallet.UserPreferences import preferences
-from lightwallet.model import TX_RECORD
 
 FILENAME_PROMPT_HISTORY = os.path.join(settings.DIR_CURRENT, '.prompt.py.history')
 
@@ -89,18 +87,21 @@ class PromptInterface(object):
                     print("please provide matching passwords that are at least 1 characters long")
                     return
 
-                try:
-                    self.Wallet = Nep6Wallet.Create(path=path, password=passwd1)
-                    print("Wallet %s " % json.dumps(self.Wallet.ToJson(), indent=4))
-                except Exception as e:
-                    print("Exception creating wallet: %s " % e)
-                    self.Wallet = None
-                    if os.path.isfile(path):
-                        try:
-                            os.remove(path)
-                        except Exception as e:
-                            print("Could not remove {}: {}".format(path, e))
-                    return
+                self.Wallet = Wallet.Create(path=path, password=passwd1)
+                print("Wallet %s " % json.dumps(self.Wallet.ToJson(), indent=4))
+
+                # try:
+                #     self.Wallet = Wallet.Create(path=path, password=passwd1)
+                #     print("Wallet %s " % json.dumps(self.Wallet.ToJson(), indent=4))
+                # except Exception as e:
+                #     print("Exception creating wallet: %s " % e)
+                #     self.Wallet = None
+                #     if os.path.isfile(path):
+                #         try:
+                #             os.remove(path)
+                #         except Exception as e:
+                #             print("Could not remove {}: {}".format(path, e))
+                return
 
             else:
                 print("Please specify a path")
@@ -123,14 +124,15 @@ class PromptInterface(object):
                     return
 
                 passwd = prompt("[Password]> ", is_password=True)
+                self.Wallet = Wallet.Open(path, passwd)
 
-                try:
-                    self.Wallet = Nep6Wallet.Open(path, passwd)
-
-
-                    print("Opened wallet at %s" % path)
-                except Exception as e:
-                    print("could not open wallet: %s " % e)
+                # try:
+                #     self.Wallet = Wallet.Open(path, passwd)
+                #
+                #
+                #     print("Opened wallet at %s" % path)
+                # except Exception as e:
+                #     print("could not open wallet: %s " % e)
 
             else:
                 print("Please specify a path")
@@ -165,55 +167,6 @@ class PromptInterface(object):
         if not item:
             print("please specify something to import")
             return
-
-        if item == 'wif':
-            if not self.Wallet:
-                print("Please open a wallet before importing WIF")
-                return
-
-            wif = get_arg(arguments, 1)
-            if not wif:
-                print("Please supply a valid WIF key")
-                return
-
-            try:
-                prikey = KeyPair.PrivateKeyFromWIF(wif)
-                key = self.Wallet.CreateKey(prikey)
-                print("Imported key %s " % wif)
-                print("Pubkey: %s \n" % key.PublicKey.encode_point(True).hex())
-                print("Wallet: %s " % json.dumps(self.Wallet.ToJson(), indent=4))
-            except ValueError as e:
-                print(str(e))
-            except Exception as e:
-                print(str(e))
-
-            return
-
-        elif item == 'nep2':
-            if not self.Wallet:
-                print("Please open a wallet before importing a NEP2 key")
-                return
-
-            nep2_key = get_arg(arguments, 1)
-            if not nep2_key:
-                print("Please supply a valid nep2 encrypted private key")
-                return
-
-            nep2_passwd = prompt("[Key Password]> ", is_password=True)
-
-            try:
-                prikey = KeyPair.PrivateKeyFromNEP2(nep2_key, nep2_passwd)
-                key = self.Wallet.CreateKey(prikey)
-                print("Imported nep2 key: %s " % nep2_key)
-                print("Pubkey: %s \n" % key.PublicKey.encode_point(True).hex())
-                print("Wallet: %s " % json.dumps(self.Wallet.ToJson(), indent=4))
-            except ValueError as e:
-                print(str(e))
-            except Exception as e:
-                print(str(e))
-
-            return
-
         else:
             print("Import of '%s' not implemented" % item)
 
@@ -238,32 +191,6 @@ class PromptInterface(object):
                 if key.GetAddress() == address:
                     export = key.Export()
                     print("WIF key export: %s" % export)
-            return
-
-        elif item == 'nep2':
-            if not self.Wallet:
-                return print("please open a wallet")
-
-            address = get_arg(arguments, 1)
-            if not address:
-                return print("Please specify an address")
-
-            passwd = prompt("[Wallet Password]> ", is_password=True)
-            if not self.Wallet.ValidatePassword(passwd):
-                return print("Incorrect password")
-
-            nep2_passwd1 = prompt("[Key Password 1]> ", is_password=True)
-            if len(nep2_passwd1) < 1:
-                return print("Please provide a password with at least 1 characters")
-
-            nep2_passwd2 = prompt("[Key Password 2]> ", is_password=True)
-            if nep2_passwd1 != nep2_passwd2:
-                return print("Passwords don't match")
-
-            keys = self.Wallet.GetKeys()
-            for key in keys:
-                export = key.ExportNEP2(nep2_passwd1)
-                print("NEP2 key export: %s" % export)
             return
 
         print("Command export %s not found" % item)

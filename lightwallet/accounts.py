@@ -10,6 +10,7 @@ from ethereum.utils import privtopub  # this is different  than the one used in 
 from ethereum.utils import sha3, is_string, encode_hex, remove_0x_head, to_string
 from rlp.utils import decode_hex
 import bitcoin
+from eth_account import Account as EAccount
 
 
 
@@ -30,13 +31,14 @@ def mk_random_privkey():
     return decode_hex(k)
 
 
-class Account(object):
+class Account(EAccount):
     """
 
     """
 
     def __init__(self, keystore, password=None, path=None):
         self.keystore = keystore
+        self._privatekey = None
         try:
             self._address = decode_hex(self.keystore['address'])
         except KeyError:
@@ -68,8 +70,8 @@ class Account(object):
         if not is_string(password):
             password = to_string(password)
 
-        keystore = keys.make_keystore_json(key, password)
-        keystore['id'] = uuid
+        account = cls.create(key)
+        keystore = Account.encrypt(account.privateKey,password)
         return Account(keystore, password, path)
 
     @classmethod
@@ -85,31 +87,21 @@ class Account(object):
             raise ValueError('Invalid keystore file')
         return Account(keystore, password, path=path)
 
-    def toJson(self, include_address=True, include_id=True):
+    def toJson(self):
+        """
+
+        :return:
+        """
+        return json.dumps(self.keystore)
+
+    def dump(self):
         """
 
         :param include_address:
         :param include_id:
         :return:
         """
-
-        d = {}
-        d['crypto'] = self.keystore['crypto']
-        d['version'] = self.keystore['version']
-        if include_address and self.address is not None:
-            d['address'] = self.address
-        if include_id and self.uuid is not None:
-            d['id'] = str(self.uuid)
-        return d
-
-    def dump(self, include_address=True, include_id=True):
-        """
-
-        :param include_address:
-        :param include_id:
-        :return:
-        """
-        return json.dumps(self.toJson(include_address, include_id))
+        return json.dumps(self.toJson())
 
     def save(self, include_address=True, include_id=True):
         """
@@ -118,7 +110,7 @@ class Account(object):
         """
         if self.path:
             with open(self.path) as f:
-                json.dump(f, self.toJson(include_address, include_id))
+                json.dump(f, self.toJson())
         else:
             raise Exception("No path given")
 
@@ -131,23 +123,22 @@ class Account(object):
                  account is locked)
         """
         if self.locked:
-            self._privkey = keys.decode_keystore_json(self.keystore, password)
+            self._privatekey = self.decrypt(json.dumps(self.keystore), password)
             self.locked = False
-            self.address  # get address such that it stays accessible after a subsequent lock
 
     def lock(self):
         """
 
         :return:
         """
-        self._privkey = None
+        self._privatekey = None
         self.locked = True
 
     @property
     def privkey(self):
         """The account's private key or `None` if the account is locked"""
         if not self.locked:
-            return self._privkey
+            return self._privatekey
         else:
             return None
 
@@ -156,6 +147,13 @@ class Account(object):
         """The account's public key or `None` if the account is locked"""
         if not self.locked:
             return privtopub(self.privkey)
+        else:
+            return None
+
+    @property
+    def pubkey_safe(self):
+        if not self.locked:
+            return encode_hex(bitcoin.privtopub(self.privkey))
         else:
             return None
 

@@ -8,12 +8,11 @@ look at `Settings.py`. Use it like this example:
 
 """
 import json
+from log import LOG
 import os
 import sys
 
 from json.decoder import JSONDecodeError
-from logzero import logger
-
 
 FILENAME_PREFERENCES="prefence.json"
 
@@ -60,7 +59,7 @@ class UserPreferencesHolder:
             pass
 
         except JSONDecodeError as e:
-            logger.error("JSONDecodeError: {} in {}".format(e.msg, self._preferences_filename))
+            LOG.error("JSONDecodeError: {} in {}".format(e.msg, self._preferences_filename))
             raise
 
     def _save_userprefs(self):
