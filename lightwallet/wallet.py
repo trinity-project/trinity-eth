@@ -63,7 +63,7 @@ class Wallet(object):
             if passwordHash is not None and passwordHash != hashlib.sha256(passwordKey.encode('utf-8')).digest():
                 raise Exception("Incorrect Password")
             self._passwordHash = passwordHash
-            self._key = Account(walletInfo['keystore'])
+            self._key = Account(json.loads(walletInfo['keystore']))
             self._key.unlock(passwordKey)
             del passwordKey
 
@@ -116,30 +116,6 @@ class Wallet(object):
         """
         return hashlib.sha256(password.encode('utf-8')).digest() == self._passwordHash
 
-    def GetStandardAddress(self):
-        """
-        Get the Wallet's default address.
-
-        Raises:
-            Exception: if no default contract address is set.
-
-        Returns:
-            UInt160: script hash.
-        """
-        for contract in self._contracts.values():
-            if contract.IsStandard:
-                return contract.ScriptHash
-
-        raise Exception("Could not find a standard contract address")
-
-    def GetKeys(self):
-        """
-        Get all keys pairs present in the wallet.
-
-        Returns:
-            list: of KeyPairs.
-        """
-        return [item["account"] for item in self._accounts]
 
     def Sign(self,tx_data):
         """
