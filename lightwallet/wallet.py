@@ -117,28 +117,21 @@ class Wallet(object):
         return hashlib.sha256(password.encode('utf-8')).digest() == self._passwordHash
 
 
-    def Sign(self,tx_data):
+    def SignHash(self,message_hash):
         """
 
         :param tx_data:
         :return:
         """
-        privtKey=binascii.hexlify(self._accounts[0]["account"].PrivateKey).decode()
-        signature = privtkey_sign(tx_data, privtKey)
-        publicKey = privtKey_to_publicKey(privtKey)
-        rawData = tx_data + "014140" +signature + "2321" + publicKey + "ac"
-        return rawData
+        return self._key.sign_hash(message_hash)
 
-
-    def SignContent(self,tx_data):
+    def SignTX(self,tx_data: dict):
         """
 
         :param tx_data:
         :return:
         """
-        privtKey=binascii.hexlify(self._accounts[0]["account"].PrivateKey).decode()
-        signature = privtkey_sign(tx_data, privtKey)
-        return signature
+        return self._key.sign_tansaction(tx_data)
 
 
     def get_default_address(self):

@@ -195,7 +195,7 @@ class Account(EAccount):
         elif 'id' in self.keystore:
             self.keystore.pop('id')
 
-    def sign_hash(self, message_hash, private_key):
+    def sign_hash(self, message_hash):
         """
 
         :param message_hash:
@@ -204,7 +204,7 @@ class Account(EAccount):
         """
         return self.signHash(message_hash,self.privkey)
 
-    def sign_tansaction(self, transaction_dict, private_key):
+    def sign_tansaction(self, transaction_dict):
         """
 
         :param transaction_dict:
