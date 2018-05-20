@@ -37,6 +37,7 @@ from web3 import Web3, HTTPProvider
 import rlp
 from ethereum.transactions import Transaction
 
+
 class Client(object):
 
     def __init__(self, eth_url):
