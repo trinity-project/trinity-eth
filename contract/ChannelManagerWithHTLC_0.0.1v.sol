@@ -124,13 +124,13 @@ contract TrinityContract{
         //transfer both special assets to this contract.
         if(Mytoken.transferFrom(partnerA,this,amountA) == true){
             if (Mytoken.transferFrom(partnerB,this,amountB) == true){
+	        trinityData.channelNumber += 1;
                 emit DepositSuccess(partnerA, amountA, partnerB, amountB, channelId);
                 return;
             }
             else{
                 Mytoken.transfer(partnerA, amountA);
                 delete trinityData.channelInfo[channelId];
-                trinityData.channelNumber += 1;
                 emit DepositFailure(partnerB, 0);
                 return;
             }
@@ -224,6 +224,7 @@ contract TrinityContract{
         Mytoken.transfer(partnerA, closeBalanceA);
         Mytoken.transfer(partnerB, closeBalanceB);
         
+	trinityData.channelNumber -= 1;
         delete trinityData.channelInfo[channelId];
         emit QuickCloseChannelSuccess(partnerA, closeBalanceA, partnerB, closeBalanceB,  channelId);
     } 
@@ -385,7 +386,7 @@ contract TrinityContract{
             Mytoken.transfer(msg.sender, updateTotalBalance);
             emit UpdateTransactionSuccess(msg.sender, updateTotalBalance, channelInfo.channelCloser, 0, channelId);
         }
-        
+        trinityData.channelNumber -= 1;
         delete trinityData.channelInfo[channelId]; 
         return;
     }  
@@ -425,7 +426,8 @@ contract TrinityContract{
         Mytoken.transfer(msg.sender, channelInfo.closerSettleBalance);
         Mytoken.transfer(partner, channelInfo.partnerSettleBalance);
         
-        // delete channel and cleare channel information
+        // delete channel
+	trinityData.channelNumber -= 1;
         delete trinityData.channelInfo[channelId]; 
         emit SettleSuccess(msg.sender, channelInfo.closerSettleBalance, channelId);
         return;
