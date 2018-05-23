@@ -8,7 +8,7 @@ from eth_hash.backends.pysha3 import keccak256
 from py_ecc.secp256k1 import privtopub
 from solc import compile_source, compile_files
 from ethereum import utils
-from ethereum.utils import ecsign, ecrecover_to_pub, privtoaddr, ecsign_return_signature, normalize_key, \
+from ethereum.utils import ecsign, ecrecover_to_pub, privtoaddr,  normalize_key, \
     int_to_big_endian
 from web3 import Web3, HTTPProvider
 import rlp
