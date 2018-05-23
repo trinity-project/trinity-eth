@@ -195,17 +195,24 @@ class Account(EAccount):
         elif 'id' in self.keystore:
             self.keystore.pop('id')
 
-    def sign_tx(self, tx):
+    def sign_hash(self, message_hash):
         """
 
-        :param tx:
+        :param message_hash:
+        :param private_key:
         :return:
         """
-        if self.privkey:
-            log.info('signing tx', tx=tx, account=self)
-            tx.sign(self.privkey)
-        else:
-            raise ValueError('Locked account cannot sign tx')
+        return self.signHash(message_hash,self.privkey)
+
+    def sign_tansaction(self, transaction_dict):
+        """
+
+        :param transaction_dict:
+        :param private_key:
+        :return:
+        """
+        return self.signTransaction(transaction_dict, self.privkey)
+
 
     def __repr__(self):
         if self.address is not None:

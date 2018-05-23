@@ -210,5 +210,5 @@ class RpcInteraceApi(object):
             rsmc_message = message.RsmcMessage.generateRSMC(params[0], None, sender_list[0], receiver_list[0], float(params[4]),
                                                        receiver_list[1], sender_list[1], int(params[5]), params[3],
                                                        role_index=int(params[6]))
-
             return rsmc_message
+

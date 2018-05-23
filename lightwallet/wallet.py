@@ -29,6 +29,7 @@ import hashlib
 import binascii
 from .accounts import Account
 import json
+from .web3_client import Client
 
 
 class Wallet(object):
@@ -37,7 +38,7 @@ class Wallet(object):
     """
 
 
-    def __init__(self, path, passwordKey, create):
+    def __init__(self, path, passwordKey, create, eth_url=""):
 
         """
 
@@ -50,6 +51,7 @@ class Wallet(object):
         self._accounts = []
         self._keys={}
         self._passwordHash=None
+        self.client = Client(eth_url)
 
         if create:
             self.uuid = uuid.uuid1()
@@ -117,41 +119,32 @@ class Wallet(object):
         return hashlib.sha256(password.encode('utf-8')).digest() == self._passwordHash
 
 
-    def Sign(self,tx_data):
+    def SignHash(self,message_hash):
         """
 
         :param tx_data:
         :return:
         """
-        privtKey=binascii.hexlify(self._accounts[0]["account"].PrivateKey).decode()
-        signature = privtkey_sign(tx_data, privtKey)
-        publicKey = privtKey_to_publicKey(privtKey)
-        rawData = tx_data + "014140" +signature + "2321" + publicKey + "ac"
-        return rawData
+        return self._key.sign_hash(message_hash)
 
-
-    def SignContent(self,tx_data):
+    def SignTX(self,tx_data: dict):
         """
 
         :param tx_data:
         :return:
         """
-        privtKey=binascii.hexlify(self._accounts[0]["account"].PrivateKey).decode()
-        signature = privtkey_sign(tx_data, privtKey)
-        return signature
+        return self._key.sign_tansaction(tx_data)
 
 
     def get_default_address(self):
         return self._accounts[0]["account"].GetAddress()
 
-    def send(self,addressFrom,addressTo,amount,assetId):
-        res = construct_tx(addressFrom,addressTo,amount,assetId)
-        print(res)
-        raw_txdata=self.Sign(res["result"]["txData"])
-        if send_raw_tx(raw_txdata):
-            print("txid: "+res["result"]["txid"])
-            return True,res["result"]["txid"]
-        return False,res["result"]["txid"]
+    def send(self,addresss_to, value, gasLimit=25600):
+        tx = self.client.construct_common_tx(self._key.address, addresss_to, value, gasLimit)
+        rawdata = self.SignTX(tx)
+        return self.client.broadcast(rawdata.rawTransaction)
+
+
 
     def ToJson(self, verbose=False):
 
