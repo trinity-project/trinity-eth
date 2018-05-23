@@ -126,7 +126,7 @@ class Client(object):
         return signature
 
     def get_balance_of_eth(self,address):
-        return self.web3.getBalance(address)
+        return self.web3.eth.getBalance(address)/(10**18)
 
     def get_balance_of_erc20(self,contract,address):
         return contract.functions.balanceOf(address).call()

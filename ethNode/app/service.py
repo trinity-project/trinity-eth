@@ -14,7 +14,9 @@ eth_client=Client(eth_url=setting.ETH_URL)
 
 
 
-def construct_tx(addressFrom,addressTo,value):
+def construct_tx(addressFrom,addressTo,value,coinType=None):
+    if coinType=="ERC20TNC":
+        unsigned_tx_data = eth_client.construct_common_tx(addressFrom, addressTo, value)
     unsigned_tx_data=eth_client.construct_common_tx(addressFrom,addressTo,value)
     return {
         "unsignedTxData":unsigned_tx_data
@@ -37,37 +39,10 @@ def broadcast(unsignedTxData,signature):
 
 
 def get_balance(address):
-    balance=Balance.query.filter_by(address=address).first()
-
-    data = {
-        "jsonrpc": "2.0",
-        "method": "invokefunction",
-        "params": [
-            setting.CONTRACTHASH,
-            "balanceOf",
-            [
-                {
-                    "type":"Hash160",
-                    "value":ToScriptHash(address).ToString()
-                }
-            ]
-        ],
-        "id": 1
+    eth_balance=eth_client.get_balance_of_eth(address)
+    return {
+        "ETH":eth_balance
     }
-    res = requests.post(setting.NEOCLIURL, json=data).json()
-    value=res["result"]["stack"][0]["value"]
-    if balance:
-        response={
-            "gasBalance":float(balance.gas_balance),
-            "neoBalance":float(balance.neo_balance),
-            "tncBalance":int(hex_reverse(value),16)/100000000 if value else 0
-        }
-    else:
-        if value:
-            response={"tncBalance":int(hex_reverse(value),16)/100000000,"gasBalance":0,"neoBalance":0}
-        else:
-            response={"tncBalance":0,"gasBalance":0,"neoBalance":0}
-    return response
 
 
 
