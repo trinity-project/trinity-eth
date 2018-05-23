@@ -35,13 +35,12 @@ import time
 from model.base_enum import EnumChannelState
 from wallet.Interface import gate_way
 from wallet.configure import Configure
-from wallet.BlockChain.interface import get_block_count
+from BlockChain import get_block_count
 from functools import reduce
-from wallet.BlockChain.monior import monitorblock,Monitor
+from BlockChain import monitorblock,Monitor
 from wallet.TransactionManagement.payment import Payment
 import requests
 import qrcode_terminal
-from wallet.BlockChain.interface import get_balance
 from configure import Configure
 
 
@@ -72,12 +71,7 @@ class UserPromptInterface(PromptInterface):
 
         :return:
         """
-        wallet = self.Wallet.ToJson()
-        try:
-            account =  wallet.get("accounts")[0]
-            return account["address"], account["pubkey"]
-        except AttributeError:
-            return None,None
+        return self.Wallet.address
 
 
     def run(self):

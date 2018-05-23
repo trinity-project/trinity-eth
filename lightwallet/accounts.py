@@ -4,17 +4,15 @@ import os
 from random import SystemRandom
 import shutil
 from uuid import UUID
-from ethereum.tools import keys
 from ethereum.slogging import get_logger
 from ethereum.utils import privtopub  # this is different  than the one used in devp2p.crypto
-from ethereum.utils import sha3, is_string, encode_hex, remove_0x_head, to_string
-from rlp.utils import decode_hex
+from ethereum.utils import sha3, is_string, encode_hex, remove_0x_head, to_string, decode_hex
 import bitcoin
 from eth_account import Account as EAccount
 
 
 
-log = get_logger('accounts')
+#log = get_logger('accounts')
 
 DEFAULT_COINBASE = decode_hex('de0b295669a9fd93d5f28d9ec85e40f4cb697bae')
 
