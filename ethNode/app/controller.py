@@ -30,9 +30,13 @@ def broadcast(rawTx,signature):
 @response_wrap
 @jsonrpc.method("getBalance")
 def get_balance(address,erc20):
-    if erc20!="ERC20TNC":
-        return None
     return service.get_balance(address,erc20)
+
+
+@response_wrap
+@jsonrpc.method("getTransactionByHash")
+def get_transaction_by_hash(txId):
+    return service.get_transaction_by_hash(txId)
 
 
 @response_wrap

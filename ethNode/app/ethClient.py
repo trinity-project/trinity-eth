@@ -4,8 +4,8 @@ from ethereum import utils
 from ethereum.utils import ecsign, normalize_key,int_to_big_endian
 from web3 import Web3, HTTPProvider
 from ethereum.transactions import Transaction
+from config import setting
 
-from . import erc20_token
 
 
 
@@ -34,7 +34,8 @@ class Client(object):
         return binascii.hexlify(unsigned_tx).decode()
 
     def construct_erc20_tx(self,addressFrom,addressTo,value,gasLimit=256000):
-        contract_instance=self.get_contract_instance(erc20_token.address,erc20_token.abi)
+        contract_instance=self.get_contract_instance(setting.SmartContract["ERC20TNC"][0],
+                                                     setting.SmartContract["ERC20TNC"][1])
         tx_dict = contract_instance.functions.transfer(
             addressTo,
             value
@@ -129,10 +130,14 @@ class Client(object):
     def get_balance_of_erc20(self,contract,address):
         return contract.functions.balanceOf(address).call()
 
+    def get_transaction_by_hash(self,txId):
+        res=self.web3.eth.getTransaction(txId)
+        return res
+
 if __name__ == "__main__":
     myclient = Client("http://192.168.214.178:8545")
-    contract = myclient.get_contract_instance(contract_address=erc20_token.SmartContract["ERC20TNC"][0],
-                                              abi=erc20_token.SmartContract["ERC20TNC"][1])
+    contract = myclient.get_contract_instance(contract_address=setting.SmartContract["ERC20TNC"][0],
+                                              abi=setting.SmartContract["ERC20TNC"][1])
 
 
     a=myclient.sign_args(typeList=['bytes32', 'bytes32', 'uint256', 'uint256',"uint256"],

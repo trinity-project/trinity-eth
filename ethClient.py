@@ -95,6 +95,8 @@ class Client(object):
     def get_balance_of_erc20(self,contract,address):
         return contract.functions.balanceOf(address).call()
 
+
+
 if __name__ == "__main__":
     myclient = Client("http://192.168.214.178:8545")
     contract = myclient.get_contract_instance(contract_address="0x8AB0FC62b95AA25EE0FBd80eDc1252DDa670Aa6C",
