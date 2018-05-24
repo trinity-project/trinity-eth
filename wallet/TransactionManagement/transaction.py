@@ -25,12 +25,11 @@ SOFTWARE."""
 #from wallet.ChannelManagement.channel import Channel
 #from neo.Wallets.Wallet import Wallet
 
-from neocore.Cryptography.Crypto import Crypto
+
 import os
 import pickle
-from TX.interface import *
 from wallet.utils import sign
-from wallet.BlockChain import interface as Binterface
+from blockchain import interface as Binterface
 from log import LOG
 import json
 

@@ -26,7 +26,6 @@ SOFTWARE."""
 
 from wallet.TransactionManagement.transaction import TrinityTransaction
 from wallet.utils import pubkey_to_address, get_asset_type_id
-from TX.interface import *
 from wallet.ChannelManagement import channel as ch
 from model.base_enum import EnumChannelState
 from wallet.Interface.gate_way import send_message
@@ -35,8 +34,7 @@ from wallet.utils import sign,\
     check_max_deposit,\
     check_mix_deposit,\
     check_deposit
-from TX.utils import blockheight_to_script
-from wallet.BlockChain.monior import register_block, \
+from blockchain.monior import register_block, \
     register_monitor
 from model import APIChannel
 from log import LOG

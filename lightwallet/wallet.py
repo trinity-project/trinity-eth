@@ -27,9 +27,9 @@ SOFTWARE."""
 import uuid
 import hashlib
 import binascii
-from .accounts import Account
+from lightwallet.accounts import Account
 import json
-from .web3_client import Client
+from blockchain.web3client import Client
 
 
 class Wallet(object):

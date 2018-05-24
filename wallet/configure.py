@@ -43,7 +43,7 @@ Configure = {
         "RPCClient":"http://localhost:20332", # neocli client json-rpc
         "NeoProtocol":"/home/will/neocli/protocol.json",
         "NeoUrlEnhance": "http://47.254.64.251:21332",
-        "NeoNetUrl" : "http://47.254.64.251:20332"
+        "EthNetUrl" : "https://ropsten.infura.io"
     },
     "DataBase":{"url": "http://localhost:20554"
     },

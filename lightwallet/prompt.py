@@ -243,7 +243,7 @@ class PromptInterface(object):
         tokens = [(Token.Neo, 'TRINITY'), (Token.Default, ' cli. Type '),
                   (Token.Command, "'help' "), (Token.Default, 'to get started')]
 
-        print_tokens(tokens,self.token_style)
+        #print_tokens(tokens,self.token_style)
         print("\n")
 
         while self.go_on:

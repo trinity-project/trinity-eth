@@ -22,15 +22,10 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 
-
-from neocore.Cryptography.Crypto import Crypto
-import binascii
 from wallet.configure import Configure
-from wallet.BlockChain.interface import get_balance
+from blockchain.interface import get_balance
 import re
 import hashlib
-
-SupportAssetType = ["TNC", "NEO", "GAS"] #Todo multi-asset will come soon, before that hardcode here
 
 
 def to_aes_key(password):
