@@ -29,7 +29,7 @@ SOFTWARE."""
 import os
 import pickle
 from wallet.utils import sign
-from BlockChain import interface as Binterface
+from blockchain import interface as Binterface
 from log import LOG
 import json
 

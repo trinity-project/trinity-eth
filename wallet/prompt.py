@@ -35,13 +35,13 @@ import time
 from model.base_enum import EnumChannelState
 from wallet.Interface import gate_way
 from wallet.configure import Configure
-from BlockChain import get_block_count
+from blockchain.interface import get_block_count
 from functools import reduce
-from BlockChain import monitorblock,Monitor
+from blockchain.monior import monitorblock,Monitor
 from wallet.TransactionManagement.payment import Payment
 import requests
 import qrcode_terminal
-from configure import Configure
+from wallet.configure import Configure
 
 
 GateWayIP = Configure.get("GatewayIP")

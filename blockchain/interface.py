@@ -35,9 +35,11 @@ NetUrl = Configure['BlockChain']['EthNetUrl']
 EthClient = Client(NetUrl)
 
 
+def send_raw(raw_data):
+    return EthClient.broadcast(raw_data)
+
 def get_block_count():
     return EthClient.get_block_count()
-
 
 
 def get_bolck(index):

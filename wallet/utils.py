@@ -23,7 +23,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 
 from wallet.configure import Configure
-from BlockChain import get_balance
+from blockchain.interface import get_balance
 import re
 import hashlib
 

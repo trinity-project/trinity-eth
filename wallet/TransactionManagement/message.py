@@ -34,7 +34,7 @@ from wallet.utils import sign,\
     check_max_deposit,\
     check_mix_deposit,\
     check_deposit
-from BlockChain import register_block, \
+from blockchain.monior import register_block, \
     register_monitor
 from model import APIChannel
 from log import LOG

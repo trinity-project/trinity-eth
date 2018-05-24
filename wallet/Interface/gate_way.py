@@ -24,7 +24,7 @@ SOFTWARE."""
 
 import requests
 from wallet.configure import Configure
-from BlockChain import get_balance
+from blockchain.interface import get_balance
 from log import LOG
 import json
 

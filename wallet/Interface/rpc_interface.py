@@ -30,7 +30,7 @@ from wallet.ChannelManagement.channel import get_channel_via_name, close_channel
 from wallet.TransactionManagement import transaction, message
 from log import LOG
 from wallet.configure import Configure
-from BlockChain import get_balance
+from blockchain.interface import get_balance
 
 
 MessageList = []
