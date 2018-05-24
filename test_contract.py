@@ -185,45 +185,45 @@ tx = Transaction(
 
 
 privtKey="b6a03207128827eaae0d31d97a7a6243de31f2baf99eabd764e33389ecf436fc"
+# #
+# UnsignedTransaction = Transaction.exclude(['v', 'r', 's'])
+# #
+# unsigned_tx=rlp.encode(tx,UnsignedTransaction)
+# print("uuuuuuu:",rlp.decode(unsigned_tx))
 #
-UnsignedTransaction = Transaction.exclude(['v', 'r', 's'])
+# print ("unsigned_tx:",unsigned_tx,binascii.hexlify(unsigned_tx).decode())
+# before_hash= utils.sha3(unsigned_tx)
 #
-unsigned_tx=rlp.encode(tx,UnsignedTransaction)
-print("uuuuuuu:",rlp.decode(unsigned_tx))
-
-print ("unsigned_tx:",unsigned_tx,binascii.hexlify(unsigned_tx).decode())
-before_hash= utils.sha3(unsigned_tx)
-
+# #
+# # print("beforehash:",before_hash,binascii.hexlify(before_hash).decode())
+# #
+# # tx.sign(privtKey)
+# # rawHash=binascii.hexlify(tx.hash)
+# #
+# # v=tx.v
+# # r=tx.r
+# # s=tx.s
+# # print(v,r,s)
+# # v,r,s=ecsign(before_hash,normalize_key(privtKey))
+# # signature = binascii.hexlify(int_to_big_endian(r) + int_to_big_endian(s) + bytes(chr(v - 27).encode()))
+# # print(signature)
+# # signed_tx = w3.toHex(rlp.encode(tx))
+# dd=rlp.decode(b"\xf8eb\x85\x040\xe24\x00\x83'\x10\x00\x94S|\x8f=>\x18\xdfU\x17\xa5\x8b?\xb9\xd9\x146\x97\x99h\x02d\x80\x1c\xa0\xd6\x18'\x1e\x1es\xf3\x11z\xb9{\xc6\xe6\x94\x87\xbf\xe2P\xf4\n\xfb[\xbb<9E\xddI\xe2\xe4\xa6\xa6\xa0\x1f'\xf9\xd8t .\xc1Do\x18\xe3\x88!\xb7\xfc\xd7\xe3\xe6\xc6&\x06\x93\x12\xb5\x95\xc6\xae\xe0T\xac\x90")
 #
-# print("beforehash:",before_hash,binascii.hexlify(before_hash).decode())
+# signature =b"\xd6\x18'\x1e\x1es\xf3\x11z\xb9{\xc6\xe6\x94\x87\xbf\xe2P\xf4\n\xfb[\xbb<9E\xddI\xe2\xe4\xa6\xa6\x1f'\xf9\xd8t .\xc1Do\x18\xe3\x88!\xb7\xfc\xd7\xe3\xe6\xc6&\x06\x93\x12\xb5\x95\xc6\xae\xe0T\xac\x90\x01"
 #
-# tx.sign(privtKey)
-# rawHash=binascii.hexlify(tx.hash)
 #
-# v=tx.v
-# r=tx.r
-# s=tx.s
-# print(v,r,s)
-# v,r,s=ecsign(before_hash,normalize_key(privtKey))
-# signature = binascii.hexlify(int_to_big_endian(r) + int_to_big_endian(s) + bytes(chr(v - 27).encode()))
-# print(signature)
-# signed_tx = w3.toHex(rlp.encode(tx))
-dd=rlp.decode(b"\xf8eb\x85\x040\xe24\x00\x83'\x10\x00\x94S|\x8f=>\x18\xdfU\x17\xa5\x8b?\xb9\xd9\x146\x97\x99h\x02d\x80\x1c\xa0\xd6\x18'\x1e\x1es\xf3\x11z\xb9{\xc6\xe6\x94\x87\xbf\xe2P\xf4\n\xfb[\xbb<9E\xddI\xe2\xe4\xa6\xa6\xa0\x1f'\xf9\xd8t .\xc1Do\x18\xe3\x88!\xb7\xfc\xd7\xe3\xe6\xc6&\x06\x93\x12\xb5\x95\xc6\xae\xe0T\xac\x90")
-
-signature =b"\xd6\x18'\x1e\x1es\xf3\x11z\xb9{\xc6\xe6\x94\x87\xbf\xe2P\xf4\n\xfb[\xbb<9E\xddI\xe2\xe4\xa6\xa6\x1f'\xf9\xd8t .\xc1Do\x18\xe3\x88!\xb7\xfc\xd7\xe3\xe6\xc6&\x06\x93\x12\xb5\x95\xc6\xae\xe0T\xac\x90\x01"
-
-
-r=signature[0:32]
-s=signature[32:64]
-v=bytes(chr(signature[64]+27).encode())
-print(dd)
-print(r,s,v)
-unsigned_items=rlp.decode(unsigned_tx)
-unsigned_items.extend([v,r,s])
-signed_items=unsigned_items
-
-reszult=rlp.encode(signed_items)
-print("reszult:",binascii.hexlify(reszult))
+# r=signature[0:32]
+# s=signature[32:64]
+# v=bytes(chr(signature[64]+27).encode())
+# print(dd)
+# print(r,s,v)
+# unsigned_items=rlp.decode(unsigned_tx)
+# unsigned_items.extend([v,r,s])
+# signed_items=unsigned_items
+#
+# reszult=rlp.encode(signed_items)
+# print("reszult:",binascii.hexlify(reszult))
 
 # tx.deserialize("e262850430e234008327100094537c8f3d3e18df5517a58b3fb9d91436979968026480")
 
@@ -268,6 +268,20 @@ class Client(object):
 
         return tx
 
+    def construct_erc20_tx(self,transc):
+        tx = Transaction(
+            nonce=transc.get("nonce"),
+            gasprice=transc.get("gasPrice"),
+            startgas=transc.get("gas"),
+            to=transc.get("to"),
+            value=transc.get("value"),
+            data=binascii.unhexlify(transc.get("data")[2:]))
+
+        UnsignedTransaction = Transaction.exclude(['v', 'r', 's'])
+        unsigned_tx = rlp.encode(tx, UnsignedTransaction)
+        return binascii.hexlify(unsigned_tx).decode()
+
+
     def get_contract_instance(self,contract_address,abi):
         contract = self.web3.eth.contract(address=contract_address, abi=abi)
         return contract
@@ -285,13 +299,32 @@ class Client(object):
             'nonce': self.web3.eth.getTransactionCount("0x9dA26FC2E1D6Ad9FDD46138906b0104ae68a65D8"),
         })
 
-        privtKey = "b6a03207128827eaae0d31d97a7a6243de31f2baf99eabd764e33389ecf436fc"
-        signed = self.web3.eth.account.signTransaction(transaction, privtKey)
+        return transaction
 
-        raw = signed.rawTransaction
-        tx_id = signed.hash
 
-        self.web3.eth.sendRawTransaction(signed.rawTransaction)
+
+    # def invoke_contract(self,contract,method,args):
+    #
+    #
+    #
+    #     transaction = contract.functions.transfer(
+    #         "0x537C8f3d3E18dF5517a58B3fB9D9143697996802",
+    #         10000
+    #     ).buildTransaction({
+    #         "gas": 100000,
+    #         'gasPrice': self.web3.eth.gasPrice,
+    #         'nonce': self.web3.eth.getTransactionCount("0x9dA26FC2E1D6Ad9FDD46138906b0104ae68a65D8"),
+    #     })
+    #
+    #     privtKey = "b6a03207128827eaae0d31d97a7a6243de31f2baf99eabd764e33389ecf436fc"
+    #     signed = self.web3.eth.account.signTransaction(transaction, privtKey)
+    #
+    #     raw = signed.rawTransaction
+    #     print(binascii.hexlify(raw))
+    #     tx_id = signed.hash
+    #     print(binascii.hexlify(tx_id))
+    #
+    #     self.web3.eth.sendRawTransaction(signed.rawTransaction)
 
     def get_balance_of_eth(self,address):
         return self.web3.getBalance(address)
@@ -301,11 +334,101 @@ class Client(object):
 
 
 
-#
-# address="0x8AB0FC62b95AA25EE0FBd80eDc1252DDa670Aa6C"
-# abi=[ { "constant": True, "inputs": [], "name": "name", "outputs": [ { "name": "", "type": "string", "value": "TNC1" } ], "payable": False, "stateMutability": "view", "type": "function" }, { "constant": False, "inputs": [ { "name": "_spender", "type": "address" }, { "name": "_value", "type": "uint256" } ], "name": "approve", "outputs": [ { "name": "success", "type": "bool" } ], "payable": False, "stateMutability": "nonpayable", "type": "function" }, { "constant": True, "inputs": [], "name": "totalSupply", "outputs": [ { "name": "", "type": "uint256", "value": "1e+36" } ], "payable": False, "stateMutability": "view", "type": "function" }, { "constant": False, "inputs": [ { "name": "_from", "type": "address" }, { "name": "_to", "type": "address" }, { "name": "_value", "type": "uint256" } ], "name": "transferFrom", "outputs": [ { "name": "success", "type": "bool" } ], "payable": False, "stateMutability": "nonpayable", "type": "function" }, { "constant": True, "inputs": [], "name": "decimals", "outputs": [ { "name": "", "type": "uint8", "value": "18" } ], "payable": False, "stateMutability": "view", "type": "function" }, { "constant": False, "inputs": [ { "name": "_value", "type": "uint256" } ], "name": "burn", "outputs": [ { "name": "success", "type": "bool" } ], "payable": False, "stateMutability": "nonpayable", "type": "function" }, { "constant": True, "inputs": [ { "name": "", "type": "address" } ], "name": "balanceOf", "outputs": [ { "name": "", "type": "uint256", "value": "0" } ], "payable": False, "stateMutability": "view", "type": "function" }, { "constant": False, "inputs": [ { "name": "_from", "type": "address" }, { "name": "_value", "type": "uint256" } ], "name": "burnFrom", "outputs": [ { "name": "success", "type": "bool" } ], "payable": False, "stateMutability": "nonpayable", "type": "function" }, { "constant": True, "inputs": [], "name": "symbol", "outputs": [ { "name": "", "type": "string", "value": "TNC1" } ], "payable": False, "stateMutability": "view", "type": "function" }, { "constant": False, "inputs": [ { "name": "_to", "type": "address" }, { "name": "_value", "type": "uint256" } ], "name": "transfer", "outputs": [], "payable": False, "stateMutability": "nonpayable", "type": "function" }, { "constant": False, "inputs": [ { "name": "_spender", "type": "address" }, { "name": "_value", "type": "uint256" }, { "name": "_extraData", "type": "bytes" } ], "name": "approveAndCall", "outputs": [ { "name": "success", "type": "bool" } ], "payable": False, "stateMutability": "nonpayable", "type": "function" }, { "constant": True, "inputs": [ { "name": "", "type": "address" }, { "name": "", "type": "address" } ], "name": "allowance", "outputs": [ { "name": "", "type": "uint256", "value": "0" } ], "payable": False, "stateMutability": "view", "type": "function" }, { "inputs": [ { "name": "initialSupply", "type": "uint256", "index": 0, "typeShort": "uint", "bits": "256", "displayName": "initial Supply", "template": "elements_input_uint", "value": "1000000000000000000" }, { "name": "tokenName", "type": "string", "index": 1, "typeShort": "string", "bits": "", "displayName": "token Name", "template": "elements_input_string", "value": "TNC1" }, { "name": "tokenSymbol", "type": "string", "index": 2, "typeShort": "string", "bits": "", "displayName": "token Symbol", "template": "elements_input_string", "value": "TNC1" } ], "payable": False, "stateMutability": "nonpayable", "type": "constructor" }, { "anonymous": False, "inputs": [ { "indexed": True, "name": "from", "type": "address" }, { "indexed": True, "name": "to", "type": "address" }, { "indexed": False, "name": "value", "type": "uint256" } ], "name": "Transfer", "type": "event" }, { "anonymous": False, "inputs": [ { "indexed": False, "name": "value", "type": "uint256" } ], "name": "Logger", "type": "event" }, { "anonymous": False, "inputs": [ { "indexed": True, "name": "from", "type": "address" }, { "indexed": False, "name": "value", "type": "uint256" } ], "name": "Burn", "type": "event" } ]
-#
-# my_contract = w3.eth.contract(address=address,abi=abi)
+
+address="0x8AB0FC62b95AA25EE0FBd80eDc1252DDa670Aa6C"
+abi=[{"constant": True, "inputs": [], "name": "name",
+                                                    "outputs": [{"name": "", "type": "string", "value": "TNC1"}],
+                                                    "payable": False, "stateMutability": "view", "type": "function"},
+                                                   {"constant": False,
+                                                    "inputs": [{"name": "_spender", "type": "address"},
+                                                               {"name": "_value", "type": "uint256"}],
+                                                    "name": "approve", "outputs": [{"name": "success", "type": "bool"}],
+                                                    "payable": False, "stateMutability": "nonpayable",
+                                                    "type": "function"},
+                                                   {"constant": True, "inputs": [], "name": "totalSupply",
+                                                    "outputs": [{"name": "", "type": "uint256", "value": "1e+36"}],
+                                                    "payable": False, "stateMutability": "view", "type": "function"},
+                                                   {"constant": False, "inputs": [{"name": "_from", "type": "address"},
+                                                                                  {"name": "_to", "type": "address"},
+                                                                                  {"name": "_value",
+                                                                                   "type": "uint256"}],
+                                                    "name": "transferFrom",
+                                                    "outputs": [{"name": "success", "type": "bool"}], "payable": False,
+                                                    "stateMutability": "nonpayable", "type": "function"},
+                                                   {"constant": True, "inputs": [], "name": "decimals",
+                                                    "outputs": [{"name": "", "type": "uint8", "value": "18"}],
+                                                    "payable": False, "stateMutability": "view", "type": "function"},
+                                                   {"constant": False,
+                                                    "inputs": [{"name": "_value", "type": "uint256"}], "name": "burn",
+                                                    "outputs": [{"name": "success", "type": "bool"}], "payable": False,
+                                                    "stateMutability": "nonpayable", "type": "function"},
+                                                   {"constant": True, "inputs": [{"name": "", "type": "address"}],
+                                                    "name": "balanceOf",
+                                                    "outputs": [{"name": "", "type": "uint256", "value": "0"}],
+                                                    "payable": False, "stateMutability": "view", "type": "function"},
+                                                   {"constant": False, "inputs": [{"name": "_from", "type": "address"},
+                                                                                  {"name": "_value",
+                                                                                   "type": "uint256"}],
+                                                    "name": "burnFrom",
+                                                    "outputs": [{"name": "success", "type": "bool"}], "payable": False,
+                                                    "stateMutability": "nonpayable", "type": "function"},
+                                                   {"constant": True, "inputs": [], "name": "symbol",
+                                                    "outputs": [{"name": "", "type": "string", "value": "TNC1"}],
+                                                    "payable": False, "stateMutability": "view", "type": "function"},
+                                                   {"constant": False, "inputs": [{"name": "_to", "type": "address"},
+                                                                                  {"name": "_value",
+                                                                                   "type": "uint256"}],
+                                                    "name": "transfer", "outputs": [], "payable": False,
+                                                    "stateMutability": "nonpayable", "type": "function"},
+                                                   {"constant": False,
+                                                    "inputs": [{"name": "_spender", "type": "address"},
+                                                               {"name": "_value", "type": "uint256"},
+                                                               {"name": "_extraData", "type": "bytes"}],
+                                                    "name": "approveAndCall",
+                                                    "outputs": [{"name": "success", "type": "bool"}], "payable": False,
+                                                    "stateMutability": "nonpayable", "type": "function"},
+                                                   {"constant": True, "inputs": [{"name": "", "type": "address"},
+                                                                                 {"name": "", "type": "address"}],
+                                                    "name": "allowance",
+                                                    "outputs": [{"name": "", "type": "uint256", "value": "0"}],
+                                                    "payable": False, "stateMutability": "view", "type": "function"}, {
+                                                       "inputs": [
+                                                           {"name": "initialSupply", "type": "uint256", "index": 0,
+                                                            "typeShort": "uint", "bits": "256",
+                                                            "displayName": "initial Supply",
+                                                            "template": "elements_input_uint",
+                                                            "value": "1000000000000000000"},
+                                                           {"name": "tokenName", "type": "string", "index": 1,
+                                                            "typeShort": "string", "bits": "",
+                                                            "displayName": "token Name",
+                                                            "template": "elements_input_string", "value": "TNC1"},
+                                                           {"name": "tokenSymbol", "type": "string", "index": 2,
+                                                            "typeShort": "string", "bits": "",
+                                                            "displayName": "token Symbol",
+                                                            "template": "elements_input_string", "value": "TNC1"}],
+                                                       "payable": False, "stateMutability": "nonpayable",
+                                                       "type": "constructor"}, {"anonymous": False, "inputs": [
+                                                      {"indexed": True, "name": "from", "type": "address"},
+                                                      {"indexed": True, "name": "to", "type": "address"},
+                                                      {"indexed": False, "name": "value", "type": "uint256"}],
+                                                                                "name": "Transfer", "type": "event"},
+                                                   {"anonymous": False,
+                                                    "inputs": [{"indexed": False, "name": "value", "type": "uint256"}],
+                                                    "name": "Logger", "type": "event"}, {"anonymous": False, "inputs": [
+                                                      {"indexed": True, "name": "from", "type": "address"},
+                                                      {"indexed": False, "name": "value", "type": "uint256"}],
+                                                                                         "name": "Burn",
+                                                                                         "type": "event"}]
+my_contract = w3.eth.contract(address=address,abi=abi)
+
+my_client=Client("http://192.168.28.139:8545")
+contract_instance=my_client.get_contract_instance(address,abi)
+transc=my_client.invoke_contract(contract_instance,"transfer",("0x3aE88fe370c39384FC16dA2C9e768Cf5d2495b48",100))
+print(transc)
+unsigned_tx_data=my_client.construct_erc20_tx(transc)
+print(unsigned_tx_data)
+
+
 # print(w3.eth.getBalance("0x9dA26FC2E1D6Ad9FDD46138906b0104ae68a65D8"))
 #
 # print(dir(my_contract))
