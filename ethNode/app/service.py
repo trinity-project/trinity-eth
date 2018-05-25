@@ -70,8 +70,8 @@ def get_balance(address,erc20=None):
 def get_transaction_by_hash(txId):
     res=eth_client.get_transaction_by_hash(txId)
     if res:
-        return {"onChain":True}
-    return {"onChain":False}
+        return True
+    return False
 
 
 
