@@ -61,12 +61,12 @@ Base.metadata.create_all(engine)
 
 
 
-def getblock(index):
+def getblock(blockNumber):
 
     data = {
           "jsonrpc": "2.0",
           "method": "eth_getBlockByNumber",
-          "params": [index,True],
+          "params": [blockNumber,True],
           "id": 1
 }
     res = requests.post(setting.ETH_URL,json=data).json()
@@ -78,17 +78,17 @@ if localBlockCount:
 
     local_block_count=localBlockCount.height
 else:
-    local_block_count=0
-    localBlockCount=LocalBlockCout(height=0)
+    local_block_count=1
+    localBlockCount=LocalBlockCout(height=local_block_count)
     session.add(localBlockCount)
     session.commit()
-i=1
 
 while True:
     # time.sleep(0.01)
     print (local_block_count)
 
     block_info=getblock(local_block_count)
+    print(block_info)
     if len(block_info["result"]["transactions"]):
         for tx in block_info["result"]["transactions"]:
             if tx["to"]==setting.CONTRACT_ADDRESS:
