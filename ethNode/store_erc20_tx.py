@@ -11,7 +11,7 @@ import requests
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String, Numeric,Boolean,create_engine
 from sqlalchemy.orm import sessionmaker
-from .config import setting
+from config import setting
 
 
 pymysql.install_as_MySQLdb()
