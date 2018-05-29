@@ -93,7 +93,7 @@ while True:
         for tx in block_info["result"]["transactions"]:
             if tx["to"]==setting.CONTRACT_ADDRESS:
 
-                address_to = tx["input"][34:74]
+                address_to = "0x"+tx["input"][34:74]
                 value = int(tx["input"][74:], 16)
                 address_from=tx["from"]
                 block_number=int(tx["blockNumber"],16)
