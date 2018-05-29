@@ -1,10 +1,10 @@
-
-
+import pymysql
 from flask import Flask
 from flask_jsonrpc import JSONRPC
 from flask_sqlalchemy import SQLAlchemy
 from config import setting
 
+pymysql.install_as_MySQLdb()
 
 app = Flask(__name__)
 
