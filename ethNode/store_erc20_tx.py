@@ -87,8 +87,7 @@ while True:
     # time.sleep(0.01)
     print (local_block_count)
 
-    block_info=getblock(local_block_count)
-    print(block_info)
+    block_info=getblock(hex(local_block_count))
     if len(block_info["result"]["transactions"]):
         for tx in block_info["result"]["transactions"]:
             if tx["to"]==setting.CONTRACT_ADDRESS:
