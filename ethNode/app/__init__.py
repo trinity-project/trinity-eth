@@ -3,7 +3,7 @@
 from flask import Flask
 from flask_jsonrpc import JSONRPC
 from flask_sqlalchemy import SQLAlchemy
-from ..config import setting
+from config import setting
 
 
 app = Flask(__name__)
