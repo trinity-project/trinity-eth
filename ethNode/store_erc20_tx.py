@@ -88,12 +88,12 @@ while True:
     print (local_block_count)
 
     block_info=getblock(hex(local_block_count))
-    if len(block_info["result"]["transactions"]):
+    if block_info["result"]["transactions"]:
         for tx in block_info["result"]["transactions"]:
             if tx["to"]==setting.CONTRACT_ADDRESS:
 
                 address_to = "0x"+tx["input"][34:74]
-                value = int(tx["input"][74:], 16)
+                value = int(tx["input"][74:], 16)/(10**8)
                 address_from=tx["from"]
                 block_number=int(tx["blockNumber"],16)
                 tx_id=tx["hash"]
