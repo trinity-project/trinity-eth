@@ -5,6 +5,14 @@ ENVIRON=os.environ
 
 class SettingHolder(object):
 
+    MYSQLDATABASE = {
+        "host": "127.0.0.1",
+        "user": ENVIRON.get("DATABASE_USERNAME"),
+        "passwd": ENVIRON.get("DATABASE_PASSWORD"),
+        "db": ENVIRON.get("DATABASE_DB")
+    }
+
+
     def setup_mainnet(self):
         self.ETH_URL = ""
 
@@ -16,6 +24,9 @@ class SettingHolder(object):
         self.ABI_MAPPING = {
             "0x65096f2B7A8dc1592479F1911cd2B98dae4d2218": ropsten_testnet_abi
         }
+
+        self.CONTRACT_ADDRESS="0x65096f2b7a8dc1592479f1911cd2b98dae4d2218"
+
     def setup_privtnet(self):
         # self.ETH_URL = "http://192.168.28.139:8545"
         self.ETH_URL = "http://192.168.214.178:8545"

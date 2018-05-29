@@ -2,6 +2,7 @@ from functools import wraps
 from enum import Enum
 
 import requests
+from ethereum.utils import privtoaddr, normalize_key
 from flask import jsonify
 
 
@@ -25,3 +26,24 @@ def get_price_from_coincapmarket(asset_type):
     print(coincapmarket_api)
     res=requests.get(coincapmarket_api).json()
     return res.get("data").get("quotes").get("CNY").get("price")
+# fbadf8a0794e71f425c2b0b025fa3d2543d81792d8e07e8aaeba99a5d0e77273
+# key="095e53c9c20e23fd01eaad953c01da9e9d3ed9bebcfed8e5b2c2fce94037d963"
+# key="fbadf8a0794e71f425c2b0b025fa3d2543d81792d8e07e8aaeba99a5d0e77273"
+#
+#
+# key = normalize_key(key)
+# addr=privtoaddr(key)
+# print("key:",key)
+# import binascii
+# print("addr:",binascii.hexlify( addr))
+# pass
+
+input= "0xa9059cbb000000000000000000000000d307807304d95d13098bca2fe9d54ff748f99bb2000000000000000000000000000000000000000000000000000000001dcd6500"
+
+print(len(input))
+
+addressTo=input[34:74]
+value=int(input[74:],16)
+
+
+pass
