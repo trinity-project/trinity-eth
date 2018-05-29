@@ -82,7 +82,7 @@ else:
     localBlockCount=LocalBlockCout(height=0)
     session.add(localBlockCount)
     session.commit()
-i=0
+i=1
 
 while True:
     # time.sleep(0.01)
