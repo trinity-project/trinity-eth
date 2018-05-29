@@ -42,6 +42,12 @@ class Erc20Tx(Base):
         session.add(new_instance)
         session.commit()
 
+class LocalBlockCout(Base):
+    __tablename__ = 'local_block_count'
+    id = Column(Integer, primary_key=True)
+    height = Column(Integer)
+
+
 Base.metadata.create_all(engine)
 
 
@@ -51,10 +57,7 @@ Base.metadata.create_all(engine)
 
 
 
-class LocalBlockCout(Base):
-    __tablename__ = 'local_block_count'
-    id = Column(Integer, primary_key=True)
-    height = Column(Integer)
+
 
 
 
