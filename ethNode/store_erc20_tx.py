@@ -86,23 +86,27 @@ else:
 while True:
     # time.sleep(0.01)
     print (local_block_count)
+    try:
 
-    block_info=getblock(hex(local_block_count))
-    if block_info["result"]["transactions"]:
-        for tx in block_info["result"]["transactions"]:
-            if tx["to"]==setting.CONTRACT_ADDRESS:
+        block_info=getblock(hex(local_block_count))
+        if block_info["result"]["transactions"]:
+            for tx in block_info["result"]["transactions"]:
+                if tx["to"]==setting.CONTRACT_ADDRESS:
 
-                address_to = "0x"+tx["input"][34:74]
-                value = int(tx["input"][74:], 16)/(10**8)
-                address_from=tx["from"]
-                block_number=int(tx["blockNumber"],16)
-                tx_id=tx["hash"]
+                    address_to = "0x"+tx["input"][34:74]
+                    value = int(tx["input"][74:], 16)/(10**8)
+                    address_from=tx["from"]
+                    block_number=int(tx["blockNumber"],16)
+                    tx_id=tx["hash"]
 
-                Erc20Tx.save(tx_id,setting.CONTRACT_ADDRESS,address_from,address_to,value,block_number)
-    local_block_count+=1
-    localBlockCount.height=local_block_count
-    session.add(localBlockCount)
-    session.commit()
+                    Erc20Tx.save(tx_id,setting.CONTRACT_ADDRESS,address_from,address_to,value,block_number)
+        local_block_count+=1
+        localBlockCount.height=local_block_count
+        session.add(localBlockCount)
+        session.commit()
+
+    except:
+        time.sleep(15)
 
 
 
