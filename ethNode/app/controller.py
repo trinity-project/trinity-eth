@@ -43,3 +43,7 @@ def get_transaction_by_hash(txId):
 @jsonrpc.method("invokeContract")
 def invoke_contract(invoker,contractAddress,method,args):
     return service.invoke_contract(invoker,contractAddress,method,args)
+
+@jsonrpc.method("verifyTransfer")
+def verify_transfer(addressFrom,addressTo,value):
+    return service.verify_transfer(addressFrom,addressTo,value)

@@ -1,10 +1,12 @@
 import time
 
 import requests
+from decimal import Decimal
 
-from config import setting
+from ..config import setting
 
 from .ethClient import Client
+from .model import Erc20Tx
 
 eth_client=Client(eth_url=setting.ETH_URL)
 
@@ -84,3 +86,15 @@ def invoke_contract(invoker,contractAddress,method,args):
         return {
             "txData":res
         }
+
+
+def verify_transfer(addressFrom,addressTo,value):
+    item = Erc20Tx.query.filter_by(address_from=addressFrom,
+                                     address_to=addressTo,
+                                     value=Decimal(str(value)),
+                                     ).first()
+
+    if item:
+        return {"txId":item.tx_id}
+
+    return {}
