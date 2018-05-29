@@ -3,7 +3,7 @@ import time
 import requests
 from decimal import Decimal
 
-from ..config import setting
+from config import setting
 
 from .ethClient import Client
 from .model import Erc20Tx
