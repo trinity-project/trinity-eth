@@ -31,7 +31,7 @@ class Client(object):
 
         UnsignedTransaction = Transaction.exclude(['v', 'r', 's'])
         unsigned_tx = rlp.encode(tx, UnsignedTransaction)
-        before_hash = utils.sha3(unsigned_tx.encode())
+        before_hash = utils.sha3(unsigned_tx)
         return binascii.hexlify(unsigned_tx).decode(),binascii.hexlify(before_hash).decode()
 
     def construct_erc20_tx(self,addressFrom,addressTo,value,gasLimit=256000):
@@ -56,7 +56,7 @@ class Client(object):
 
         UnsignedTransaction = Transaction.exclude(['v', 'r', 's'])
         unsigned_tx = rlp.encode(tx, UnsignedTransaction)
-        before_hash = utils.sha3(unsigned_tx.encode())
+        before_hash = utils.sha3(unsigned_tx)
         return binascii.hexlify(unsigned_tx).decode(),binascii.hexlify(before_hash).decode()
 
 
