@@ -38,12 +38,7 @@ def get_price_from_coincapmarket(asset_type):
 # print("addr:",binascii.hexlify( addr))
 # pass
 
-input= "0xa9059cbb000000000000000000000000d307807304d95d13098bca2fe9d54ff748f99bb2000000000000000000000000000000000000000000000000000000001dcd6500"
 
-print(len(input))
-
-addressTo=input[34:74]
-value=int(input[74:],16)
 
 
 pass

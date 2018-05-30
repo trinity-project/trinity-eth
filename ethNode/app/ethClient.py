@@ -101,7 +101,7 @@ class Client(object):
         unsigned_tx=binascii.unhexlify(unsigned_tx.encode())
         r = signature[0:32]
         s = signature[32:64]
-        v = bytes(chr(signature[64] + 27).encode())
+        v = bytes(chr(signature[64]).encode())
 
         unsigned_items = rlp.decode(unsigned_tx)
         unsigned_items.extend([v, r, s])
