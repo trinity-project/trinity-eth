@@ -21,15 +21,16 @@ def construct_tx(addressFrom,addressTo,value,coinType=None):
     unsigned_tx_data,txHash=eth_client.construct_common_tx(addressFrom,addressTo,value)
     return {
         "txData":unsigned_tx_data,
-        "txHash":
+        "txHash":txHash
     }
 
 
 def construct_erc20_tx(addressFrom,addressTo,value):
 
-    unsigned_tx_data=eth_client.construct_erc20_tx(addressFrom,addressTo,value)
+    unsigned_tx_data,txHash=eth_client.construct_erc20_tx(addressFrom,addressTo,value)
     return {
-        "txData":unsigned_tx_data
+        "txData":unsigned_tx_data,
+        "txHash": txHash
     }
 
 def sign(unsignedTxData,privtKey):
