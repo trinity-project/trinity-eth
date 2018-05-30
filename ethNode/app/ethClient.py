@@ -31,7 +31,8 @@ class Client(object):
 
         UnsignedTransaction = Transaction.exclude(['v', 'r', 's'])
         unsigned_tx = rlp.encode(tx, UnsignedTransaction)
-        return binascii.hexlify(unsigned_tx).decode()
+        before_hash = utils.sha3(binascii.unhexlify(unsigned_tx.encode()))
+        return binascii.hexlify(unsigned_tx).decode(),binascii.hexlify(before_hash).decode()
 
     def construct_erc20_tx(self,addressFrom,addressTo,value,gasLimit=256000):
         contract_instance=self.get_contract_instance(setting.SmartContract["ERC20TNC"][0],
@@ -55,7 +56,8 @@ class Client(object):
 
         UnsignedTransaction = Transaction.exclude(['v', 'r', 's'])
         unsigned_tx = rlp.encode(tx, UnsignedTransaction)
-        return binascii.hexlify(unsigned_tx).decode()
+        before_hash = utils.sha3(binascii.unhexlify(unsigned_tx.encode()))
+        return binascii.hexlify(unsigned_tx).decode(),binascii.hexlify(before_hash).decode()
 
 
     def get_contract_instance(self, contract_address, abi):
