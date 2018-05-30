@@ -130,7 +130,7 @@ class Client(object):
         return self.web3.eth.getBalance(address)/(10**18)
 
     def get_balance_of_erc20(self,contract,address):
-        return contract.functions.balanceOf(address).call()
+        return contract.functions.balanceOf(address).call()/(10**8)
 
     def get_transaction_by_hash(self,txId):
         res=self.web3.eth.getTransaction(txId)
