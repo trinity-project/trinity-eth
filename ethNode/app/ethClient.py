@@ -109,8 +109,8 @@ class Client(object):
 
         signed_tx_data = rlp.encode(signed_items)
         print(binascii.hexlify(signed_tx_data))
-        tx_id = self.web3.eth.sendRawTransaction(signed_tx_data)
-        return "0x"+binascii.hexlify(tx_id).decode()
+        # tx_id = self.web3.eth.sendRawTransaction(signed_tx_data)
+        # return "0x"+binascii.hexlify(tx_id).decode()
 
 
     def sign_args(self,typeList, valueList, privtKey):
