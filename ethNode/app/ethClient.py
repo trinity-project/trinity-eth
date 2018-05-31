@@ -25,10 +25,9 @@ class Client(object):
             gasprice=self.web3.eth.gasPrice,
             startgas=gasLimit,
             to=addressTo,
-            value=value*(10**18),
+            value=int(value*(10**18)),
             data=b''
         )
-        print(value*(10**18))
         UnsignedTransaction = Transaction.exclude(['v', 'r', 's'])
         unsigned_tx = rlp.encode(tx, UnsignedTransaction)
         before_hash = utils.sha3(unsigned_tx)
