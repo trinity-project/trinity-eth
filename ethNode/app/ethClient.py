@@ -108,6 +108,7 @@ class Client(object):
         signed_items = unsigned_items
 
         signed_tx_data = rlp.encode(signed_items)
+        print(binascii.hexlify(signed_tx_data))
         tx_id = self.web3.eth.sendRawTransaction(signed_tx_data)
         return "0x"+binascii.hexlify(tx_id).decode()
 
