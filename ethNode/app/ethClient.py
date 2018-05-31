@@ -38,7 +38,7 @@ class Client(object):
                                                      setting.SmartContract["ERC20TNC"][1])
         tx_dict = contract_instance.functions.transfer(
             addressTo,
-            value
+            int(value*(10**8))
         ).buildTransaction({
             "gas": gasLimit,
             'gasPrice': self.web3.eth.gasPrice,
@@ -50,7 +50,7 @@ class Client(object):
             gasprice=tx_dict.get("gasPrice"),
             startgas=tx_dict.get("gas"),
             to=tx_dict.get("to"),
-            value=int(tx_dict.get("value")*(10**8)),
+            value=tx_dict.get("value"),
             data=binascii.unhexlify(tx_dict.get("data")[2:]))
 
         UnsignedTransaction = Transaction.exclude(['v', 'r', 's'])
