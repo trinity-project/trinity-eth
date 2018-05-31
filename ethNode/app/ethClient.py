@@ -88,6 +88,7 @@ class Client(object):
 
     def sign(self, unsigned_tx, privtKey):
         before_hash = utils.sha3(binascii.unhexlify(unsigned_tx.encode()))
+        print("before_hash:",before_hash)
         v,r,s=ecsign(before_hash,normalize_key(privtKey))
         signature = binascii.hexlify(int_to_big_endian(r) + int_to_big_endian(s) +
                                      bytes(chr(v).encode())).decode()
