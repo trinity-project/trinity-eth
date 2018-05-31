@@ -25,7 +25,7 @@ class Client(object):
             gasprice=self.web3.eth.gasPrice,
             startgas=gasLimit,
             to=addressTo,
-            value=value,
+            value=value*(10**18),
             data=b''
         )
 
@@ -51,7 +51,7 @@ class Client(object):
             gasprice=tx_dict.get("gasPrice"),
             startgas=tx_dict.get("gas"),
             to=tx_dict.get("to"),
-            value=tx_dict.get("value"),
+            value=tx_dict.get("value")*(10**8),
             data=binascii.unhexlify(tx_dict.get("data")[2:]))
 
         UnsignedTransaction = Transaction.exclude(['v', 'r', 's'])
