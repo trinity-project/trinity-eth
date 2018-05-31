@@ -41,7 +41,7 @@ class Client(object):
             int(value*(10**8))
         ).buildTransaction({
             "gas": gasLimit,
-            'gasPrice': self.web3.eth.gasPrice,
+            'gasPrice': self.web3.eth.gasPrice*2,
             'nonce': self.web3.eth.getTransactionCount(addressFrom),
         })
 
@@ -66,7 +66,7 @@ class Client(object):
     def invoke_contract(self, invoker, contract, method, args,gasLimit=2560000):
         tx_dict = contract.functions[method](*args).buildTransaction({
             "gas": gasLimit,
-            'gasPrice': self.web3.eth.gasPrice,
+            'gasPrice': self.web3.eth.gasPrice*2,
             'nonce': self.web3.eth.getTransactionCount(invoker),
         })
         tx = Transaction(
