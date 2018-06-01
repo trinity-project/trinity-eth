@@ -147,6 +147,6 @@ if __name__ == "__main__":
                          valueList=["0x3ae88fe370c39384fc16da2c9e768cf5d2495b48","0x537C8f3d3E18dF5517a58B3fB9D9143697996802",20,20,0],
                          privtKey="095e53c9c20e23fd01eaad953c01da9e9d3ed9bebcfed8e5b2c2fce94037d963")
 
-    print(a)
+    print(myclient.web3.eth.gasPrice)
 
     pass

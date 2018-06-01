@@ -32,13 +32,15 @@ class Erc20Tx(Base):
     address_from = Column(String(64))
     address_to = Column(String(64))
     value = Column(Numeric(16,8))
+    block_timestamp=Column(Integer)
 
 
     @staticmethod
-    def save(tx_id,contract,address_from,address_to,value,block_number):
+    def save(tx_id,contract,address_from,address_to,value,block_number,block_timestamp):
         new_instance = Erc20Tx(tx_id=tx_id,
                                 contract=contract,address_from=address_from,
-                                address_to=address_to,value=value,block_number=block_number)
+                                address_to=address_to,value=value,
+                               block_number=block_number,block_timestamp=block_timestamp)
         session.add(new_instance)
         session.commit()
 
@@ -97,9 +99,11 @@ while True:
                     value = int(tx["input"][74:], 16)/(10**8)
                     address_from=tx["from"]
                     block_number=int(tx["blockNumber"],16)
+                    block_timestamp=int(block_info["result"]["timestamp"],16)
                     tx_id=tx["hash"]
 
-                    Erc20Tx.save(tx_id,setting.CONTRACT_ADDRESS,address_from,address_to,value,block_number)
+                    Erc20Tx.save(tx_id,setting.CONTRACT_ADDRESS,address_from,
+                                 address_to,value,block_number,block_timestamp)
         local_block_count+=1
         localBlockCount.height=local_block_count
         session.add(localBlockCount)
