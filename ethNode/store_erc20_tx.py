@@ -101,6 +101,7 @@ while True:
 
                     address_to = "0x"+tx["input"][34:74]
                     value = int(tx["input"][74:], 16)/(10**8)
+                    print(value)
                     address_from=tx["from"]
                     block_number=int(tx["blockNumber"],16)
                     block_timestamp=int(block_info["result"]["timestamp"],16)
