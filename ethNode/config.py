@@ -17,7 +17,7 @@ class SettingHolder(object):
     def setup_mainnet(self):
         self.ETH_URL = ""
         self.PRIVTKEY=ENVIRON.get("PRIVTKEY")
-        self.PASSWDHASH=ENVIRON.get("PASSWDHASH")
+        self.PASSWD_HASH=ENVIRON.get("PASSWDHASH")
         self.REMOTE_ADDR=ENVIRON.get("REMOTEADDR")
         self.ADDRESS_FROM=ENVIRON.get("ADDRESS_FROM")
 
@@ -33,7 +33,7 @@ class SettingHolder(object):
         self.CONTRACT_ADDRESS="0x65096f2b7a8dc1592479f1911cd2b98dae4d2218"
 
         self.PRIVTKEY=ENVIRON.get("PRIVTKEY")
-        self.PASSW_DHASH="$2b$10$F7GVmj.eahbHMIUjOxooYuLBMqZaIGcJZ7KxufGfbxwGTErKCzNQm"
+        self.PASSWD_DHASH="$2b$10$F7GVmj.eahbHMIUjOxooYuLBMqZaIGcJZ7KxufGfbxwGTErKCzNQm"
         self.REMOTE_ADDR=ENVIRON.get("REMOTE_ADDR")
         self.ADDRESS_FROM=ENVIRON.get("ADDRESS_FROM")
 
