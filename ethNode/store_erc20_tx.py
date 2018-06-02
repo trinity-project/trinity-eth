@@ -101,15 +101,15 @@ while True:
 
                     address_to = "0x"+tx["input"][34:74]
                     value = int(tx["input"][74:], 16)/(10**8)
-                    print(int(tx["input"][74:], 16))
-                    print(value)
                     address_from=tx["from"]
                     block_number=int(tx["blockNumber"],16)
                     block_timestamp=int(block_info["result"]["timestamp"],16)
                     tx_id=tx["hash"]
-
-                    Erc20Tx.save(tx_id,setting.CONTRACT_ADDRESS,address_from,
+                    try:
+                        Erc20Tx.save(tx_id,setting.CONTRACT_ADDRESS,address_from,
                                  address_to,value,block_number,block_timestamp)
+                    except Exception as e:
+                        print(e)
         local_block_count+=1
         localBlockCount.height=local_block_count
         session.add(localBlockCount)
