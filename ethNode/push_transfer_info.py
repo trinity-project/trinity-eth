@@ -10,6 +10,9 @@ from sqlalchemy import Column, Integer, String, Numeric, Boolean, create_engine,
 from sqlalchemy.orm import sessionmaker
 from config import setting
 
+from logzero import logger,logfile
+
+logfile("push_transfer.log", maxBytes=1e6, backupCount=3)
 
 pymysql.install_as_MySQLdb()
 engine = create_engine('mysql://%s:%s@%s/%s' %(setting.MYSQLDATABASE["user"],
@@ -72,7 +75,10 @@ def TransferMonitor():
             if res==0:
                 exist_instance.has_pushed=True
                 exist_instance.save()
+                logger.info("push tx:{} sucess".format(exist_instance.tx_id))
                 # time.sleep(3)
+            else:
+                logger.info("push tx:{} fail".format(exist_instance.tx_id))
         else:
             time.sleep(30)
 
