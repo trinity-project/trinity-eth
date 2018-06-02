@@ -93,7 +93,7 @@ def get_receipt_status(txId):
 }
     res = requests.post(setting.ETH_URL,json=data).json()
     # print(res)
-    return int(res["result"]["status"])
+    return int(res["result"]["status"],16)
 
 
 localBlockCount = session.query(LocalBlockCout).first()
