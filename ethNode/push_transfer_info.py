@@ -51,12 +51,14 @@ def push_transfer(txId,addressFrom,addressTo,value,blockTimestamp):
         "value": value,
         "blockTimestamp":blockTimestamp
     }
-    try:
-        res = requests.post(setting.WEBAPI, json=data).json()
-        return res["Code"]
-    except:
-        return None
-
+    # try:
+    #     res = requests.post(setting.WEBAPI, json=data).json()
+    #     return res["Code"]
+    # except:
+    #     return None
+    res = requests.post(setting.WEBAPI, json=data).json()
+    print(res)
+    return res["Code"]
 def TransferMonitor():
 
 
@@ -73,6 +75,7 @@ def TransferMonitor():
                               exist_instance.address_to,
                               exist_instance.value,
                               exist_instance.block_timestamp)
+
             if res==0:
                 exist_instance.has_pushed=1
                 Erc20Tx.save(exist_instance,session)
