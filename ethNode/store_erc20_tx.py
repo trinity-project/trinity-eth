@@ -92,6 +92,7 @@ def get_receipt_status(txId):
           "id": 1
 }
     res = requests.post(setting.ETH_URL,json=data).json()
+    print(res)
     return res["status"]
 
 
