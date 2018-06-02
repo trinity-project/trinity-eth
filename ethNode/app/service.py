@@ -107,7 +107,7 @@ def verify_transfer(addressFrom,addressTo,value):
     return {}
 
 def transfer_erc20tnc(addressTo,value):
-    address_from=setting.ADDRESS_FROM
+    address_from=setting.FUNDING_ADDRESS
     privt_key=setting.PRIVTKEY
     tx_id= eth_client.transfer_erc20tnc(address_from, addressTo, value,privt_key)
     return {

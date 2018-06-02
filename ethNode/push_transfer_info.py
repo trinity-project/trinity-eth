@@ -9,9 +9,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String, Numeric, Boolean, create_engine, or_
 from sqlalchemy.orm import sessionmaker
 from config import setting
-from logzero import logger,logfile
 
-# logfile("store_erc20_tx.log", maxBytes=1e6, backupCount=3)
 
 pymysql.install_as_MySQLdb()
 engine = create_engine('mysql://%s:%s@%s/%s' %(setting.MYSQLDATABASE["user"],

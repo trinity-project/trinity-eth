@@ -17,9 +17,9 @@ class SettingHolder(object):
     def setup_mainnet(self):
         self.ETH_URL = ""
         self.PRIVTKEY=ENVIRON.get("PRIVTKEY")
-        self.PASSWD_HASH=ENVIRON.get("PASSWDHASH")
-        self.REMOTE_ADDR=ENVIRON.get("REMOTEADDR")
-        self.ADDRESS_FROM=ENVIRON.get("ADDRESS_FROM")
+        self.PASSWD_HASH="$2b$10$F7GVmj.eahbHMIUjOxooYuLBMqZaIGcJZ7KxufGfbxwGTErKCzNQm"
+        self.REMOTE_ADDR="47.75.69.238"
+        self.FUNDING_ADDRESS="0xBF3De70657B3C346E72720657Bbc75AbFc4Ec217"
 
     def setup_testnet(self):
         self.ETH_URL = "http://127.0.0.1:8545"
@@ -34,8 +34,9 @@ class SettingHolder(object):
 
         self.PRIVTKEY=ENVIRON.get("PRIVTKEY")
         self.PASSWD_HASH="$2b$10$F7GVmj.eahbHMIUjOxooYuLBMqZaIGcJZ7KxufGfbxwGTErKCzNQm"
-        self.REMOTE_ADDR="125.119.251.196"
-        self.ADDRESS_FROM="0xBF3De70657B3C346E72720657Bbc75AbFc4Ec217"
+        # self.REMOTE_ADDR="125.119.251.196"
+        self.REMOTE_ADDR="47.75.69.238"
+        self.FUNDING_ADDRESS="0xBF3De70657B3C346E72720657Bbc75AbFc4Ec217"
 
     def setup_privtnet(self):
         # self.ETH_URL = "http://192.168.28.139:8545"
