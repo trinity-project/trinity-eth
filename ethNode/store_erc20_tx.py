@@ -99,7 +99,6 @@ def get_receipt_status(txId):
 }
     try:
         res = requests.post(setting.ETH_URL,json=data).json()
-        print(res)
         return res["result"]
     except:
         return None
@@ -128,7 +127,7 @@ while True:
                 res=get_receipt_status(tx["hash"])
                 if not res:
                     logger.error("txId:{} get transaction receipt fail".format(tx["hash"]))
-                if res["status"]==1:
+                if res["status"]=="0x1":
                     address_to = "0x"+tx["input"][34:74]
                     value = int(tx["input"][74:], 16)/(10**8)
                     address_from=tx["from"]
