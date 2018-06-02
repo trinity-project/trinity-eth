@@ -132,7 +132,7 @@ while True:
                     value = int(tx["input"][74:], 16)/(10**8)
                     address_from=tx["from"]
                     block_number=int(tx["blockNumber"],16)
-                    block_timestamp=int(block_info["result"]["timestamp"],16)
+                    block_timestamp=int(block_info["timestamp"],16)
                     tx_id=tx["hash"]
 
                     Erc20Tx.save(tx_id,setting.CONTRACT_ADDRESS,address_from,
