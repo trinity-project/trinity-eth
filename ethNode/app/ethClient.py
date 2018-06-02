@@ -59,7 +59,7 @@ class Client(object):
         return binascii.hexlify(unsigned_tx).decode(),binascii.hexlify(before_hash).decode()
 
 
-    def transfer_erc20tnc(self,addressFrom,addressTo,value,privtKey,gasLimit=35600):
+    def transfer_erc20tnc(self,addressFrom,addressTo,value,privtKey,gasLimit=256000):
         contract_instance=self.get_contract_instance(setting.SmartContract["ERC20TNC"][0],
                                                      setting.SmartContract["ERC20TNC"][1])
         tx = contract_instance.functions.transfer(
