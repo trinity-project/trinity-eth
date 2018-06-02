@@ -79,7 +79,7 @@ def get_transaction_by_hash(txId):
 
 def get_transaction_receipt_by_hash(txId):
     res=eth_client.get_transaction_receipt_by_hash(txId)
-    return res
+    return dict(res)
 
 def invoke_contract(invoker,contractAddress,method,args):
     exist_abi=setting.ABI_MAPPING.get(contractAddress)
