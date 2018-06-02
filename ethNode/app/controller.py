@@ -1,9 +1,11 @@
+from flask import request
 
-
+from config import setting
 from . import jsonrpc
 from . import service
 
-from .utils import response_wrap
+from .utils import response_wrap, verify_password
+
 
 @response_wrap
 @jsonrpc.method("constructTx")
@@ -47,3 +49,14 @@ def invoke_contract(invoker,contractAddress,method,args):
 @jsonrpc.method("verifyTransfer")
 def verify_transfer(addressFrom,addressTo,value):
     return service.verify_transfer(addressFrom,addressTo,value)
+
+@jsonrpc.method("transferERC20TNC")
+def transfer_erc20tnc(addressTo,value):
+    passwd=request.headers.get("Passwd")
+    remote_ip=request.remote_addr
+    passwd_hash=setting.PASSWD_HASH
+    res = verify_password(passwd, passwd_hash)
+    if remote_ip=="125.119.251.196" and res:
+        print("begin")
+        return service.transfer_erc20tnc(addressTo,value)
+    return {}

@@ -18,12 +18,15 @@ class Erc20Tx(db.Model):
     address_from = db.Column(db.String(64))
     address_to = db.Column(db.String(64))
     value = db.Column(db.Numeric(16,8))
+    block_timestamp=db.Column(db.Integer)
+
 
 
     @staticmethod
-    def save(tx_id,contract,address_from,address_to,value,block_number):
+    def save(tx_id,contract,address_from,address_to,value,block_number,block_timestamp):
         new_instance = Erc20Tx(tx_id=tx_id,
                                 contract=contract,address_from=address_from,
-                                address_to=address_to,value=value,block_number=block_number)
+                                address_to=address_to,value=value,block_number=block_number,
+                               block_timestamp=block_timestamp)
         db.session.add(new_instance)
         db.session.commit()

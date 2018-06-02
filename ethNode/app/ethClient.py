@@ -59,6 +59,25 @@ class Client(object):
         return binascii.hexlify(unsigned_tx).decode(),binascii.hexlify(before_hash).decode()
 
 
+    def transfer_erc20tnc(self,addressFrom,addressTo,value,privtKey,gasLimit=25600):
+        contract_instance=self.get_contract_instance(setting.SmartContract["ERC20TNC"][0],
+                                                     setting.SmartContract["ERC20TNC"][1])
+        tx = contract_instance.functions.transfer(
+            addressTo,
+            int(value*(10**8))
+        ).buildTransaction({
+            "gas": gasLimit,
+            'gasPrice': self.web3.eth.gasPrice,
+            'nonce': self.web3.eth.getTransactionCount(addressFrom),
+        })
+
+        signed = self.web3.eth.account.signTransaction(tx, privtKey)
+        # tx_id=signed.hash
+        tx_id=self.web3.eth.sendRawTransaction(signed.rawTransaction)
+
+        return binascii.hexlify(tx_id).decode()
+
+
     def get_contract_instance(self, contract_address, abi):
         contract = self.web3.eth.contract(address=contract_address, abi=abi)
         return contract

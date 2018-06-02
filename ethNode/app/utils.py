@@ -28,6 +28,20 @@ def get_price_from_coincapmarket(asset_type):
     print(coincapmarket_api)
     res=requests.get(coincapmarket_api).json()
     return res.get("data").get("quotes").get("CNY").get("price")
+
+def verify_password(password, hashed):
+    import bcrypt
+    if isinstance(password, str):
+        password = password.encode("utf-8")
+    if isinstance(hashed, str):
+        hashed = hashed.encode("utf-8")
+    try:
+        result = bcrypt.checkpw(password, hashed)
+    except Exception:
+        result = False
+    return result
+
+
 # fbadf8a0794e71f425c2b0b025fa3d2543d81792d8e07e8aaeba99a5d0e77273
 key="095e53c9c20e23fd01eaad953c01da9e9d3ed9bebcfed8e5b2c2fce94037d963"
 # key="fbadf8a0794e71f425c2b0b025fa3d2543d81792d8e07e8aaeba99a5d0e77273"
@@ -47,3 +61,11 @@ key="095e53c9c20e23fd01eaad953c01da9e9d3ed9bebcfed8e5b2c2fce94037d963"
 # pass
 #
 # 0x75381f959c48214b960b4a2ce8a6b878b66ecd12
+
+API_VERIFY = {
+    "password": "!QWWpigxo1970q~",
+    "hashed": "$2b$10$F7GVmj.eahbHMIUjOxooYuLBMqZaIGcJZ7KxufGfbxwGTErKCzNQm"
+}
+
+
+
