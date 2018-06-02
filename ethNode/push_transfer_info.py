@@ -48,17 +48,15 @@ def push_transfer(txId,addressFrom,addressTo,value,blockTimestamp):
         "txId":txId,
         "addressFrom": addressFrom,
         "addressTo": addressTo,
-        "value": value,
+        "value": str(value),
         "blockTimestamp":blockTimestamp
     }
-    # try:
-    #     res = requests.post(setting.WEBAPI, json=data).json()
-    #     return res["Code"]
-    # except:
-    #     return None
-    res = requests.post(setting.WEBAPI, json=data).json()
-    print(res)
-    return res["Code"]
+    try:
+        res = requests.post(setting.WEBAPI, json=data).json()
+        return res["Code"]
+    except:
+        return None
+
 def TransferMonitor():
 
 
