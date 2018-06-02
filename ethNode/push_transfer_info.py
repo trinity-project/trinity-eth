@@ -23,7 +23,7 @@ engine = create_engine('mysql://%s:%s@%s/%s' %(setting.MYSQLDATABASE["user"],
 
 Session = sessionmaker(bind=engine)
 Base = declarative_base()
-session=Session()
+
 
 class Erc20Tx(Base):
     __tablename__ = 'erc20_tx'
@@ -37,8 +37,8 @@ class Erc20Tx(Base):
     block_timestamp=Column(Integer)
     has_pushed=Column(Boolean,default=False)
 
-
-    def save(self):
+    @staticmethod
+    def save(self,session):
         session.add(self)
         session.commit()
 
@@ -61,10 +61,11 @@ def TransferMonitor():
 
 
     while True:
+        session = Session()
         exist_instance = session.query(Erc20Tx).filter(
             or_(Erc20Tx.address_from == setting.FUNDING_ADDRESS,
                 Erc20Tx.address_to == setting.FUNDING_ADDRESS),
-            Erc20Tx.has_pushed==False
+            Erc20Tx.has_pushed==0
         ).first()
         if exist_instance:
             res=push_transfer(exist_instance.tx_id,
@@ -73,8 +74,8 @@ def TransferMonitor():
                               exist_instance.value,
                               exist_instance.block_timestamp)
             if res==0:
-                exist_instance.has_pushed=True
-                exist_instance.save()
+                exist_instance.has_pushed=1
+                Erc20Tx.save(exist_instance,session)
                 logger.info("push tx:{} sucess".format(exist_instance.tx_id))
                 # time.sleep(3)
             else:

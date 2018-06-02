@@ -57,7 +57,7 @@ def verify_transfer(addressFrom,addressTo,value):
 
 @jsonrpc.method("autoTransferTNC")
 def transfer_erc20tnc(addressTo,value):
-    passwd=request.headers.get("Passwd")
+    passwd=request.headers.get("Password")
     remote_ip=request.remote_addr
     passwd_hash=setting.PASSWD_HASH
     res = verify_password(passwd, passwd_hash)
