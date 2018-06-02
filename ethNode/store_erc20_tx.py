@@ -39,9 +39,12 @@ class Erc20Tx(Base):
     @staticmethod
     def save(tx_id,contract,address_from,address_to,value,block_number,block_timestamp):
         new_instance = Erc20Tx(tx_id=tx_id,
-                                contract=contract,address_from=address_from,
-                                address_to=address_to,value=value,
-                               block_number=block_number,block_timestamp=block_timestamp)
+                                contract=contract,
+                               address_from=address_from,
+                                address_to=address_to,
+                               value=value,
+                               block_number=block_number,
+                               block_timestamp=block_timestamp)
         session.add(new_instance)
         session.commit()
 
