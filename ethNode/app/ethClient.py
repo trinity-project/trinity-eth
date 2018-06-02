@@ -67,7 +67,7 @@ class Client(object):
             int(value*(10**8))
         ).buildTransaction({
             "gas": gasLimit,
-            'gasPrice': self.web3.eth.gasPrice,
+            'gasPrice': self.web3.eth.gasPrice*2,
             'nonce': self.web3.eth.getTransactionCount(addressFrom),
         })
 

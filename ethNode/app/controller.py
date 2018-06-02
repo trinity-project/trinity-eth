@@ -56,7 +56,6 @@ def transfer_erc20tnc(addressTo,value):
     remote_ip=request.remote_addr
     passwd_hash=setting.PASSWD_HASH
     res = verify_password(passwd, passwd_hash)
-    if remote_ip=="125.119.251.196" and res:
-        print("begin")
+    if remote_ip== setting.REMOTE_ADDR and res:
         return service.transfer_erc20tnc(addressTo,value)
     return {}

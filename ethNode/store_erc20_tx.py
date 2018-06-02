@@ -110,7 +110,8 @@ while True:
         session.add(localBlockCount)
         session.commit()
 
-    except:
+    except Exception as e:
+        print(e)
         time.sleep(15)
 
 

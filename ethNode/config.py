@@ -34,8 +34,8 @@ class SettingHolder(object):
 
         self.PRIVTKEY=ENVIRON.get("PRIVTKEY")
         self.PASSWD_HASH="$2b$10$F7GVmj.eahbHMIUjOxooYuLBMqZaIGcJZ7KxufGfbxwGTErKCzNQm"
-        self.REMOTE_ADDR=ENVIRON.get("REMOTE_ADDR")
-        self.ADDRESS_FROM=ENVIRON.get("ADDRESS_FROM")
+        self.REMOTE_ADDR="125.119.251.196"
+        self.ADDRESS_FROM="0xBF3De70657B3C346E72720657Bbc75AbFc4Ec217"
 
     def setup_privtnet(self):
         # self.ETH_URL = "http://192.168.28.139:8545"
