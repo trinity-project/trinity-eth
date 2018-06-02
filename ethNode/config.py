@@ -37,6 +37,7 @@ class SettingHolder(object):
         # self.REMOTE_ADDR="125.119.251.196"
         self.REMOTE_ADDR="47.75.69.238"
         self.FUNDING_ADDRESS="0xBF3De70657B3C346E72720657Bbc75AbFc4Ec217"
+        self.WEBAPI = "http://tokenswap.trinity.tech/monitor/transactions"
 
     def setup_privtnet(self):
         # self.ETH_URL = "http://192.168.28.139:8545"
