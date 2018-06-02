@@ -156,6 +156,10 @@ class Client(object):
         res=self.web3.eth.getTransaction(txId)
         return res
 
+    def get_transaction_receipt_by_hash(self,txId):
+        res=self.web3.eth.getTransactionReceipt(txId)
+        return res
+
 if __name__ == "__main__":
     myclient = Client("http://192.168.214.178:8545")
     contract = myclient.get_contract_instance(contract_address=setting.SmartContract["ERC20TNC"][0],

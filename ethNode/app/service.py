@@ -77,7 +77,9 @@ def get_transaction_by_hash(txId):
         return {"onChain":True}
     return {"onChain":False}
 
-
+def get_transaction_receipt_by_hash(txId):
+    res=eth_client.get_transaction_receipt_by_hash(txId)
+    return res
 
 def invoke_contract(invoker,contractAddress,method,args):
     exist_abi=setting.ABI_MAPPING.get(contractAddress)

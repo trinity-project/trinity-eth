@@ -40,6 +40,11 @@ def get_balance(address,erc20):
 def get_transaction_by_hash(txId):
     return service.get_transaction_by_hash(txId)
 
+@response_wrap
+@jsonrpc.method("getTransactionReceiptByHash")
+def get_transaction_receipt_by_hash(txId):
+    return service.get_transaction_receipt_by_hash(txId)
+
 
 @response_wrap
 @jsonrpc.method("invokeContract")
