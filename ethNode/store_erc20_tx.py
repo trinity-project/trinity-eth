@@ -83,6 +83,18 @@ def getblock(blockNumber):
     return res
 
 
+def get_receipt_status(txId):
+
+    data = {
+          "jsonrpc": "2.0",
+          "method": "eth_getTransactionReceipt",
+          "params": [txId],
+          "id": 1
+}
+    res = requests.post(setting.ETH_URL,json=data).json()
+    return res["status"]
+
+
 localBlockCount = session.query(LocalBlockCout).first()
 if localBlockCount:
 
@@ -102,17 +114,22 @@ while True:
         if block_info["result"]["transactions"]:
             for tx in block_info["result"]["transactions"]:
                 if tx["to"]==setting.CONTRACT_ADDRESS:
+                    status=get_receipt_status(tx["hash"])
+                    print(status)
+                    if status:
+                        address_to = "0x"+tx["input"][34:74]
+                        value = int(tx["input"][74:], 16)/(10**8)
+                        address_from=tx["from"]
+                        block_number=int(tx["blockNumber"],16)
+                        block_timestamp=int(block_info["result"]["timestamp"],16)
+                        tx_id=tx["hash"]
+                        try:
+                            Erc20Tx.save(tx_id,setting.CONTRACT_ADDRESS,address_from,
+                                     address_to,value,block_number,block_timestamp)
+                        except Exception as e:
+                            pass
 
-                    address_to = "0x"+tx["input"][34:74]
-                    value = int(tx["input"][74:], 16)/(10**8)
-                    address_from=tx["from"]
-                    block_number=int(tx["blockNumber"],16)
-                    block_timestamp=int(block_info["result"]["timestamp"],16)
-                    tx_id=tx["hash"]
-                    try:
-                        Erc20Tx.save(tx_id,setting.CONTRACT_ADDRESS,address_from,
-                                 address_to,value,block_number,block_timestamp)
-                    except Exception as e:
+                    else:
                         pass
         local_block_count+=1
         localBlockCount.height=local_block_count
