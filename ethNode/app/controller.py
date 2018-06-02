@@ -55,7 +55,7 @@ def invoke_contract(invoker,contractAddress,method,args):
 def verify_transfer(addressFrom,addressTo,value):
     return service.verify_transfer(addressFrom,addressTo,value)
 
-@jsonrpc.method("transferERC20TNC")
+@jsonrpc.method("autoTransferTNC")
 def transfer_erc20tnc(addressTo,value):
     passwd=request.headers.get("Passwd")
     remote_ip=request.remote_addr
