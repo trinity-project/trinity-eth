@@ -106,5 +106,5 @@ def transfer_erc20tnc(addressTo,value):
     privt_key=setting.PRIVTKEY
     tx_id= eth_client.transfer_erc20tnc(address_from, addressTo, value,privt_key)
     return {
-        "txId":tx_id
+        "txId":"0x"+tx_id
     }
