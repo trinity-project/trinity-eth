@@ -44,6 +44,9 @@ class Erc20Tx(Base):
 
 
 def push_transfer(txId,addressFrom,addressTo,value,blockTimestamp):
+    headers={
+        "Password":"!QWWpigxo1970q~"
+    }
     data = {
         "txId":txId,
         "addressFrom": addressFrom,
@@ -52,7 +55,7 @@ def push_transfer(txId,addressFrom,addressTo,value,blockTimestamp):
         "blockTimestamp":blockTimestamp
     }
     try:
-        res = requests.post(setting.WEBAPI, json=data).json()
+        res = requests.post(setting.WEBAPI, json=data,headers=headers).json()
         return res["Code"]
     except:
         return None
