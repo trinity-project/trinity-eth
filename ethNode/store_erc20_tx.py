@@ -36,7 +36,7 @@ class Erc20Tx(Base):
     address_to = Column(String(64),index=True)
     value = Column(Numeric(16,8))
     block_timestamp=Column(Integer)
-    hash_pushed=Column(Boolean,default=False)
+    has_pushed=Column(Boolean,default=False)
 
 
     @staticmethod
