@@ -46,7 +46,10 @@ class Erc20Tx(Base):
                                block_number=block_number,
                                block_timestamp=block_timestamp)
         session.add(new_instance)
-        session.commit()
+        try:
+            session.commit()
+        except:
+            session.rollback()
 
 class LocalBlockCout(Base):
     __tablename__ = 'local_block_count'
