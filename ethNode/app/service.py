@@ -4,6 +4,7 @@ import requests
 from decimal import Decimal
 
 from config import setting
+from hexbytes import HexBytes
 
 from .ethClient import Client
 from .model import Erc20Tx
@@ -82,7 +83,12 @@ def get_transaction_receipt_by_hash(txId):
     print(res)
     print(type(res))
     print(dir(res))
-    return res
+    dict_res=dict(res)
+    for k,v in dict_res.items():
+        if isinstance(v,HexBytes):
+            dict_res[k]=v.hex()
+
+    return dict_res
 
 def invoke_contract(invoker,contractAddress,method,args):
     exist_abi=setting.ABI_MAPPING.get(contractAddress)
