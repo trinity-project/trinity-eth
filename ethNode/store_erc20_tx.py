@@ -12,7 +12,9 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String, Numeric,Boolean,create_engine
 from sqlalchemy.orm import sessionmaker
 from config import setting
+from logzero import logger,logfile
 
+logfile("store_erc20_tx.log", maxBytes=1e6, backupCount=3)
 
 pymysql.install_as_MySQLdb()
 engine = create_engine('mysql://%s:%s@%s/%s' %(setting.MYSQLDATABASE["user"],
@@ -79,8 +81,12 @@ def getblock(blockNumber):
           "params": [blockNumber,True],
           "id": 1
 }
-    res = requests.post(setting.ETH_URL,json=data).json()
-    return res
+
+    try:
+        res = requests.post(setting.ETH_URL,json=data).json()
+        return res["result"]
+    except:
+        return None
 
 
 def get_receipt_status(txId):
@@ -91,9 +97,11 @@ def get_receipt_status(txId):
           "params": [txId],
           "id": 1
 }
-    res = requests.post(setting.ETH_URL,json=data).json()
-    # print(res)
-    return int(res["result"]["status"],16)
+    try:
+        res = requests.post(setting.ETH_URL,json=data).json()
+        return res["result"]
+    except:
+        return None
 
 
 localBlockCount = session.query(LocalBlockCout).first()
@@ -107,39 +115,38 @@ else:
     session.commit()
 
 while True:
-    # time.sleep(0.01)
     print (local_block_count)
-    try:
 
-        block_info=getblock(hex(local_block_count))
-        if block_info["result"]["transactions"]:
-            for tx in block_info["result"]["transactions"]:
-                if tx["to"]==setting.CONTRACT_ADDRESS:
-                    status=get_receipt_status(tx["hash"])
-                    print(status)
-                    if status:
-                        address_to = "0x"+tx["input"][34:74]
-                        value = int(tx["input"][74:], 16)/(10**8)
-                        address_from=tx["from"]
-                        block_number=int(tx["blockNumber"],16)
-                        block_timestamp=int(block_info["result"]["timestamp"],16)
-                        tx_id=tx["hash"]
-                        try:
-                            Erc20Tx.save(tx_id,setting.CONTRACT_ADDRESS,address_from,
-                                     address_to,value,block_number,block_timestamp)
-                        except Exception as e:
-                            pass
-
-                    else:
-                        pass
-        local_block_count+=1
-        localBlockCount.height=local_block_count
-        session.add(localBlockCount)
-        session.commit()
-
-    except Exception as e:
-        print(e)
+    block_info=getblock(hex(local_block_count))
+    if not block_info:
         time.sleep(15)
+        continue
+    if block_info["transactions"]:
+        for tx in block_info["transactions"]:
+            if tx["to"]==setting.CONTRACT_ADDRESS:
+                res=get_receipt_status(tx["hash"])
+                if not res:
+                    logger.error("txId:{} get transaction receipt fail".format(tx["hash"]))
+                if res["status"]==1:
+                    address_to = "0x"+tx["input"][34:74]
+                    value = int(tx["input"][74:], 16)/(10**8)
+                    address_from=tx["from"]
+                    block_number=int(tx["blockNumber"],16)
+                    block_timestamp=int(block_info["result"]["timestamp"],16)
+                    tx_id=tx["hash"]
+
+                    Erc20Tx.save(tx_id,setting.CONTRACT_ADDRESS,address_from,
+                             address_to,value,block_number,block_timestamp)
+
+
+                else:
+                    logger.info("txId:{} transaction receipt status is fail".format(tx["hash"]))
+    local_block_count+=1
+    localBlockCount.height=local_block_count
+    session.add(localBlockCount)
+    session.commit()
+
+
 
 
 
