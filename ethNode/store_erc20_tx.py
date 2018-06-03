@@ -163,7 +163,7 @@ while True:
                     block_number=int(tx["blockNumber"],16)
                     block_timestamp=int(block_info["timestamp"],16)
                     tx_id=tx["hash"]
-
+                    logger.info("txid:{},addressFrom:{},addressTo:{},value:{}".format(tx_id,address_from,address_to,value))
                     Erc20Tx.save(tx_id,setting.CONTRACT_ADDRESS,address_from,
                              address_to,value,block_number,block_timestamp)
 
