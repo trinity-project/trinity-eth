@@ -82,8 +82,8 @@ def TransferMonitor():
 
             if res==0:
                 exist_instance.has_pushed=1
-                Erc20Tx.save(exist_instance,session)
                 logger.info("push tx:{} sucess".format(exist_instance.tx_id))
+                Erc20Tx.save(exist_instance,session)
             else:
                 logger.info("push tx:{} fail".format(exist_instance.tx_id))
                 session.close()
