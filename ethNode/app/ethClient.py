@@ -63,7 +63,7 @@ class Client(object):
         contract_instance=self.get_contract_instance(setting.SmartContract["ERC20TNC"][0],
                                                      setting.SmartContract["ERC20TNC"][1])
         tx = contract_instance.functions.transfer(
-            addressTo,
+            checksum_encode(addressTo),
             int(value*(10**8))
         ).buildTransaction({
             "gas": gasLimit,
