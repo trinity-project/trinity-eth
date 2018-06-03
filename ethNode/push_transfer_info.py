@@ -88,7 +88,7 @@ def TransferMonitor():
                 # time.sleep(3)
             else:
                 logger.info("push tx:{} fail".format(exist_instance.tx_id))
-                time.sleep(3)
+                # time.sleep(3)
         else:
             session.close()
             time.sleep(30)
