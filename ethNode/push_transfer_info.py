@@ -23,7 +23,6 @@ engine = create_engine('mysql://%s:%s@%s/%s' %(setting.MYSQLDATABASE["user"],
 
 Session = sessionmaker(bind=engine)
 Base = declarative_base()
-session = Session()
 
 class Erc20Tx(Base):
     __tablename__ = 'erc20_tx'
@@ -68,8 +67,7 @@ def TransferMonitor():
 
 
     while True:
-        # session = Session()
-        session.flush()
+        session = Session()
         exist_instance = session.query(Erc20Tx).filter(
             or_(Erc20Tx.address_from == setting.FUNDING_ADDRESS,
                 Erc20Tx.address_to == setting.FUNDING_ADDRESS),
@@ -86,9 +84,8 @@ def TransferMonitor():
                 exist_instance.has_pushed=1
                 Erc20Tx.save(exist_instance,session)
                 logger.info("push tx:{} sucess".format(exist_instance.tx_id))
-                # time.sleep(3)
             else:
-                # session.close()
+                session.close()
                 logger.info("push tx:{} fail".format(exist_instance.tx_id))
                 # time.sleep(3)
         else:
