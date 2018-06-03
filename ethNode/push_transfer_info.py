@@ -87,10 +87,11 @@ def TransferMonitor():
                 logger.info("push tx:{} sucess".format(exist_instance.tx_id))
                 # time.sleep(3)
             else:
+                session.close()
                 logger.info("push tx:{} fail".format(exist_instance.tx_id))
                 # time.sleep(3)
         else:
-            session.close()
+
             time.sleep(30)
 
 if __name__ == "__main__":
