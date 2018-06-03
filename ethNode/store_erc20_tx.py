@@ -171,7 +171,6 @@ while True:
                 else:
                     logger.info("txId:{} transaction receipt status is fail".format(tx["hash"]))
     local_block_count+=1
-    print(local_block_count)
     localBlockCount.height=local_block_count
     LocalBlockCout.update(localBlockCount)
 
