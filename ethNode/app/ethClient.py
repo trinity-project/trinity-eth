@@ -1,7 +1,7 @@
 import binascii
 import rlp
 from ethereum import utils
-from ethereum.utils import ecsign, normalize_key,int_to_big_endian
+from ethereum.utils import ecsign, normalize_key, int_to_big_endian, checksum_encode
 from web3 import Web3, HTTPProvider
 from ethereum.transactions import Transaction
 from config import setting
@@ -37,7 +37,7 @@ class Client(object):
         contract_instance=self.get_contract_instance(setting.SmartContract["ERC20TNC"][0],
                                                      setting.SmartContract["ERC20TNC"][1])
         tx_dict = contract_instance.functions.transfer(
-            addressTo,
+            checksum_encode(addressTo),
             int(value*(10**8))
         ).buildTransaction({
             "gas": gasLimit,

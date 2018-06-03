@@ -10,13 +10,13 @@ from py_ecc.secp256k1 import privtopub
 from solc import compile_source, compile_files
 from ethereum import utils
 from ethereum.utils import ecsign, ecrecover_to_pub, privtoaddr, big_endian_to_int, normalize_key, int_to_big_endian, \
-    safe_ord
+    safe_ord, check_checksum, checksum_encode
 from web3 import Web3, HTTPProvider
 import rlp
 from ethereum.transactions import Transaction
 
 # w3 = Web3(HTTPProvider('http://192.168.28.139:8545'))
-w3 = Web3(HTTPProvider('http://192.168.28.139:8545'))
+# w3 = Web3(HTTPProvider('http://192.168.28.139:8545'))
 
 # method=binascii.hexlify( w3.sha3(text="Mike(address)"))
 
@@ -170,18 +170,18 @@ def deploy_contract(contract_source_code,addressFrom,privtKey):
 #     data=b''
 # )
 
-tx = Transaction(
-    nonce=98,
-    gasprice=w3.eth.gasPrice,
-    startgas=2560000,
-    to="0x537C8f3d3E18dF5517a58B3fB9D9143697996802",
-    value=100,
-    data=b'',
-    # v=28,
-    # r=96837623906486680784052655012985722878022151455312662607219766671968890562214,
-    # s=14092329712025910985667934767468484568673182721842620151437634408917438344336
-
-)
+# tx = Transaction(
+#     nonce=98,
+#     gasprice=w3.eth.gasPrice,
+#     startgas=2560000,
+#     to="0x537C8f3d3E18dF5517a58B3fB9D9143697996802",
+#     value=100,
+#     data=b'',
+#     # v=28,
+#     # r=96837623906486680784052655012985722878022151455312662607219766671968890562214,
+#     # s=14092329712025910985667934767468484568673182721842620151437634408917438344336
+#
+# )
 
 
 privtKey="b6a03207128827eaae0d31d97a7a6243de31f2baf99eabd764e33389ecf436fc"
@@ -234,7 +234,7 @@ privtKey="b6a03207128827eaae0d31d97a7a6243de31f2baf99eabd764e33389ecf436fc"
 # print ("signed_tx:",signed_tx)
 
 
-# pub1=privtopub("095e53c9c20e23fd01eaad953c01da9e9d3ed9bebcfed8e5b2c2fce94037d963")
+pub1=privtopub("095e53c9c20e23fd01eaad953c01da9e9d3ed9bebcfed8e5b2c2fce94037d963")
 
 class Client(object):
 
@@ -419,14 +419,14 @@ abi=[{"constant": True, "inputs": [], "name": "name",
                                                       {"indexed": False, "name": "value", "type": "uint256"}],
                                                                                          "name": "Burn",
                                                                                          "type": "event"}]
-my_contract = w3.eth.contract(address=address,abi=abi)
+# my_contract = w3.eth.contract(address=address,abi=abi)
 
-my_client=Client("http://192.168.28.139:8545")
-contract_instance=my_client.get_contract_instance(address,abi)
-transc=my_client.invoke_contract(contract_instance,"transfer",("0x3aE88fe370c39384FC16dA2C9e768Cf5d2495b48",100))
-print(transc)
-unsigned_tx_data=my_client.construct_erc20_tx(transc)
-print(unsigned_tx_data)
+# my_client=Client("http://192.168.28.139:8545")
+# contract_instance=my_client.get_contract_instance(address,abi)
+# transc=my_client.invoke_contract(contract_instance,"transfer",("0x3aE88fe370c39384FC16dA2C9e768Cf5d2495b48",100))
+# print(transc)
+# unsigned_tx_data=my_client.construct_erc20_tx(transc)
+# print(unsigned_tx_data)
 
 
 # print(w3.eth.getBalance("0x9dA26FC2E1D6Ad9FDD46138906b0104ae68a65D8"))
@@ -476,3 +476,21 @@ pass
 
 # [b'b', b'\x040\xe24\x00', b"'\x10\x00", b'S|\x8f=>\x18\xdfU\x17\xa5\x8b?\xb9\xd9\x146\x97\x99h\x02', b'd', b'']
 # [b'b', b'\x040\xe24\x00', b"'\x10\x00", b'S|\x8f=>\x18\xdfU\x17\xa5\x8b?\xb9\xd9\x146\x97\x99h\x02', b'd', b'', b'\x1c', b"\xd6\x18'\x1e\x1es\xf3\x11z\xb9{\xc6\xe6\x94\x87\xbf\xe2P\xf4\n\xfb[\xbb<9E\xddI\xe2\xe4\xa6\xa6", b"\x1f'\xf9\xd8t .\xc1Do\x18\xe3\x88!\xb7\xfc\xd7\xe3\xe6\xc6&\x06\x93\x12\xb5\x95\xc6\xae\xe0T\xac\x90"]
+
+#
+# def checksum_encode(addr): # Takes a 20-byte binary address as input
+#     o = ''
+#     v = utils.big_endian_to_int(utils.sha3(addr))
+#     for i, c in enumerate(addr.encode()):
+#         if c in '0123456789':
+#             o += c
+#         else:
+#             o += c.upper() if (v & (2**(255 - i))) else c.lower()
+#     return '0x'+o
+
+# dd=checksum_encode("8AB0FC62b95AA25EE0FBd80eDc1252DDa670Aa6C")
+# print(dd)
+dd=check_checksum("0x8aB0FC62b95AA25EE0FBd80eDc1252DDa670Aa6C")
+print(dd)
+cc=checksum_encode("0x8AB0FC62b95AA25EE0FBd80eDc1252DDa670Aa6c")
+print(cc)
