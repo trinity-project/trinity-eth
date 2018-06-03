@@ -90,7 +90,7 @@ def TransferMonitor():
                 # time.sleep(3)
         else:
 
-            time.sleep(30)
+            time.sleep(0.00001)
 
 if __name__ == "__main__":
     TransferMonitor()
