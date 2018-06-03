@@ -23,6 +23,8 @@ class SettingHolder(object):
         self.ABI_MAPPING = {
             "0xc9ad73d11d272c95b5a2c48780a55b6b3c726cac": mainnet_testnet_abi
         }
+
+        self.CONTRACT_ADDRESS="0xc9ad73d11d272c95b5a2c48780a55b6b3c726cac"
         self.PRIVTKEY=ENVIRON.get("PRIVTKEY")
         self.PASSWD_HASH="$2b$10$F7GVmj.eahbHMIUjOxooYuLBMqZaIGcJZ7KxufGfbxwGTErKCzNQm"
         self.REMOTE_ADDR="47.75.69.238"
