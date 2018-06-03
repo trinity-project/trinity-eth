@@ -85,8 +85,8 @@ def TransferMonitor():
                 Erc20Tx.save(exist_instance,session)
                 logger.info("push tx:{} sucess".format(exist_instance.tx_id))
             else:
-                session.close()
                 logger.info("push tx:{} fail".format(exist_instance.tx_id))
+                session.close()
                 # time.sleep(3)
         else:
             session.close()
