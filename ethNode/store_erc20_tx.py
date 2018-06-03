@@ -152,7 +152,7 @@ while True:
         continue
     if block_info["transactions"]:
         for tx in block_info["transactions"]:
-            if tx["to"]==setting.CONTRACT_ADDRESS:
+            if tx["to"]==setting.CONTRACT_ADDRESS and tx["input"][:10]=="0xa9059cbb":
                 res=get_receipt_status(tx["hash"])
                 if not res:
                     logger.error("txId:{} get transaction receipt fail".format(tx["hash"]))
