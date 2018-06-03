@@ -69,6 +69,7 @@ def TransferMonitor():
 
     while True:
         # session = Session()
+        session.flush()
         exist_instance = session.query(Erc20Tx).filter(
             or_(Erc20Tx.address_from == setting.FUNDING_ADDRESS,
                 Erc20Tx.address_to == setting.FUNDING_ADDRESS),
