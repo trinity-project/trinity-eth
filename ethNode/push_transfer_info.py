@@ -39,9 +39,13 @@ class Erc20Tx(Base):
 
     @staticmethod
     def save(self,session):
-        session.add(self)
-        session.commit()
-
+        try:
+            session.add(self)
+            session.commit()
+        except:
+            session.roolback()
+        finally:
+            session.close()
 
 def push_transfer(txId,addressFrom,addressTo,value,blockTimestamp):
     headers={
@@ -84,6 +88,7 @@ def TransferMonitor():
                 # time.sleep(3)
             else:
                 logger.info("push tx:{} fail".format(exist_instance.tx_id))
+                time.sleep(3)
         else:
             time.sleep(30)
 
