@@ -21,10 +21,10 @@ engine = create_engine('mysql://%s:%s@%s/%s' %(setting.MYSQLDATABASE["user"],
                                                setting.MYSQLDATABASE["passwd"],
                                                setting.MYSQLDATABASE["host"],
                                                setting.MYSQLDATABASE["db"]),
-                       pool_size=5)
+                       )
 Session = sessionmaker(bind=engine)
 Base = declarative_base()
-session=Session()
+# session=Session()
 
 class Erc20Tx(Base):
     __tablename__ = 'erc20_tx'
@@ -48,16 +48,47 @@ class Erc20Tx(Base):
                                value=value,
                                block_number=block_number,
                                block_timestamp=block_timestamp)
+        session=Session()
         session.add(new_instance)
         try:
             session.commit()
         except:
             session.rollback()
+        finally:
+            session.close()
 
 class LocalBlockCout(Base):
     __tablename__ = 'local_block_count'
     id = Column(Integer, primary_key=True)
     height = Column(Integer)
+
+    @staticmethod
+    def query():
+        session=Session()
+        exist_instance=session.query(LocalBlockCout).first()
+        session.close()
+        return exist_instance
+    @staticmethod
+    def save(height):
+        session=Session()
+        new_instance = LocalBlockCout(height=height)
+        session.add(new_instance)
+        try:
+            session.commit()
+        except:
+            session.rollback()
+        finally:
+            session.close()
+    @staticmethod
+    def update(exist_instance):
+        session=Session()
+        session.add(exist_instance)
+        try:
+            session.commit()
+        except:
+            session.rollback()
+        finally:
+            session.close()
 
 
 Base.metadata.create_all(engine)
@@ -104,15 +135,13 @@ def get_receipt_status(txId):
         return None
 
 
-localBlockCount = session.query(LocalBlockCout).first()
+localBlockCount = LocalBlockCout.query()
 if localBlockCount:
-
     local_block_count=localBlockCount.height
 else:
     local_block_count=1
-    localBlockCount=LocalBlockCout(height=local_block_count)
-    session.add(localBlockCount)
-    session.commit()
+    LocalBlockCout.save(height=local_block_count)
+
 
 while True:
     print (local_block_count)
@@ -143,8 +172,7 @@ while True:
                     logger.info("txId:{} transaction receipt status is fail".format(tx["hash"]))
     local_block_count+=1
     localBlockCount.height=local_block_count
-    session.add(localBlockCount)
-    session.commit()
+    LocalBlockCout.update(localBlockCount)
 
 
 
