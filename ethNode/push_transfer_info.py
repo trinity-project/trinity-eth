@@ -19,7 +19,7 @@ engine = create_engine('mysql://%s:%s@%s/%s' %(setting.MYSQLDATABASE["user"],
                                                setting.MYSQLDATABASE["passwd"],
                                                setting.MYSQLDATABASE["host"],
                                                setting.MYSQLDATABASE["db"]),
-                       pool_size=5)
+                       )
 
 Session = sessionmaker(bind=engine)
 Base = declarative_base()
