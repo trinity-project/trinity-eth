@@ -156,6 +156,7 @@ while True:
                 res=get_receipt_status(tx["hash"])
                 if not res:
                     logger.error("txId:{} get transaction receipt fail".format(tx["hash"]))
+                    continue
                 if res["status"]=="0x1":
                     address_to = "0x"+tx["input"][34:74]
                     value = int(tx["input"][74:], 16)/(10**8)
