@@ -15,7 +15,8 @@ class SettingHolder(object):
 
 
     def setup_mainnet(self):
-        self.ETH_URL = "http://127.0.0.1:8545"
+        # self.ETH_URL = "http://127.0.0.1:8545"
+        self.ETH_URL = "https://mainnet.infura.io/pZc5ZTRYM8wYfRPtoQal"
 
         self.SmartContract = {
             "ERC20TNC": ("0xc9ad73d11d272c95b5a2c48780a55b6b3c726cac", mainnet_testnet_abi)
@@ -28,7 +29,7 @@ class SettingHolder(object):
         self.PRIVTKEY=ENVIRON.get("PRIVTKEY")
         self.PASSWD_HASH="$2b$10$F7GVmj.eahbHMIUjOxooYuLBMqZaIGcJZ7KxufGfbxwGTErKCzNQm"
         self.REMOTE_ADDR="47.75.69.238"
-        self.FUNDING_ADDRESS=""
+        self.FUNDING_ADDRESS="0x0d7C7D0e76E25290aBB5BfEc7D1adFf36BEfb09F"
 
     def setup_testnet(self):
         self.ETH_URL = "http://127.0.0.1:8545"
