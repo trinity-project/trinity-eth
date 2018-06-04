@@ -79,7 +79,7 @@ class Client(object):
 
 
     def get_contract_instance(self, contract_address, abi):
-        contract = self.web3.eth.contract(address=contract_address, abi=abi)
+        contract = self.web3.eth.contract(address=checksum_encode(contract_address), abi=abi)
         return contract
 
     def invoke_contract(self, invoker, contract, method, args,gasLimit=256000):
