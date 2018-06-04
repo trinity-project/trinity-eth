@@ -30,6 +30,7 @@ class SettingHolder(object):
         self.PASSWD_HASH="$2b$10$F7GVmj.eahbHMIUjOxooYuLBMqZaIGcJZ7KxufGfbxwGTErKCzNQm"
         self.REMOTE_ADDR="47.75.69.238"
         self.FUNDING_ADDRESS="0x0d7C7D0e76E25290aBB5BfEc7D1adFf36BEfb09F"
+        self.WEBAPI = "https://tokenswap.trinity.ink/monitor/transactions"
 
     def setup_testnet(self):
         self.ETH_URL = "http://127.0.0.1:8545"
