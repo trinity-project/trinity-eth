@@ -52,7 +52,9 @@ class Erc20Tx(Base):
         session.add(new_instance)
         try:
             session.commit()
+            logger.info("txid:{},addressFrom:{},addressTo:{},value:{}".format(tx_id, address_from, address_to, value))
         except:
+            logger.error("store error txid:{},addressFrom:{},addressTo:{},value:{}".format(tx_id, address_from, address_to, value))
             session.rollback()
         finally:
             session.close()
@@ -120,7 +122,7 @@ def getblock(blockNumber):
         return None
 
 
-def get_receipt_status(txId):
+def get_receipt_status(txId,retry_num=3):
 
     data = {
           "jsonrpc": "2.0",
@@ -131,8 +133,15 @@ def get_receipt_status(txId):
     try:
         res = requests.post(setting.ETH_URL,json=data).json()
         return res["result"]
-    except:
-        return None
+    except Exception as e:
+        retry_num-=1
+        if retry_num==0:
+            logger.error("txId:{} get transaction receipt fail \n {}".format(tx["hash"], e))
+            return None
+        return get_receipt_status(txId,retry_num)
+
+
+
 
 
 localBlockCount = LocalBlockCout.query()
@@ -155,7 +164,6 @@ while True:
             if tx["to"]==setting.CONTRACT_ADDRESS and tx["input"][:10]=="0xa9059cbb":
                 res=get_receipt_status(tx["hash"])
                 if not res:
-                    logger.error("txId:{} get transaction receipt fail".format(tx["hash"]))
                     continue
                 if res["status"]=="0x1":
                     address_to = "0x"+tx["input"][34:74]
@@ -164,7 +172,7 @@ while True:
                     block_number=int(tx["blockNumber"],16)
                     block_timestamp=int(block_info["timestamp"],16)
                     tx_id=tx["hash"]
-                    logger.info("txid:{},addressFrom:{},addressTo:{},value:{}".format(tx_id,address_from,address_to,value))
+
                     Erc20Tx.save(tx_id,setting.CONTRACT_ADDRESS,address_from,
                              address_to,value,block_number,block_timestamp)
 
