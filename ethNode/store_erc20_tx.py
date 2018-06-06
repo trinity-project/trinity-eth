@@ -156,7 +156,6 @@ else:
 
 
 while True:
-    print (local_block_count)
 
     block_info=getblock(hex(local_block_count))
     if not block_info:
