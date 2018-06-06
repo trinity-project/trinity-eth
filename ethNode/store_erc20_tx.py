@@ -13,8 +13,11 @@ from sqlalchemy import Column, Integer, String, Numeric,Boolean,create_engine
 from sqlalchemy.orm import sessionmaker
 from config import setting
 from logzero import logger,logfile
+import logging
+import logzero
 
-logfile("store_erc20_tx.log", maxBytes=1e6, backupCount=3)
+formatter=logging.Formatter('%(asctime)-15s - %(levelname)s: %(message)s')
+logzero.formatter(formatter)
 
 pymysql.install_as_MySQLdb()
 engine = create_engine('mysql://%s:%s@%s/%s' %(setting.MYSQLDATABASE["user"],
