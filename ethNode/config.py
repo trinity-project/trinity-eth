@@ -10,7 +10,8 @@ class SettingHolder(object):
         "host": "127.0.0.1",
         "user": ENVIRON.get("DATABASE_USERNAME"),
         "passwd": ENVIRON.get("DATABASE_PASSWORD"),
-        "db": ENVIRON.get("DATABASE_DB")
+        "db": ENVIRON.get("DATABASE_DB"),
+        "db_block_info": ENVIRON.get("DATABASE_DB_BLOCK_INFO")
     }
 
 
