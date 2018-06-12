@@ -5,7 +5,7 @@ import requests
 import time
 
 from config import setting
-from data_model.accout_info_model import LocalBlockCout,Tx,Erc20Tx,EthTx,BlockHeight,logger
+from data_model.account_info_model import LocalBlockCout,Tx,Erc20Tx,EthTx,BlockHeight,logger
 from decimal import Decimal
 
 
