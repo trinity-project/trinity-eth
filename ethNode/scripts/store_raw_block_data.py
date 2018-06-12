@@ -40,13 +40,13 @@ class Tx(Base):
     gas = Column(String(16))
     gas_price = Column(String(16))
     nonce = Column(String(16))
-    input = Column(Text(32))
+    data = Column(Text(32))
     block_number = Column(String(16))
     block_timestamp=Column(String(16))
 
 
     @staticmethod
-    def save(tx_id,address_from,address_to,value,gas,gas_price,nonce,input,block_number,block_timestamp):
+    def save(tx_id,address_from,address_to,value,gas,gas_price,nonce,data,block_number,block_timestamp):
         new_instance = Tx(tx_id=tx_id,
                                address_from=address_from,
                                 address_to=address_to,
@@ -54,7 +54,7 @@ class Tx(Base):
                                gas=gas,
                                gas_price=gas_price,
                                nonce=nonce,
-                               input=input,
+                               data=data,
                                block_number=block_number,
                                block_timestamp=block_timestamp)
         session=Session()
@@ -138,7 +138,7 @@ localBlockCount = LocalBlockCout.query()
 if localBlockCount:
     local_block_count=localBlockCount.height
 else:
-    local_block_count=1
+    local_block_count=0
     LocalBlockCout.save(height=local_block_count)
 
 
@@ -158,11 +158,12 @@ while True:
             gas=tx.get("gas")
             gas_price=tx.get("gasPrice")
             nonce=tx.get("nonce")
+            data=tx.get("input")
             block_number=tx.get("blockNumber")
             block_timestamp=block_info.get("timestamp")
 
 
-            Tx.save(tx_id,address_from,address_to,value,gas,gas_price,nonce,input,block_number,block_timestamp)
+            Tx.save(tx_id,address_from,address_to,value,gas,gas_price,nonce,data,block_number,block_timestamp)
 
     local_block_count+=1
     localBlockCount.height=local_block_count
