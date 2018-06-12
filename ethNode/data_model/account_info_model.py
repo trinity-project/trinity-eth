@@ -164,7 +164,7 @@ class Tx(BlockInfoBase):
     gas_price = Column(String(16))
     nonce = Column(String(16))
     data = Column(Text)
-    block_number = Column(String(16))
+    block_number = Column(Integer)
     block_timestamp=Column(String(16))
 
 
