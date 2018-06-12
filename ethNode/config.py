@@ -12,6 +12,7 @@ class SettingHolder(object):
         "passwd": ENVIRON.get("DATABASE_PASSWORD"),
         "db": ENVIRON.get("DATABASE_DB"),
         "db_block_info": ENVIRON.get("DATABASE_DB_BLOCK_INFO")
+        "db_account_info": ENVIRON.get("DATABASE_DB_ACCOUNT_INFO")
     }
 
 
