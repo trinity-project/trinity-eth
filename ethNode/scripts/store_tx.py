@@ -74,6 +74,7 @@ while True:
                     if address_to==setting.CONTRACT_ADDRESS and data[:10]=="0xa9059cbb":
                         address_to = "0x"+data[34:74]
                         value = Decimal(str(int(data[74:], 16)/(10**8)))
+                        logger.info(tx_id,address_from,address_to,value,gas,gas_price,nonce,block_number,block_timestamp,state)
                         Erc20Tx.save(tx_id,address_from,address_to,value,gas,gas_price,nonce,block_number,block_timestamp,state)
 
         local_block_count+=1
