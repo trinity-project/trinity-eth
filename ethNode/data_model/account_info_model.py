@@ -168,7 +168,12 @@ class Tx(BlockInfoBase):
     block_timestamp=Column(String(16))
 
 
-
+    @staticmethod
+    def query(block_height):
+        session=BlockInfoSession()
+        exist_instance=session.query(Tx).filter(Tx.block_height==block_height).all()
+        session.close()
+        return exist_instance
 
 class BlockHeight(BlockInfoBase):
     __tablename__ = 'local_block_count'
