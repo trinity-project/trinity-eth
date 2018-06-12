@@ -171,7 +171,7 @@ class Tx(BlockInfoBase):
     @staticmethod
     def query(block_height):
         session=BlockInfoSession()
-        exist_instance=session.query(Tx).filter(Tx.block_height==block_height).all()
+        exist_instance=session.query(Tx).filter(Tx.block_number==block_height).all()
         session.close()
         return exist_instance
 
