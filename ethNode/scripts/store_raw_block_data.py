@@ -40,7 +40,7 @@ class Tx(Base):
     gas = Column(String(16))
     gas_price = Column(String(16))
     nonce = Column(String(16))
-    data = Column(Text(32))
+    data = Column(Text)
     block_number = Column(String(16))
     block_timestamp=Column(String(16))
 
@@ -144,7 +144,7 @@ else:
 
 
 while True:
-
+    logger.info(local_block_count)
     block_info=getblock(hex(local_block_count))
     if not block_info:
         time.sleep(15)
