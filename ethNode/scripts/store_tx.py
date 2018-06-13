@@ -55,7 +55,7 @@ while True:
                 address_to = tx.address_to
                 value = int(tx.value,16)
                 gas = int(tx.gas,16)
-                gas_price = int(tx.gas_price,16)
+                gas_price = Decimal(str(int(tx.gas_price,16)/(10**18)))
                 nonce = int(tx.nonce,16)
                 data = tx.data
                 block_number = tx.block_number
