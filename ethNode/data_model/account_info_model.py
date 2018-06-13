@@ -111,7 +111,8 @@ class EthTx(AccountInfoBase):
         session.add(new_instance)
         try:
             session.commit()
-        except:
+        except Exception as e:
+            logger.error(e)
             logger.error("store error txid:{},addressFrom:{},addressTo:{},value:{}"
                          .format(tx_id, address_from, address_to, value))
             session.rollback()
