@@ -63,6 +63,7 @@ while True:
 
                 res = get_receipt_status(tx.tx_id)
                 if res:
+                    logger.info(res)
                     state=int(res.get("status"),16)
                 else:
                     logger.info("txId:{} get transction receipt  fail".format(tx_id))
