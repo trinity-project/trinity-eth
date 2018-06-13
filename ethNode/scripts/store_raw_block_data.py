@@ -6,7 +6,7 @@ import requests
 
 from data_model.block_info_model import Tx,LocalBlockCout,logger
 
-
+from config import setting
 
 
 def getblock(blockNumber):
