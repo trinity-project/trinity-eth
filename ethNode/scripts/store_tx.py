@@ -57,10 +57,10 @@ while True:
                 gas_price = int(tx.gas_price,16)
                 nonce = int(tx.nonce,16)
                 data = tx.data
-                block_number = int(tx.block_number,16)
+                block_number = tx.block_number
                 block_timestamp = int(tx.block_timestamp,16)
 
-                res = get_receipt_status(tx["hash"])
+                res = get_receipt_status(tx.tx_id)
                 if res:
                     state=int(res.get("status"),16)
                 else:
