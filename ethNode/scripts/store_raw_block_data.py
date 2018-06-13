@@ -19,7 +19,6 @@ def getblock(blockNumber):
 }
 
     try:
-        logger.info(setting.ETH_URL)
         res = requests.post(setting.ETH_URL,json=data).json()
         return res["result"]
     except:
@@ -39,7 +38,6 @@ else:
 while True:
     logger.info(local_block_count)
     block_info=getblock(hex(local_block_count))
-    logger.info(block_info)
     if not block_info:
         time.sleep(15)
         continue
