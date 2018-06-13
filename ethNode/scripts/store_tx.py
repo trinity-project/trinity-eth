@@ -55,7 +55,7 @@ while True:
                 address_to = tx.address_to
                 value = int(tx.value,16)
                 gas = int(tx.gas,16)
-                gas_price = Decimal(str(int(tx.gas_price,16)/(10**18)))
+                gas_price = str(int(tx.gas_price,16)/(10**18))
                 nonce = int(tx.nonce,16)
                 data = tx.data
                 block_number = tx.block_number
@@ -68,13 +68,13 @@ while True:
                     logger.info("txId:{} get transction receipt  fail".format(tx_id))
                     state=None
                 if data=="0x":
-                    value=Decimal(str(value/(10**18)))
+                    value=str(value/(10**18))
                     EthTx.save(tx_id,address_from,address_to,value,gas,gas_price,nonce,block_number,block_timestamp,state)
 
                 else:
                     if address_to==setting.CONTRACT_ADDRESS and data[:10]=="0xa9059cbb":
                         address_to = "0x"+data[34:74]
-                        value = Decimal(str(int(data[74:], 16)/(10**8)))
+                        value = str(int(data[74:], 16)/(10**8))
                         logger.info(tx_id,address_from,address_to,value,gas,gas_price,nonce,block_number,block_timestamp,state)
                         Erc20Tx.save(tx_id,address_from,address_to,value,gas,gas_price,nonce,block_number,block_timestamp,state)
 
