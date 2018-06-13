@@ -19,6 +19,7 @@ def getblock(blockNumber):
 }
 
     try:
+        logger.info(setting.ETH_URL)
         res = requests.post(setting.ETH_URL,json=data).json()
         return res["result"]
     except:
