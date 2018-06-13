@@ -62,12 +62,13 @@ class Erc20Tx(AccountInfoBase):
                                address_from=address_from,
                                 address_to=address_to,
                                value=value,
-                               state=state,
                                gas=gas,
                                gas_price=gas_price,
                                nonce=nonce,
                                block_number=block_number,
-                               block_timestamp=block_timestamp)
+                               block_timestamp=block_timestamp,
+                               state=state,
+                               )
         session=AccountInfoSession()
         session.add(new_instance)
         try:
@@ -96,7 +97,7 @@ class EthTx(AccountInfoBase):
 
     @staticmethod
     def save(tx_id,address_from,address_to,value,gas,gas_price,nonce,block_number,block_timestamp,state):
-        new_instance = Erc20Tx(tx_id=tx_id,
+        new_instance = EthTx(tx_id=tx_id,
                                address_from=address_from,
                                 address_to=address_to,
                                value=value,
