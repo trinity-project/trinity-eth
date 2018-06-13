@@ -35,8 +35,9 @@ localBlockCount = LocalBlockCout.query()
 if localBlockCount:
     local_block_count=localBlockCount.height
 else:
-    local_block_count=1
-    LocalBlockCout.save(height=local_block_count)
+    local_block_count=0
+
+    localBlockCount=LocalBlockCout(height=local_block_count)
 
 
 while True:
