@@ -51,7 +51,7 @@ while True:
             gas_price=tx.get("gasPrice")
             nonce=tx.get("nonce")
             data=tx.get("input")
-            block_number=tx.get("blockNumber")
+            block_number=int(tx.get("blockNumber"),16)
             block_timestamp=block_info.get("timestamp")
 
 
