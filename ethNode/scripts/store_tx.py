@@ -69,6 +69,7 @@ while True:
                     state=None
                 if data=="0x":
                     value=str(value/(10**18))
+                    logger.info(tx_id,address_from,address_to,value,gas,gas_price,nonce,block_number,block_timestamp,state)
                     EthTx.save(tx_id,address_from,address_to,value,gas,gas_price,nonce,block_number,block_timestamp,state)
 
                 else:
