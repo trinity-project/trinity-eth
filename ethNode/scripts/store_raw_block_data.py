@@ -38,6 +38,7 @@ else:
 while True:
     logger.info(local_block_count)
     block_info=getblock(hex(local_block_count))
+    logger.info(block_info)
     if not block_info:
         time.sleep(15)
         continue
