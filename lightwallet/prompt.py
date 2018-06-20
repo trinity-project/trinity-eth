@@ -90,24 +90,23 @@ class PromptInterface(object):
                 self.Wallet = Wallet.Create(path=path, password=passwd1)
                 print("Wallet %s " % json.dumps(self.Wallet.ToJson(), indent=4))
 
-                # try:
-                #     self.Wallet = Wallet.Create(path=path, password=passwd1)
-                #     print("Wallet %s " % json.dumps(self.Wallet.ToJson(), indent=4))
-                # except Exception as e:
-                #     print("Exception creating wallet: %s " % e)
-                #     self.Wallet = None
-                #     if os.path.isfile(path):
-                #         try:
-                #             os.remove(path)
-                #         except Exception as e:
-                #             print("Could not remove {}: {}".format(path, e))
+                try:
+                    self.Wallet = Wallet.Create(path=path, password=passwd1)
+                    print("Wallet %s " % json.dumps(self.Wallet.ToJson(), indent=4))
+                except Exception as e:
+                    print("Exception creating wallet: %s " % e)
+                    self.Wallet = None
+                    if os.path.isfile(path):
+                        try:
+                            os.remove(path)
+                        except Exception as e:
+                            print("Could not remove {}: {}".format(path, e))
                 return
 
             else:
                 print("Please specify a path")
 
     def do_open(self, arguments):
-        self.do_close_wallet()
         if self.Wallet:
             self.do_close_wallet()
 
@@ -126,13 +125,13 @@ class PromptInterface(object):
                 passwd = prompt("[Password]> ", is_password=True)
                 self.Wallet = Wallet.Open(path, passwd)
 
-                # try:
-                #     self.Wallet = Wallet.Open(path, passwd)
-                #
-                #
-                #     print("Opened wallet at %s" % path)
-                # except Exception as e:
-                #     print("could not open wallet: %s " % e)
+                try:
+                    self.Wallet = Wallet.Open(path, passwd)
+
+
+                    print("Opened wallet at %s" % path)
+                except Exception as e:
+                    print("could not open wallet: %s " % e)
 
             else:
                 print("Please specify a path")

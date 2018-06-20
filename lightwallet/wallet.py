@@ -135,6 +135,20 @@ class Wallet(object):
         """
         return self._key.sign_tansaction(tx_data)
 
+    @property
+    def address(self):
+        if self._key:
+            return self._key.address
+        else:
+            return None
+
+    @property
+    def pubkey(self):
+        if self._key:
+            return self._key.pubkey_safe
+        else:
+            return None
+
 
     def get_default_address(self):
         return self._accounts[0]["account"].GetAddress()

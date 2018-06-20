@@ -63,6 +63,10 @@ class LOG(object):
 
     @staticmethod
     def warning(msg, *args, **kwargs):
+        """
+
+        :rtype: 
+        """
         pass
 
     @staticmethod

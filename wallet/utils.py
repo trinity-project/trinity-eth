@@ -26,6 +26,7 @@ from wallet.configure import Configure
 from blockchain.interface import get_balance
 import re
 import hashlib
+from log.log import LOG
 
 
 def to_aes_key(password):
@@ -182,10 +183,52 @@ def check_partner(wallet, partner):
         return False
 
 
+def get_wallet_info(pubkey):
+    """
+
+    :param pubkey:
+    :return: message dict
+    """
+    balance = {}
+    for i in Configure["AssetType"].keys():
+        b = get_balance(pubkey, i.upper())
+        balance[i] = b
+    message = {
+                   "Publickey": pubkey,
+                    "alias": Configure["alias"],
+                    "AutoCreate": Configure["AutoCreate"],
+                    "Ip": "{}:{}".format(Configure.get("NetAddress"),
+                                         Configure.get("NetPort")),
+                    "MaxChannel": Configure["MaxChannel"],
+                   "Channel": Configure["Channel"],
+                   "Balance": balance,
+               }
+    return message
+
+
+def convert_number_auto(asset_type, number: int or float or str):
+    if asset_type in ['NEO']:
+        LOG.warning('Convert number<{}> to integer for asset<{}> just support integer type transaction.'.format(number, asset_type))
+        if isinstance(number, str):
+            number = float(number)
+        return int(number)
+
+    return number
+
+
+def convert_float(number, decimals=8):
+    return round(float(number),decimals)
 
 
 
 
 if __name__ == "__main__":
-    print(pubkey_to_address("03a6fcaac0e13dfbd1dd48a964f92b8450c0c81c28ce508107bc47ddc511d60e75"))
-    print(Crypto.Hash160("02cebf1fbde4786f031d6aa0eaca2f5acd9627f54ff1c0510a18839946397d3633".encode()))
+    # print(pubkey_to_address("03a6fcaac0e13dfbd1dd48a964f92b8450c0c81c28ce508107bc47ddc511d60e75"))
+    # print(Crypto.Hash160("02cebf1fbde4786f031d6aa0eaca2f5acd9627f54ff1c0510a18839946397d3633".encode()))
+    import time
+    print(time.time())
+    r=convert_float(1.1234567890)
+    print(type(r))
+    print(time.time())
+    float("1.234567890")
+    print(time.time())

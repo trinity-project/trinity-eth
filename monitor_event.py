@@ -15,7 +15,7 @@ async def log_loop(event_filter, poll_interval):
         await asyncio.sleep(poll_interval)
 
 def main():
-    block_filter = w3.eth.filter({"address":"0x445E08fCE1E43606f8D39B14E372eA084B75C5f1"})
+    block_filter = w3.eth.filter({"address":"0x65096f2B7A8dc1592479F1911cd2B98dae4d2218"})
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(

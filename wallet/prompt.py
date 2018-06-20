@@ -218,9 +218,8 @@ class UserPromptInterface(PromptInterface):
         reactor.stop()
 
     def enable_channel(self):
-        self.Wallet.address, self.Wallet.pubkey = self.get_address()
         try:
-            result = gate_way.join_gateway(self.Wallet.pubkey).get("result")
+            result = gate_way.join_gateway(self.Wallet.address).get("result")
             if result:
                 self.Wallet.url = json.loads(result).get("MessageBody").get("Url")
                 self.Channel = True
