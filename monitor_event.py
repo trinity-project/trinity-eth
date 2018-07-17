@@ -80,5 +80,6 @@ def main():
     w3 = Web3(HTTPProvider('https://ropsten.infura.io/pZc5ZTRYM8wYfRPtoQal'))
     log_loop(w3)
 
+
 if __name__ == '__main__':
     main()

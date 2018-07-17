@@ -52,6 +52,8 @@ class Wallet(object):
         self._keys={}
         self._passwordHash=None
         self.client = Client(eth_url)
+        self.locked = False
+        self.name = path.split(".")[0]
 
         if create:
             self.uuid = uuid.uuid1()
@@ -88,7 +90,6 @@ class Wallet(object):
              UserWallet: a UserWallet instance.
         """
         wallet = Wallet(path=path, passwordKey=password, create=True)
-        wallet.Name=path.split(".")[0]
         wallet.CreateKeyStore(password)
         wallet.ToJsonFile(path)
         return wallet
@@ -134,6 +135,20 @@ class Wallet(object):
         :return:
         """
         return self._key.sign_tansaction(tx_data)
+
+    @property
+    def address(self):
+        if self._key:
+            return self._key.address
+        else:
+            return None
+
+    @property
+    def pubkey(self):
+        if self._key:
+            return self._key.pubkey_safe
+        else:
+            return None
 
 
     def get_default_address(self):
