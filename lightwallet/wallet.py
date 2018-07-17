@@ -52,6 +52,8 @@ class Wallet(object):
         self._keys={}
         self._passwordHash=None
         self.client = Client(eth_url)
+        self.locked = False
+        self.name = path.split(".")[0]
 
         if create:
             self.uuid = uuid.uuid1()
@@ -88,7 +90,6 @@ class Wallet(object):
              UserWallet: a UserWallet instance.
         """
         wallet = Wallet(path=path, passwordKey=password, create=True)
-        wallet.Name=path.split(".")[0]
         wallet.CreateKeyStore(password)
         wallet.ToJsonFile(path)
         return wallet
