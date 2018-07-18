@@ -62,3 +62,6 @@ def get_arg(arguments, index=0, convert_to_int=False, do_parse=False):
     except Exception as e:
         pass
     return None
+
+def get_asset_id(to_send):
+    return True

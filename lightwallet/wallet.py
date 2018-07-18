@@ -30,6 +30,8 @@ import binascii
 from lightwallet.accounts import Account
 import json
 from blockchain.web3client import Client
+from lightwallet.Settings import settings
+from ethereum.utils import checksum_encode
 
 
 class Wallet(object):
@@ -37,8 +39,7 @@ class Wallet(object):
 
     """
 
-
-    def __init__(self, path, passwordKey, create, eth_url=""):
+    def __init__(self, path, passwordKey, create):
 
         """
 
@@ -51,7 +52,6 @@ class Wallet(object):
         self._accounts = []
         self._keys={}
         self._passwordHash=None
-        self.client = Client(eth_url)
         self.locked = False
         self.name = path.split(".")[0]
 
@@ -155,9 +155,10 @@ class Wallet(object):
         return self._accounts[0]["account"].GetAddress()
 
     def send(self,addresss_to, value, gasLimit=25600):
-        tx = self.client.construct_common_tx(self._key.address, addresss_to, value, gasLimit)
+        addresss_to = checksum_encode(addresss_to)
+        tx = settings.EthClient.construct_common_tx(self._key.address, addresss_to, value, gasLimit)
         rawdata = self.SignTX(tx)
-        return self.client.broadcast(rawdata.rawTransaction)
+        return settings.EthClient.broadcast(rawdata.rawTransaction)
 
 
 
@@ -173,7 +174,7 @@ class Wallet(object):
     def ToJsonFile(self, path):
         jsn={}
         jsn["password"]={"passwordHash":self._passwordHash.decode()}
-        jsn["name"]=self.Name
+        jsn["name"]=self.name
         jsn['keystore'] = self._key.toJson()
         jsn['extra'] ={}
 

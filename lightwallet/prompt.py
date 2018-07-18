@@ -12,11 +12,12 @@ import os
 import sys
 pythonpath = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(pythonpath)
-from lightwallet.Utils import get_arg
+from lightwallet.Utils import get_arg,get_asset_id
 from lightwallet.Settings import settings
 from lightwallet.wallet import Wallet
 
 from lightwallet.UserPreferences import preferences
+import binascii
 
 FILENAME_PROMPT_HISTORY = os.path.join(settings.DIR_CURRENT, '.prompt.py.history')
 
@@ -267,12 +268,14 @@ class PromptInterface(object):
             return False
 
         address_to = get_arg(arguments, 1)
-        amount = get_arg(arguments, 2)
-        address_from=self.Wallet._accounts[0]["account"].GetAddress()
+        amount = float(get_arg(arguments, 2))
+        gaslimit = int(get_arg(arguments,3)) if get_arg(arguments,3) else 25600
 
-        res = self.Wallet.send(addressFrom=address_from,addressTo=address_to,amount=amount,assetId=assetId)
-        TX_RECORD.save(tx_id=res[1],asset_type=assetId,address_from=address_from,
-                       address_to=address_to,value=amount,state=res[0])
+        try:
+            res = self.Wallet.send(address_to, amount, gaslimit)
+            print("txid: 0x"+binascii.b2a_hex(res).decode())
+        except Exception as e:
+            print("send failed %s" %e)
         return
 
     def unlock(self, args):
@@ -333,10 +336,10 @@ class PromptInterface(object):
                 pprint.pprint (show_tx(item))
             except Exception as e:
                 print("Could not find transaction with id %s " % item)
-        else:
-            tx_records=TX_RECORD.query(self.Wallet._accounts[0]["account"].GetAddress())
-            for item in tx_records:
-                print(item.to_json())
+        # else:
+        #     tx_records=TX_RECORD.query(self.Wallet._accounts[0]["account"].GetAddress())
+        #     for item in tx_records:
+        #         print(item.to_json())
 
     def parse_result(self, result):
         """
@@ -423,24 +426,35 @@ class PromptInterface(object):
             except KeyboardInterrupt:
                 self.quit()
                 continue
-            try:
-                command, arguments = self.parse_result(result)
+            # try:
+            #     command, arguments = self.parse_result(result)
+            #
+            #     if command is not None and len(command) > 0:
+            #         command = command.lower()
+            #
+            #         if self.locked:
+            #             self.handle_locked_command(command, arguments)
+            #             continue
+            #
+            #         else:
+            #             self.handle_commands(command, arguments)
+            #
+            # except Exception as e:
+            #
+            #     print("could not execute command: %s " % e)
+            #     traceback.print_stack()
+            #     traceback.print_exc()
+            command, arguments = self.parse_result(result)
 
-                if command is not None and len(command) > 0:
-                    command = command.lower()
+            if command is not None and len(command) > 0:
+                command = command.lower()
 
-                    if self.locked:
-                        self.handle_locked_command(command, arguments)
-                        continue
+                if self.locked:
+                    self.handle_locked_command(command, arguments)
+                    continue
 
-                    else:
-                        self.handle_commands(command, arguments)
-
-            except Exception as e:
-
-                print("could not execute command: %s " % e)
-                traceback.print_stack()
-                traceback.print_exc()
+                else:
+                    self.handle_commands(command, arguments)
 
 
 def main():

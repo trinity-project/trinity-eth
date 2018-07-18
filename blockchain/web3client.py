@@ -18,7 +18,7 @@ from ethereum.transactions import Transaction
 def get_privtKey_from_keystore(filename,password):
     with open(filename) as keyfile:
         encrypted_key = keyfile.read()
-        private_key = w3.eth.account.decrypt(encrypted_key, password)
+        private_key = Web3.eth.account.decrypt(encrypted_key, password)
         print(private_key)
         return binascii.hexlify(private_key).decode()
 
@@ -45,11 +45,11 @@ class Client(object):
         tx = {
             'gas': gasLimit,
             'to': addressTo,
-            'value': value,
+            'value': int(value*10**18),
             'gasPrice': self.web3.eth.gasPrice,
             'nonce': self.web3.eth.getTransactionCount(addressFrom),
         }
-
+        print(tx)
         return tx
 
 

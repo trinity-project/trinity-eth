@@ -5,8 +5,9 @@ from random import SystemRandom
 import shutil
 from uuid import UUID
 from ethereum.slogging import get_logger
-from ethereum.utils import privtopub  # this is different  than the one used in devp2p.crypto
-from ethereum.utils import sha3, is_string, encode_hex, remove_0x_head, to_string, decode_hex
+from ethereum.tools import keys
+from ethereum.utils import privtopub
+from ethereum.utils import sha3, is_string, encode_hex, checksum_encode, to_string, decode_hex
 import bitcoin
 from eth_account import Account as EAccount
 
@@ -169,7 +170,7 @@ class Account(EAccount):
             self._address = keys.privtoaddr(self.privkey)
         else:
             return None
-        return encode_hex(self._address)
+        return checksum_encode(encode_hex(self._address))
 
     @property
     def uuid(self):
