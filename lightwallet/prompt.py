@@ -261,21 +261,29 @@ class PromptInterface(object):
             return False
 
 
-        to_send = get_arg(arguments)
-        assetId = get_asset_id(to_send)
-        if assetId is None:
-            print("Asset id not found")
-            return False
-
+        assetId = get_arg(arguments).upper()
         address_to = get_arg(arguments, 1)
         amount = float(get_arg(arguments, 2))
         gaslimit = int(get_arg(arguments,3)) if get_arg(arguments,3) else 25600
+        gasprice = int(get_arg(arguments,4)) if get_arg(arguments, 4) else None
 
-        try:
-            res = self.Wallet.send(address_to, amount, gaslimit)
-            print("txid: 0x"+binascii.b2a_hex(res).decode())
-        except Exception as e:
-            print("send failed %s" %e)
+        if assetId == "ETH":
+
+            try:
+                res = self.Wallet.send_eth(address_to, amount, gaslimit)
+                print("txid: 0x"+res)
+            except Exception as e:
+                print("send failed %s" %e)
+        elif assetId == "TNC":
+
+            try:
+                res = self.Wallet.send_erc20(assetId, address_to, amount, gaslimit, gasprice)
+                print("txid: 0x" +res)
+            except Exception as e:
+                print("send failed %s" % e)
+
+        else:
+            pass
         return
 
     def unlock(self, args):

@@ -64,6 +64,17 @@ class Client(object):
         return self.web3.eth.contract(address=contract_address, abi=abi)
 
 
+    def construct_erc20_tx(self, contract,addressFrom, addressTo,value, gasLimit=25600, gasprice=None):
+        tx = contract.functions.transfer(
+            addressTo,
+            int(value)
+        ).buildTransaction({
+            "gas": gasLimit,
+            'gasPrice': self.web3.eth.gasPrice * 2 if not gasprice  else gasprice,
+            'nonce': self.web3.eth.getTransactionCount(addressFrom),
+        })
+        return tx
+
     def invoke_contract(self, invoker, contract, method, args):
         tx = contract.functions[method](*args
                                         ).buildTransaction({
@@ -105,13 +116,15 @@ class Client(object):
         """
         return self.web3.getBalance(address)
 
-    def get_balance_of_erc20(self,contract,address):
+    def get_balance_of_erc20(self,contract_address, abi,address):
         """
 
-        :param contract: contract instance , can get via
+        :param contract_address:
+        :param abi:
         :param address:
         :return:
         """
+        contract = self.get_contract_instance(contract_address, abi)
         return contract.functions.balanceOf(address).call()
 
     def get_block_count(self):
