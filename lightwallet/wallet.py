@@ -237,8 +237,28 @@ class Wallet(object):
         jsn['path'] = self._path
         jsn['address'] = self._key.address
         jsn["publickey"] = self._key.pubkey
+        jsn["ETH"] = self.eth_balance
+        jsn["TNC"] = self.tnc_balance
 
         return jsn
+
+    @property
+    def eth_balance(self):
+        """
+
+        :return:
+        """
+
+        return settings.EthClient.get_balance_of_eth(self._key.address)
+
+    @property
+    def tnc_balance(self):
+        """
+
+        :return:
+        """
+        return settings.EthClient.get_balance_of_erc20(settings.TNC, settings.TNCabi,
+                                                       self._key.address)
 
     def ToJsonFile(self, path):
         """

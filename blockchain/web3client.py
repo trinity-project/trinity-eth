@@ -114,9 +114,9 @@ class Client(object):
         :param address:
         :return:
         """
-        return self.web3.getBalance(address)
+        return self.web3.eth.getBalance(address)/(10**18)
 
-    def get_balance_of_erc20(self,contract_address, abi,address):
+    def get_balance_of_erc20(self,contract_address, abi, address):
         """
 
         :param contract_address:
@@ -125,7 +125,7 @@ class Client(object):
         :return:
         """
         contract = self.get_contract_instance(contract_address, abi)
-        return contract.functions.balanceOf(address).call()
+        return contract.functions.balanceOf(address).call()/(10**8)
 
     def get_block_count(self):
         """

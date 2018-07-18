@@ -195,6 +195,7 @@ class PromptInterface(object):
 
         if not item:
             print("Wallet %s " % json.dumps(self.Wallet.ToJson(), indent=4))
+
             return
 
         else:
