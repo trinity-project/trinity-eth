@@ -49,48 +49,40 @@ class TBLTransaction(DBManager):
 
     @property
     def primary_key(self):
-        return 'transaction'
+        return 'nonce'
+
+    def list_collections(self):
+        return self.client.trans_db.list_collection_names()
+
+    def delete_collection(self, collection_index):
+        return self.client.trans_db.drop_collection(collection_index)
+
 
 
 
 class APITransaction(object):
-    table = TBLTransaction()
 
-    @classmethod
-    def get_transation(cls, transaction_index):
-        cls.table = TBLTransaction().set_collection(transaction_index)
+    def __init__(self, transaction_index):
+        self.table = TBLTransaction().set_collection(transaction_index)
 
-    @classmethod
-    @rpc_response('AddTransaction')
-    def add_transaction(cls, *args):
-        return cls.table.add_one(*args)
 
-    @classmethod
-    @rpc_response('DeleteTransaction')
-    def delete_transaction(cls, transaction):
-        return cls.table.delete_one(transaction)
+    def add_transaction(self, *args):
+        return self.table.add_one(*args)
 
-    @classmethod
-    @rpc_response('BatchDeleteTransaction')
-    def batch_delete_transaction(cls, filters):
-        return cls.table.delete_many(filters)
+    def delete_transaction(self, transaction):
+        return self.table.delete_one(transaction)
 
-    @classmethod
-    @rpc_response('QueryTransaction')
-    def query_transaction(cls, transaction, *args, **kwargs):
-        return cls.table.query_one(transaction, *args, **kwargs)
+    def batch_delete_transaction(self, filters):
+        return self.table.delete_many(filters)
 
-    @classmethod
-    @rpc_response('BatchQueryTransaction')
-    def batch_query_transaction(cls, filters, *args, **kwargs):
-        return cls.table.query_many(filters, *args, **kwargs)
+    def query_transaction(self, transaction, *args, **kwargs):
+        return self.table.query_one(transaction, *args, **kwargs)
 
-    @classmethod
-    @rpc_response('UpdateTransaction')
-    def update_transaction(cls, transaction, **kwargs):
-        return cls.table.update_one(transaction, **kwargs)
+    def batch_query_transaction(self, filters, *args, **kwargs):
+        return self.table.query_many(filters, *args, **kwargs)
 
-    @classmethod
-    @rpc_response('BatchUpdateTransaction')
-    def batch_update_transaction(cls, filters, **kwargs):
-        return cls.table.update_many(filters, **kwargs)
+    def update_transaction(self, transaction, **kwargs):
+        return self.table.update_one(transaction, **kwargs)
+
+    def batch_update_transaction(self, filters, **kwargs):
+        return self.table.update_many(filters, **kwargs)

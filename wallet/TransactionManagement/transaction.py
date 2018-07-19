@@ -29,19 +29,14 @@ SOFTWARE."""
 import os
 import pickle
 from wallet.utils import sign
-from blockchain import interface as Binterface
 from log import LOG
 import json
-from model.transaction_model import APITransaction
-from model.manager import DBClient
+from model.transaction_model import APITransaction,TBLTransaction
+from lightwallet.Settings import settings
 BlockHightRegister=[]
 TxIDRegister= []
 
 
-
-TxDataDir = os.path.join(os.path.dirname(os.path.abspath(__file__)),"txdata")
-if not os.path.exists(TxDataDir):
-    os.makedirs(TxDataDir)
 
 
 class TrinityTransaction(object):
@@ -49,71 +44,50 @@ class TrinityTransaction(object):
     def __init__(self, channel, wallet):
         self.channel = channel
         self.wallet = wallet
+        self.transaction = APITransaction(self.channel)
 
     def transaction_exist(self):
-        return os.path.isfile(self.tx_file)
+        """
 
-    def signature(self, rawdata):
-        return self.wallet.Sign(rawdata)
-
-    def create_tx_file(self,channel_name):
-        os.mknod(os.path.join(TxDataDir, channel_name+".data"))
-        self.tx_file = self.get_transaction_file()
-
-    def get_transaction_file(self):
-
-         return os.path.join(TxDataDir, self.channel+".data")
-
-    def store_transaction(self, tx_message):
-        with open(self.tx_file, "wb+") as f:
-            crypto_channel(f, **tx_message)
-        return None
+        :return:
+        """
+        transes = TBLTransaction().list_collections()
+        return self.channel in transes
 
     def read_transaction(self):
-        with open(self.tx_file, "rb") as f:
-            try:
-               return uncryto_channel(f)
-            except:
-                return None
+        """
+
+        :return:
+        """
+        return self.transaction.batch_query_transaction({})
 
     def update_transaction(self, tx_nonce, **kwargs):
-        tx_infos = self.read_transaction()
-        if tx_infos:
-            info = tx_infos.get(tx_nonce)
-            if not info:
-                tx_infos[tx_nonce] = kwargs
-            else:
-                dictMerged = dict(info, **kwargs)
-                tx_infos[tx_nonce] = dictMerged
-        else:
-            tx_infos=dict([(tx_nonce, kwargs)])
-        self.store_transaction(tx_infos)
+        """
+
+        :param tx_nonce:
+        :param kwargs:
+        :return:
+        """
+        return self.transaction.update_transaction(tx_nonce,**kwargs)
+
 
     @staticmethod
     def sendrawtransaction(raw_data):
-        LOG.info("SendRawTransaction: {}".format(raw_data))
-        result = Binterface.send_raw(raw_data)
-        LOG.info("SendRawTransaction Result: {}".format(result))
-        return result
+        """
 
-    @staticmethod
-    def genarate_raw_data(Singtxdata,Witness):
-        return Singtxdata+Witness
-
-    def get_founder(self):
-        tx = self.read_transaction()
-        return tx["0"]["Founder"]
+        :param raw_data:
+        :return:
+        """
+        return settings.EthClient.SendRawTransaction(raw_data)
 
     def get_balance(self, tx_nonce):
-        tx = self.get_tx_nonce(tx_nonce)
-        try:
-            return tx["Balance"]
-        except KeyError:
-            return None
+        tx = self.transaction.query_transaction(tx_nonce)
+        balance = tx.get(self.wallet.address)
+        return float(balance) if balance else 0
+
 
     def get_tx_nonce(self, tx_nonce):
-        tx = self.read_transaction()
-        return tx.get(tx_nonce) if tx else None
+        return self.transaction.query_transaction(tx_nonce)
 
     def get_latest_nonceid(self, tx=None):
         tx = tx if tx else self.read_transaction()
@@ -157,164 +131,6 @@ class TrinityTransaction(object):
 
         print("Commitment Tx to Chain    ", tx_id)
         return result
-
-
-def dic2byte(file_handler, **kwargs):
-    """
-
-    :param kwargs:
-    :return:
-    """
-    return pickle.dump(kwargs, file_handler)
-
-
-def crypto_channel(file_handler, **kwargs):
-    """
-    :param kwargs:
-    :return:
-    """
-    return pickle.dump(kwargs, file_handler)
-
-def uncryto_channel(file_handler):
-    """
-
-    :param file_handler:
-    :return:
-    """
-    return pickle.load(file_handler)
-
-def byte2dic(file_hander):
-    """
-
-    :param file_hander:
-    :return:
-    """
-    try:
-        pickle.load(file_hander)
-    except:
-        return None
-
-def pickle_load(file):
-    """
-
-    :param file:
-    :return:
-    """
-    pickles = []
-    while True:
-        try:
-            pickles.append(pickle.load(file))
-        except EOFError:
-            return pickles[0] if pickles else None
-
-def scriptToAddress(script):
-    scriptHash=Crypto.ToScriptHash(script)
-    address=Crypto.ToAddress(scriptHash)
-    return address
-
-
-def funder_trans(params):
-    """
-
-    :param params:
-    :return:
-    """
-    selfpubkey = params[0]
-    otherpubkey = params[1]
-    addressFunding = params[2]
-    scriptFunding = params[3]
-    deposit = params[4]
-
-    C_tx = createCTX(addressFunding=addressFunding, balanceSelf=deposit,
-                          balanceOther=deposit, pubkeySelf=selfpubkey,
-                          pubkeyOther=otherpubkey, fundingScript=scriptFunding)
-
-    RD_tx = createRDTX(addressRSMC=C_tx["addressRSMC"], addressSelf=pubkeyToAddress(selfpubkey),
-                            balanceSelf=deposit, CTxId=C_tx["txId"],
-                            RSMCScript=C_tx["scriptRSMC"])
-
-    return {"C_TX":C_tx,"R_TX":RD_tx}
-
-
-def funder_create(params):
-        walletfounder = {
-            "pubkey":params[0],
-            "deposit":float(params[2])
-    }
-        walletpartner = {
-            "pubkey":params[1],
-            "deposit":float(params[2])
-    }
-
-        founder = createFundingTx(walletpartner, walletfounder)
-
-        commitment = createCTX(founder.get("addressFunding"), float(params[2]), float(params[2]), params[0],
-                               params[1], founder.get("scriptFunding"))
-
-        address_self = pubkeyToAddress(params[0])
-
-        revocabledelivery = createRDTX(commitment.get("addressRSMC"),address_self, float(params[2]), commitment.get("txId"),
-                                       commitment.get("scriptRSMC"))
-        return {"Founder":founder,"C_TX":commitment,"R_TX":revocabledelivery}
-
-def rsmc_trans(params):
-    """
-
-    :param params:
-    :return:
-    """
-    script_funding = params[0]
-    balanceself = params[1]
-    balanceother = params[2]
-    pubkeyself = params[3]
-    pubkeyother = params[4]
-
-
-    C_tx = createCTX(addressFunding=scriptToAddress(script_funding), balanceSelf=balanceself,
-                          balanceOther=balanceother, pubkeySelf=pubkeyself,
-                          pubkeyOther=pubkeyother, fundingScript=script_funding)
-
-    RD_tx = createRDTX(addressRSMC=C_tx["addressRSMC"], addressSelf=pubkeyToAddress(walletSelf["pubkey"]),
-                            balanceSelf=walletSelf["deposit"], CTxId=C_tx["txId"],
-                            RSMCScript=C_tx["scriptRSMC"])
-
-    return {"C_TX": C_tx, "R_TX": RD_tx}
-
-
-def br_trans(params):
-    """
-
-    :param params:
-    :return:
-    """
-    script_rsmc = params[0]
-    selfpubkey = params[1]
-    balanceself = params[2]
-
-    BR_tx = createBRTX(addressRSMC=scriptToAddress(script_rsmc), addressOther=pubkeyToAddress(selfpubkey),
-                            balanceSelf=balanceself, RSMCScript=script_rsmc)
-
-    return {"BR_tx": BR_tx}
-
-def hltc_trans(params):
-    """
-
-    :param params:
-    :return:
-    """
-    pubkeySender = params[0]
-    pubkeyReceiver = params[1]
-    HTLCValue = params[2]
-    balanceSender = params[3]
-    balanceReceiver = params[4]
-    hashR = params[5]
-    addressFunding = params[6]
-    fundingScript = params[7]
-
-
-    return create_sender_HCTX(pubkeySender, pubkeyReceiver, HTLCValue, balanceSender, balanceReceiver, hashR,
-                       addressFunding, fundingScript)
-
 
 
 

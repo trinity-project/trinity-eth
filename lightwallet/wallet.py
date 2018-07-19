@@ -179,7 +179,7 @@ class Wallet(object):
         addresss_to = checksum_encode(addresss_to)
         tx = settings.EthClient.construct_common_tx(self._key.address, addresss_to, value, gasLimit)
         rawdata = self.SignTX(tx)
-        tx_id = settings.EthClient.broadcast(rawdata.rawTransaction)
+        tx_id = self.SendRawTransaction(rawdata.rawTransaction)
         return binascii.hexlify(tx_id).decode()
 
     def send_erc20(self, asset, address_to, value, gasLimit=25600, gasprice=None):
@@ -204,7 +204,7 @@ class Wallet(object):
         tx = settings.EthClient.construct_erc20_tx(contract_instance, self._key.address,
                                                    int(value*10*decimals), gasLimit, gasprice)
         rawdata = self.SignTX(tx)
-        tx_id = settings.EthClient.broadcast(rawdata.rawTransaction)
+        tx_id = self.SendRawTransaction(rawdata.rawTransaction)
         return binascii.hexlify(tx_id).decode()
 
     def get_contract(self, asset):
@@ -309,3 +309,6 @@ class Wallet(object):
         wallet_info["extra"][key] = value
         with open(self._path,"wb") as f:
             f.write(json.dumps(wallet_info).encode())
+
+    def SendRawTransaction(self, rawdata):
+        return settings.EthClient.broadcast(rawdata)
