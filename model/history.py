@@ -25,7 +25,7 @@ SOFTWARE."""
 from .manager import DBManager, rpc_response, connection_singleton
 
 
-class TBLTransaction(DBManager):
+class TBLHistory(DBManager):
     """
         Descriptions    :
         Created         : 2018-02-13
@@ -33,12 +33,12 @@ class TBLTransaction(DBManager):
     """
     def add_one(self, **kwargs):
         # to check whether the state is correct:
-        return super(TBLTransaction, self).add(*kwargs)
+        return super(TBLHistory, self).add(*kwargs)
 
     @property
     @connection_singleton
     def client(self):
-        return super(TBLTransaction, self).client
+        return super(TBLHistory, self).client
 
     @property
     def db_table(self):
@@ -54,11 +54,11 @@ class TBLTransaction(DBManager):
 
 
 class APITransaction(object):
-    table = TBLTransaction()
+    table = TBLHistory()
 
     @classmethod
-    def get_transation(cls, transaction_index):
-        cls.table = TBLTransaction().set_collection(transaction_index)
+    def get_transation(cls, history_index):
+        cls.table = TBLHistory().set_collection(history_index)
 
     @classmethod
     @rpc_response('AddTransaction')

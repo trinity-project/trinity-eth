@@ -32,9 +32,11 @@ from wallet.utils import sign
 from blockchain import interface as Binterface
 from log import LOG
 import json
-
+from model.transaction_model import APITransaction
+from model.manager import DBClient
 BlockHightRegister=[]
 TxIDRegister= []
+
 
 
 TxDataDir = os.path.join(os.path.dirname(os.path.abspath(__file__)),"txdata")
@@ -47,7 +49,6 @@ class TrinityTransaction(object):
     def __init__(self, channel, wallet):
         self.channel = channel
         self.wallet = wallet
-        self.tx_file = self.get_transaction_file()
 
     def transaction_exist(self):
         return os.path.isfile(self.tx_file)
