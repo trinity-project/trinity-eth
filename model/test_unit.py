@@ -25,17 +25,17 @@ SOFTWARE."""
 from unittest import mock, TestCase
 import mongomock
 
-import manager
-import address_model
-import channel_model
-import node_model
-import transaction_model
+from model import manager
+from model import address_model
+from model import channel_model
+from model import node_model
+from model import transaction_model
 
 
 def ut_db_congif(db_name: str):
     db_cfg = {
         'host': 'localhost',
-        'name': db_name,
+        'channel': db_name,
         'port': 27017,
         'type': 'mongodb',
         'authentication': {
@@ -43,7 +43,7 @@ def ut_db_congif(db_name: str):
             'password': None
         }
     }
-    return mock.patch('manager.cfg', db_cfg)
+    return mock.patch('model.manager.cfg', db_cfg)
 
 
 class LOG(object):
@@ -126,7 +126,7 @@ class DBClientTestBase(DBTestBase):
 @mock.patch('manager.LOG', LOG)
 class DBClientTest(DBClientTestBase):
 
-    def test__DBClient_instance(self):
+    def test_DBClient_instance(self):
         self.assertIsNotNone(self.client.db_client)
         self.assertIsNotNone(self.client.db)
 
@@ -178,16 +178,6 @@ class AddressModelTestBase(DBTestBase):
                               address_model.EnumChainType.NEO,
                               '6PYVexaFJHFiSYyEYvaLaRxzmmNatZSayqs82cZ1fhTQwkDraURNAhKKXw',
                               'node-3']]
-
-        print (self.addr_inst.client, type(self.addr_inst.client))
-        print (self.addr_inst.client.uri)
-        print (self.addr_inst.db_table)
-
-        for item in tests_addres_data:
-            self.addr_inst.add_one(address=item[0], chain=item[1], public_key=item[2], node=item[3])
-
-        result = self.addr_inst.query_many({'address': 'all'})
-        print (result)
 
 
 class TBLWalletAddressTest(AddressModelTestBase):
@@ -264,3 +254,8 @@ class TBLTransactionTest(DBTestBase):
 @ut_db_congif(transaction_model_test_db)
 class APITransactionTest(DBTestBase):
     pass
+
+
+if __name__ == "__main__":
+    import unittest
+    unittest.main()

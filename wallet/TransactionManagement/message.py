@@ -480,8 +480,6 @@ class FounderResponsesMessage(TransactionMessage):
     def _check_transaction_file(self):
         if not self.wallet.LoadStoredData(self.channel_name):
             self.wallet.SaveStoredData(self.channel_name, "{}.data".format(self.channel_name))
-        if not self.transaction.transaction_exist():
-            self.transaction.create_tx_file(self.channel_name)
 
     def _handle_0_message(self):
         self.transaction.update_transaction("0", Founder=self.founder, Commitment=self.commitment,

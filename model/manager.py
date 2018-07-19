@@ -27,7 +27,7 @@ from pymongo.errors import DuplicateKeyError
 from datetime import datetime
 #from jsonrpc import dispatcher
 
-from .base_enum import EnumStatusCode
+from model.base_enum import EnumStatusCode
 from trinity import DATABASE_CONFIG as cfg
 from log import LOG
 
@@ -122,7 +122,7 @@ class DBClient(object):
 
     @property
     def db_name(self):
-        return cfg['channel'] if cfg.get("name") else "Channel"
+        return cfg['channel'] if cfg.get("channel") else "Channel"
 
     @property
     def db_trans_name(self):

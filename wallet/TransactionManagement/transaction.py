@@ -89,20 +89,8 @@ class TrinityTransaction(object):
     def get_tx_nonce(self, tx_nonce):
         return self.transaction.query_transaction(tx_nonce)
 
-    def get_latest_nonceid(self, tx=None):
-        tx = tx if tx else self.read_transaction()
-        if tx is None:
-            return 0
-        nonce = []
-        for i in tx.keys():
-            try:
-                if tx[i].get("State") == "confirm":
-                    nonce.append(int(i))
-                else:
-                    continue
-            except ValueError:
-                continue
-        return max(nonce) if nonce else 0
+    def get_latest_nonceid(self):
+        trans = self.transaction.batch_query_transaction({}).
 
     def get_transaction_state(self):
         tx = self.read_transaction()
