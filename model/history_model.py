@@ -47,50 +47,38 @@ class TBLHistory(DBManager):
     def set_collection(self, collection):
         self.collection = collection
 
-    @property
-    def primary_key(self):
-        return 'transaction'
 
 
 
 class APITransaction(object):
     table = TBLHistory()
 
-    @classmethod
+
     def get_transation(cls, history_index):
         cls.table = TBLHistory().set_collection(history_index)
 
-    @classmethod
-    @rpc_response('AddTransaction')
+
     def add_transaction(cls, *args):
         return cls.table.add_one(*args)
 
-    @classmethod
-    @rpc_response('DeleteTransaction')
     def delete_transaction(cls, transaction):
         return cls.table.delete_one(transaction)
 
-    @classmethod
-    @rpc_response('BatchDeleteTransaction')
+
     def batch_delete_transaction(cls, filters):
         return cls.table.delete_many(filters)
 
-    @classmethod
-    @rpc_response('QueryTransaction')
+
     def query_transaction(cls, transaction, *args, **kwargs):
         return cls.table.query_one(transaction, *args, **kwargs)
 
-    @classmethod
-    @rpc_response('BatchQueryTransaction')
+
     def batch_query_transaction(cls, filters, *args, **kwargs):
         return cls.table.query_many(filters, *args, **kwargs)
 
-    @classmethod
-    @rpc_response('UpdateTransaction')
+
     def update_transaction(cls, transaction, **kwargs):
         return cls.table.update_one(transaction, **kwargs)
 
-    @classmethod
-    @rpc_response('BatchUpdateTransaction')
     def batch_update_transaction(cls, filters, **kwargs):
         return cls.table.update_many(filters, **kwargs)
