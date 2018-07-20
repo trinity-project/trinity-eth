@@ -90,35 +90,16 @@ class TrinityTransaction(object):
         return self.transaction.query_transaction(tx_nonce)
 
     def get_latest_nonceid(self):
-        trans = self.transaction.batch_query_transaction({}).
+        trans = self.transaction.batch_query_transaction({})
+        return trans[-1].nonce
 
     def get_transaction_state(self):
-        tx = self.read_transaction()
-        if tx:
-            return tx.get("State")
-        else:
-            return None
+        trans = self.transaction.batch_query_transaction({})
+        return trans[-1].state
 
     def realse_transaction(self):
-        LOG.debug("realse_transaction {}".format(self.channel))
-        tx = self.read_transaction()
-        tx_state = tx.get("State")
-        if tx_state !="confirm":
-            return False, "transaction state not be confirmed"
-        latest_nonce =self.get_latest_nonceid(tx)
-        latest_tx = tx.get(str(latest_nonce))
-        LOG.debug("Latest Tx {}".format(json.dumps(latest_tx, indent=1)))
-        latest_ctx = latest_tx.get("Commitment")
-        ctx_txData = latest_ctx.get("originalData").get("txData")
-        tx_id = latest_ctx.get("originalData").get("txId")
-        ctx_witness = latest_ctx.get("originalData").get("witness")
-        ctx_txData_other = latest_ctx.get("txDataSing")
-        ctx_txData_sign = sign(ctx_txData, self.wallet)
-        raw_data = ctx_txData+ctx_witness.format(signSelf=ctx_txData_other, signOther = ctx_txData_sign)
-        result = TrinityTransaction.sendrawtransaction(raw_data)
+        pass
 
-        print("Commitment Tx to Chain    ", tx_id)
-        return result
 
 
 
