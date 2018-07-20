@@ -25,7 +25,7 @@ SOFTWARE."""
 from .manager import DBManager, rpc_response, connection_singleton
 
 
-class TBLTransaction(DBManager):
+class TBLHistory(DBManager):
     """
         Descriptions    :
         Created         : 2018-02-13
@@ -33,12 +33,12 @@ class TBLTransaction(DBManager):
     """
     def add_one(self, **kwargs):
         # to check whether the state is correct:
-        return super(TBLTransaction, self).add(*kwargs)
+        return super(TBLHistory, self).add(*kwargs)
 
     @property
     @connection_singleton
     def client(self):
-        return super(TBLTransaction, self).client
+        return super(TBLHistory, self).client
 
     @property
     def db_table(self):
@@ -47,42 +47,38 @@ class TBLTransaction(DBManager):
     def set_collection(self, collection):
         self.collection = collection
 
-    @property
-    def primary_key(self):
-        return 'nonce'
-
-    def list_collections(self):
-        return self.client.trans_db.list_collection_names()
-
-    def delete_collection(self, collection_index):
-        return self.client.trans_db.drop_collection(collection_index)
-
 
 
 
 class APITransaction(object):
-
-    def __init__(self, transaction_index):
-        self.table = TBLTransaction().set_collection(transaction_index)
+    table = TBLHistory()
 
 
-    def add_transaction(self, *args):
-        return self.table.add_one(*args)
+    def get_transation(cls, history_index):
+        cls.table = TBLHistory().set_collection(history_index)
 
-    def delete_transaction(self, transaction):
-        return self.table.delete_one(transaction)
 
-    def batch_delete_transaction(self, filters):
-        return self.table.delete_many(filters)
+    def add_transaction(cls, *args):
+        return cls.table.add_one(*args)
 
-    def query_transaction(self, transaction, *args, **kwargs):
-        return self.table.query_one(transaction, *args, **kwargs)
+    def delete_transaction(cls, transaction):
+        return cls.table.delete_one(transaction)
 
-    def batch_query_transaction(self, filters, *args, **kwargs):
-        return self.table.query_many(filters, *args, **kwargs)
 
-    def update_transaction(self, transaction, **kwargs):
-        return self.table.update_one(transaction, **kwargs)
+    def batch_delete_transaction(cls, filters):
+        return cls.table.delete_many(filters)
 
-    def batch_update_transaction(self, filters, **kwargs):
-        return self.table.update_many(filters, **kwargs)
+
+    def query_transaction(cls, transaction, *args, **kwargs):
+        return cls.table.query_one(transaction, *args, **kwargs)
+
+
+    def batch_query_transaction(cls, filters, *args, **kwargs):
+        return cls.table.query_many(filters, *args, **kwargs)
+
+
+    def update_transaction(cls, transaction, **kwargs):
+        return cls.table.update_one(transaction, **kwargs)
+
+    def batch_update_transaction(cls, filters, **kwargs):
+        return cls.table.update_many(filters, **kwargs)

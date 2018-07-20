@@ -22,7 +22,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 Configure = {
-    "alias":"TrinityNode",# you can rename your node
+    "alias":"TrinityEthNode",# you can rename your node
     "GatewayURL":"http://localhost:8077",
     "AutoCreate": True, # if the wallet accept the create channel request automatically
     "Channel":{
@@ -40,9 +40,6 @@ Configure = {
         "TNC": "0x849d095d07950b9e56d0c895ec48ec5100cfdff1"
     },
     "BlockChain":{
-        "RPCClient":"http://localhost:20332", # neocli client json-rpc
-        "NeoProtocol":"/home/will/neocli/protocol.json",
-        "NeoUrlEnhance": "http://47.254.64.251:21332",
         "EthNetUrl" : "https://ropsten.infura.io"
     },
     "DataBase":{"url": "http://localhost:20554"

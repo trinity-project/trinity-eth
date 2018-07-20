@@ -27,7 +27,7 @@ from pymongo.errors import DuplicateKeyError
 from datetime import datetime
 #from jsonrpc import dispatcher
 
-from .base_enum import EnumStatusCode
+from model.base_enum import EnumStatusCode
 from trinity import DATABASE_CONFIG as cfg
 from log import LOG
 
@@ -81,6 +81,8 @@ class DBClient(object):
     def __init__(self):
         self.db_client = pymongo.MongoClient(self.uri)
         self.db = self.db_client.get_database(self.db_name)
+        self.trans_db=self.db_client.get_database(self.db_trans_name)
+        self.history_db = self.db_client.get_database(self.db_history_name)
 
     def close(self):
         try:
@@ -120,7 +122,15 @@ class DBClient(object):
 
     @property
     def db_name(self):
-        return cfg['name']
+        return cfg['channel'] if cfg.get("channel") else "Channel"
+
+    @property
+    def db_trans_name(self):
+        return cfg["trans"] if cfg.get("trans") else "Transaction"
+
+    @property
+    def db_history_name(self):
+        return cfg["history"] if cfg.get("history") else "History"
 
 
 class DBManager(object):

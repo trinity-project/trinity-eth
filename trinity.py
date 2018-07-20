@@ -41,7 +41,9 @@ DATABASE_CONFIG = {
         'password': os.getenv('DB_PASSWORD'),
     },
     'type': os.getenv('DB_TYPE', 'mongodb'),
-    'name': os.getenv('DB_NAME', 'trinity') if __running_mode__ else 'beta-database',
+    'channel': os.getenv('DB_CHANNEL', 'channel') if __running_mode__ else 'beta-channel',
+    'trans': os.getenv('DB_TRANS','Transaction') if __running_mode__ else 'beta-trans',
+    'history': os.getenv('DB_HISTORY','History') if __running_mode__ else 'beta-history',
     'host': os.getenv('DB_HOST', '127.0.0.1'),
     'port': int(os.getenv('DB_PORT', 27017))
 }

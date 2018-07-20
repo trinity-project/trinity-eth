@@ -18,7 +18,7 @@ from ethereum.transactions import Transaction
 def get_privtKey_from_keystore(filename,password):
     with open(filename) as keyfile:
         encrypted_key = keyfile.read()
-        private_key = w3.eth.account.decrypt(encrypted_key, password)
+        private_key = Web3.eth.account.decrypt(encrypted_key, password)
         print(private_key)
         return binascii.hexlify(private_key).decode()
 
@@ -45,11 +45,11 @@ class Client(object):
         tx = {
             'gas': gasLimit,
             'to': addressTo,
-            'value': value,
+            'value': int(value*10**18),
             'gasPrice': self.web3.eth.gasPrice,
             'nonce': self.web3.eth.getTransactionCount(addressFrom),
         }
-
+        print(tx)
         return tx
 
 
@@ -63,6 +63,17 @@ class Client(object):
         """
         return self.web3.eth.contract(address=contract_address, abi=abi)
 
+
+    def construct_erc20_tx(self, contract,addressFrom, addressTo,value, gasLimit=25600, gasprice=None):
+        tx = contract.functions.transfer(
+            addressTo,
+            int(value)
+        ).buildTransaction({
+            "gas": gasLimit,
+            'gasPrice': self.web3.eth.gasPrice * 2 if not gasprice  else gasprice,
+            'nonce': self.web3.eth.getTransactionCount(addressFrom),
+        })
+        return tx
 
     def invoke_contract(self, invoker, contract, method, args):
         tx = contract.functions[method](*args
@@ -103,16 +114,18 @@ class Client(object):
         :param address:
         :return:
         """
-        return self.web3.getBalance(address)
+        return self.web3.eth.getBalance(address)/(10**18)
 
-    def get_balance_of_erc20(self,contract,address):
+    def get_balance_of_erc20(self,contract_address, abi, address):
         """
 
-        :param contract: contract instance , can get via
+        :param contract_address:
+        :param abi:
         :param address:
         :return:
         """
-        return contract.functions.balanceOf(address).call()
+        contract = self.get_contract_instance(contract_address, abi)
+        return contract.functions.balanceOf(address).call()/(10**8)
 
     def get_block_count(self):
         """

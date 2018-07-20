@@ -30,6 +30,8 @@ import binascii
 from lightwallet.accounts import Account
 import json
 from blockchain.web3client import Client
+from lightwallet.Settings import settings
+from ethereum.utils import checksum_encode
 
 
 class Wallet(object):
@@ -37,8 +39,7 @@ class Wallet(object):
 
     """
 
-
-    def __init__(self, path, passwordKey, create, eth_url=""):
+    def __init__(self, path, passwordKey, create):
 
         """
 
@@ -51,7 +52,6 @@ class Wallet(object):
         self._accounts = []
         self._keys={}
         self._passwordHash=None
-        self.client = Client(eth_url)
         self.locked = False
         self.name = path.split(".")[0]
 
@@ -138,6 +138,11 @@ class Wallet(object):
 
     @property
     def address(self):
+        """
+
+        :return:
+        """
+
         if self._key:
             return self._key.address
         else:
@@ -145,6 +150,10 @@ class Wallet(object):
 
     @property
     def pubkey(self):
+        """
+
+        :return:
+        """
         if self._key:
             return self._key.pubkey_safe
         else:
@@ -152,28 +161,115 @@ class Wallet(object):
 
 
     def get_default_address(self):
+        """
+
+        :return:
+        """
         return self._accounts[0]["account"].GetAddress()
 
-    def send(self,addresss_to, value, gasLimit=25600):
-        tx = self.client.construct_common_tx(self._key.address, addresss_to, value, gasLimit)
+    def send_eth(self,addresss_to, value, gasLimit=25600):
+        """
+
+        :param addresss_to:
+        :param value:
+        :param gasLimit:
+        :return:
+        """
+
+        addresss_to = checksum_encode(addresss_to)
+        tx = settings.EthClient.construct_common_tx(self._key.address, addresss_to, value, gasLimit)
         rawdata = self.SignTX(tx)
-        return self.client.broadcast(rawdata.rawTransaction)
+        tx_id = self.SendRawTransaction(rawdata.rawTransaction)
+        return binascii.hexlify(tx_id).decode()
 
+    def send_erc20(self, asset, address_to, value, gasLimit=25600, gasprice=None):
+        """
 
+        :param asset:
+        :param address_to:
+        :param value:
+        :param gasLimit:
+        :param gasprice:
+        :return:
+        """
+
+        conract_address, abi, decimals = self.get_contract(asset)
+
+        if not conract_address or not abi or not decimals:
+            raise Exception("can not get asset %s info" %asset)
+
+        contract_instance = settings.EthClient.get_contract_instance(conract_address,
+                                                       abi)
+        address_to = checksum_encode(address_to)
+        tx = settings.EthClient.construct_erc20_tx(contract_instance, self._key.address,
+                                                   int(value*10*decimals), gasLimit, gasprice)
+        rawdata = self.SignTX(tx)
+        tx_id = self.SendRawTransaction(rawdata.rawTransaction)
+        return binascii.hexlify(tx_id).decode()
+
+    def get_contract(self, asset):
+        """
+
+        :param asset:
+        :return:
+        """
+        if asset.upper() == "TNC":
+            return settings.TNC, settings.TNCabi, 8
+        else:
+            return self.search_asset(asset)
+
+    def search_asset(self, asset):
+        """
+        todo
+        :param asset:
+        :return:
+        """
+        return None, None, None
 
     def ToJson(self, verbose=False):
+        """
+
+        :param verbose:
+        :return:
+        """
 
         jsn = {}
         jsn['path'] = self._path
         jsn['address'] = self._key.address
         jsn["publickey"] = self._key.pubkey
+        jsn["ETH"] = self.eth_balance
+        jsn["TNC"] = self.tnc_balance
 
         return jsn
 
+    @property
+    def eth_balance(self):
+        """
+
+        :return:
+        """
+
+        return settings.EthClient.get_balance_of_eth(self._key.address)
+
+    @property
+    def tnc_balance(self):
+        """
+
+        :return:
+        """
+        return settings.EthClient.get_balance_of_erc20(settings.TNC, settings.TNCabi,
+                                                       self._key.address)
+
     def ToJsonFile(self, path):
+        """
+
+        :param path:
+        :return:
+        """
+
         jsn={}
         jsn["password"]={"passwordHash":self._passwordHash.decode()}
-        jsn["name"]=self.Name
+        jsn["name"]=self.name
         jsn['keystore'] = self._key.toJson()
         jsn['extra'] ={}
 
@@ -182,16 +278,37 @@ class Wallet(object):
         return None
 
     def fromJsonFile(self,path):
+        """
+
+        :param path:
+        :return:
+        """
+
         with open(path,"rb") as f:
             content=json.loads(f.read().decode())
         return content
 
     def LoadStoredData(self, key):
+        """
+
+        :param key:
+        :return:
+        """
+
         wallet = self.fromJsonFile(self._path)
         return wallet.get("extra").get(key)
 
     def SaveStoredData(self, key, value):
+        """
+
+        :param key:
+        :param value:
+        :return:
+        """
         wallet_info  = self.fromJsonFile(self._path)
         wallet_info["extra"][key] = value
         with open(self._path,"wb") as f:
             f.write(json.dumps(wallet_info).encode())
+
+    def SendRawTransaction(self, rawdata):
+        return settings.EthClient.broadcast(rawdata)
