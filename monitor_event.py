@@ -33,7 +33,7 @@ def handle_logs(logs):
 
     tmp_dict={}
     for item in logs:
-        # print(item)
+        print(item)
         if item.get("address") ==ADDRESS_OF_ERC721_WOB:
             if item.get("topics")[0].hex()==TOPICS_OF_ERC_TRANSFER:
 
@@ -43,6 +43,7 @@ def handle_logs(logs):
                 tmp_dict["addressTo"]="0x"+item.get("data")[90:130]
                 tmp_dict["messageType"]="monitorEthTransfer"
                 tmp_dict["tokenId"]=int("0x"+item.get("data")[130:194],16)
+                tmp_dict["timestamp"]=int(time.time())
 
                 to_push_event=json.dumps(tmp_dict)
                 if to_push_event not in has_pushed:
