@@ -37,7 +37,7 @@ class PromptInterface(object):
                 'send {asset} {address} {amount}',
                 'export wif {address}',
                 'export nep2 {address}',
-                'tx {txid}',
+                'history',
                 'lock cli',
                 'unlock cli'
                 ]
@@ -339,16 +339,11 @@ class PromptInterface(object):
         :param args:
         :return:
         """
-        item = get_arg(args)
-        if item is not None:
-            try:
-                pprint.pprint (show_tx(item))
-            except Exception as e:
-                print("Could not find transaction with id %s " % item)
-        # else:
-        #     tx_records=TX_RECORD.query(self.Wallet._accounts[0]["account"].GetAddress())
-        #     for item in tx_records:
-        #         print(item.to_json())
+        history = self.Wallet.query_history()
+        for item in history:
+            print("*"*20)
+            print(item)
+        return
 
     def parse_result(self, result):
         """
@@ -390,7 +385,7 @@ class PromptInterface(object):
             self.show_wallet(arguments)
         elif command == 'send':
             self.do_send(arguments)
-        elif command == 'tx':
+        elif command == 'history':
             self.show_tx(arguments)
         elif command == "lock":
             self.do_lock(arguments)

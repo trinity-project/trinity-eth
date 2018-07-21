@@ -25,6 +25,8 @@ SOFTWARE."""
 import pymongo
 from pymongo.errors import DuplicateKeyError
 from datetime import datetime
+import json
+
 #from jsonrpc import dispatcher
 
 from model.base_enum import EnumStatusCode
@@ -71,6 +73,11 @@ def rpc_response(name):
 class ModelSet(object):
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
+
+    def __str__(self):
+        _dict = self.__dict__.copy()
+        _dict.pop("_id") if _dict.get("_id") else None
+        return json.dumps(_dict, skipkeys=True, indent=4)
 
 
 class DBClient(object):
@@ -253,11 +260,11 @@ class DBManager(object):
 
     @property
     def create_at(self):
-        return {'create_at': datetime.utcnow(), 'update_at': ''}
+        return {'create_at': str(datetime.utcnow()), 'update_at': ''}
 
     @property
     def update_at(self):
-        return {'update_at': datetime.utcnow()}
+        return {'update_at': str(datetime.utcnow())}
 
     @property
     def client(self):

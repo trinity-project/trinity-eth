@@ -1,18 +1,9 @@
 import binascii
-
-import time
-
 import requests
-from eth_account.datastructures import AttributeDict
-from eth_hash.backends.pysha3 import keccak256
-from py_ecc.secp256k1 import privtopub
-from solc import compile_source, compile_files
-from ethereum import utils
-from ethereum.utils import ecsign, ecrecover_to_pub, privtoaddr, normalize_key, \
+from ethereum.utils import ecsign, normalize_key, \
     int_to_big_endian
 from web3 import Web3, HTTPProvider
-import rlp
-from ethereum.transactions import Transaction
+
 
 
 def get_privtKey_from_keystore(filename,password):
@@ -25,8 +16,6 @@ def get_privtKey_from_keystore(filename,password):
 from enum import Enum
 class ASSET_TYPE(Enum):
     TNC=2443
-    NEO=1376
-    GAS=1785
     ETH=1027
 
 def get_price_from_coincapmarket(asset_type):
@@ -49,7 +38,6 @@ class Client(object):
             'gasPrice': self.web3.eth.gasPrice,
             'nonce': self.web3.eth.getTransactionCount(addressFrom),
         }
-        print(tx)
         return tx
 
 
