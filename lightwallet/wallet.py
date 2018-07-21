@@ -195,7 +195,7 @@ class Wallet(object):
 
         tx_id = binascii.hexlify(tx_id).decode()
         try:
-            self.record_history(tx_id=tx_id, asset_id="Eth", sendto=sendto, value=value)
+            self.record_history(tx_id=tx_id, asset_id=asset_id, sendto=sendto, value=value)
         except Exception as e:
             LOG.error("Record history error {}".format(e))
 
@@ -225,6 +225,7 @@ class Wallet(object):
                                                    int(value*10*decimals), gasLimit, gasprice)
         rawdata = self.SignTX(tx)
 
+        asset = "{}({})".format(asset, conract_address)
         return self._sendraw_and_recordhistory(rawdata, asset, address_to, value)
 
     def get_contract(self, asset):
