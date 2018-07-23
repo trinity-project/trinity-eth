@@ -19,6 +19,9 @@ class Interface(object):
         self.contract=self.eth_client.get_contract_instance(setting.ETH_CONTRACT_ADDRESS,setting.ETH_CONTRACT_ABI)
         self.asset_contract=self.eth_client.get_contract_instance(setting.ASSET_CONTRACT_ADDRESS,setting.ASSET_CONTRACT_ABI)
 
+    def approve_default(self, invoker, assetAmount, privateKey):
+        self.__approve(invoker, setting.ASSET_CONTRACT_ADDRESS, assetAmount, privateKey)
+
     def approve(self, invoker, ethContractAddress, assetAmount, privateKey):
         ethContractAddress = checksum_encode(ethContractAddress)
         txId = self.eth_client.contruct_Transaction(invoker, self.asset_contract, "approve",[ethContractAddress,assetAmount], privateKey)

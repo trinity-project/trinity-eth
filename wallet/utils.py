@@ -220,6 +220,9 @@ def convert_float(number, decimals=8):
     return round(float(number),decimals)
 
 
+def get_magic():
+    magic = Configure.get('Magic')
+    return magic.get('Block').strip() + magic.get('Trinity').strip()
 
 
 if __name__ == "__main__":

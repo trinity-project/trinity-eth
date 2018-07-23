@@ -33,13 +33,28 @@ from wallet.utils import sign,\
     check_onchain_balance, \
     check_max_deposit,\
     check_mix_deposit,\
-    check_deposit
+    check_deposit,\
+    get_magic
 from blockchain.monior import register_block, \
     register_monitor
+from blockchain.ethInterface.service import Interface as EthInterface
 from model import APIChannel
 from log import LOG
 import json
 from wallet.TransactionManagement.payment import Payment
+from enum import IntEnum
+
+
+class EnumResponseStatus(IntEnum):
+    RESPONSE_OK     = 0x0
+
+    # Fonder Message
+    RESPONSE_FONDER_DEPOSIT_NOT_ENOUGH = 0x10
+
+    # Common response error
+    RESPONSE_EXCEPTION_HAPPENED = 0xF0
+    RESPONSE_FAIL   = 0XFF
+
 
 class Message(object):
     """
@@ -48,15 +63,31 @@ class Message(object):
 
     def __init__(self, message):
         self.message = message
-        self.message_type = message.get("MessageType")
         self.receiver = message.get("Receiver")
         self.sender = message.get("Sender")
+        assert self.sender != self.receiver, 'Sender should be different from receiver.'
+
+        self.message_type = message.get("MessageType")
         self.message_body = message.get("MessageBody")
         self.error = message.get("Error")
+        # self.network_magic = get_magic()
+
+    @property
+    def network_magic(self):
+        return get_magic()
+
+    @staticmethod
+    def get_magic():
+        return get_magic()
+
+
 
     @staticmethod
     def send(message):
         send_message(message)
+
+    def handle(self):
+        LOG.info('Received Message<{}>'.format(self.message_type))
 
 
 class RegisterMessage(Message):
@@ -206,6 +237,7 @@ class CreateTranscation(Message):
 
 
 class TransactionMessage(Message):
+    _interface = EthInterface()
     """
 
     """
@@ -226,6 +258,22 @@ class TransactionMessage(Message):
         """
         res = sign(self.wallet, context)
         return res
+
+    @staticmethod
+    def sign_content(*args, **kwargs):
+        """
+
+        :return:
+        """
+        typeList = args[0] if 0 < len(args) else kwargs.get('typeList')
+        valueList = args[1] if 1 < len(args) else kwargs.get('valueList')
+        privtKey = args[2] if 2 < len(args) else kwargs.get('privtKey')
+        content = TransactionMessage._interface.sign_args(typeList, valueList, privtKey).decode()
+        return '0x'+content
+
+    @staticmethod
+    def approve(public_key, deposit, private_key):
+        TransactionMessage._interface.approve_default(public_key, deposit, private_key)
 
 
 class FounderMessage(TransactionMessage):
@@ -250,201 +298,96 @@ class FounderMessage(TransactionMessage):
 
     def __init__(self, message, wallet=None):
         super().__init__(message,wallet)
+        assert 0 == self.tx_nonce, 'Nonce must be zero.'
+
         self.channel_name = message.get("ChannelName")
-        self.founder = self.message_body.get("Founder")
-        self.commitment = self.message_body.get("Commitment")
-        self.revocable_delivery = self.message_body.get("RevocableDelivery")
-        self.transaction = TrinityTransaction(self.channel_name, self.wallet)
-        self.sender_pubkey, self.sender_ip = self.sender.split("@")
-        self.receiver_pubkey, self.receiver_ip= self.receiver.split("@")
-        self.sender_address = pubkey_to_address(self.sender_pubkey)
-        self.receiver_address = pubkey_to_address(self.receiver_pubkey)
         self.asset_type = self.message_body.get("AssetType")
-        self.deposit = self.message_body.get("Deposit")
-        self.role_index = self.message_body.get("RoleIndex")
-        self.rdtxid = self.revocable_delivery.get("txId")
+        self.founder_deposit = self.message_body.get("FounderDeposit")
+        self.partner_deposit = self.message_body.get("PartnerDeposit")
+
+        self.commitment = self.message_body.get('Commitment')
         self.comments = self.message.get("Comments")
 
-    def _check_transaction_file(self):
-        if not self.wallet.LoadStoredData(self.channel_name):
-            self.wallet.SaveStoredData(self.channel_name, "{}.data".format(self.channel_name))
-            self.transaction.create_tx_file(self.channel_name)
-
-    def _handle_0_message(self):
-        self.send_responses(role_index=self.role_index)
-        self.transaction.update_transaction(str(self.tx_nonce), Founder = self.founder ,MonitorTxId=self.rdtxid)
-        role_index = int(self.role_index) + 1
-        FounderMessage.create(self.channel_name, self.receiver_pubkey,
-                              self.sender_pubkey, self.asset_type.upper(), self.deposit, self.sender_ip,
-                              self.receiver_ip, role_index=role_index, wallet=self.wallet, comments=self.comments)
-
-    def _handle_1_message(self):
-        txid = self.founder.get("txId")
-        self.send_responses(role_index=self.role_index)
-        ch.Channel.channel(self.channel_name).update_channel(state=EnumChannelState.OPENING.name)
-        print("Channel Now is Opening")
-        register_monitor(txid, monitor_founding, self.channel_name, EnumChannelState.OPENED.name)
-        subitem = {}
-        subitem.setdefault(self.asset_type.upper(), self.deposit)
-        balance = {}
-        balance.setdefault(self.sender_pubkey, subitem)
-        balance.setdefault(self.receiver_pubkey, subitem)
-        self.transaction.update_transaction(str(self.tx_nonce), Balance=balance, State="confirm")
+        self.wallet = wallet
 
     def handle_message(self):
-        LOG.info("Handle FounderMessage: {}".format(str(self.message)))
+        self.handle()
+
+    def handle(self):
+        super().handle()
         verify, error = self.verify()
-        if verify:
-            self._check_transaction_file()
-            if self.role_index == 0:
-                return self._handle_0_message()
-            elif self.role_index == 1:
-                return self._handle_1_message()
-            else:
-                LOG.error("Not correct role index, expect 0 or 1 but get {}".format(str(self.role_index)))
-                return None
+
+        status = EnumResponseStatus.RESPONSE_OK.value
+        if not verify:
+            status = EnumResponseStatus.RESPONSE_FAIL
         else:
-            self.send_responses(self.role_index, error = error)
+            FounderResponsesMessage.approve(self.wallet._key.pubkey, self.partner_deposit, self.wallet._key.privkey)
+
+        # send response
+        FounderResponsesMessage.create(self.channel_name, self.sender, self.receiver, self.asset_type,
+                                       self.founder_deposit, self.partner_deposit, self.network_magic,
+                                       status, self.wallet)
 
     @staticmethod
-    def create(channel_name, self_pubkey, partner_pubkey,asset_type, deposit, partner_ip,
-               gateway_ip,role_index=0, wallet=None, comments= None):
+    def create(channel_name, founder, partner, asset_type, founder_deposit, partner_deposit, magic, wallet=None, comments=None):
         """
 
         :param channel_name:
-        :param self_pubkey:
-        :param partner_pubkey:
+        :param founder:
+        :param partner:
         :param asset_type:
-        :param deposit:
-        :param partner_ip:
-        :param gateway_ip:
-        :param role_index:
+        :param founder_deposit:
+        :param receiver_deposit:
         :param wallet:
+        :param comments:
         :return:
         """
-        walletfounder = {
-            "pubkey":self_pubkey,
-            "deposit":float(deposit)
-    }
-        walletpartner = {
-            "pubkey":partner_pubkey,
-            "deposit":float(deposit)
-    }
+        assert founder.__contains__('@'), 'Invalid founder URL format.'
+        assert partner.__contains__('@'), 'Invalid founder URL format.'
 
-        transaction = TrinityTransaction(channel_name, wallet)
+        founder_deposit = float(founder_deposit)
+        assert 0 < float(founder_deposit), 'Deposit Must be lager than zero.'
 
-        if role_index == 0:
-            founder = createFundingTx(walletpartner, walletfounder)
+        if partner_deposit:
+            assert float(partner_deposit) <= float(founder_deposit), 'Deposit Must be lager than zero.'
+            partner_deposit = float(partner_deposit)
         else:
-            founder = transaction.get_founder()
+            partner_deposit = founder_deposit
 
-        commitment = createCTX(founder.get("addressFunding"), deposit, deposit, self_pubkey,
-                               partner_pubkey, founder.get("scriptFunding"))
+        founder_addr = founder.strip().split('@')[0]
+        partner_addr = partner.strip().split('@')[0]
 
-        address_self = pubkey_to_address(self_pubkey)
+        # Sign this data to the
+        commitment = FounderMessage.sign_content(typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
+                                                 valueList=[channel_name, 0, founder_addr, founder_deposit, partner_addr, partner_deposit],
+                                                 privtKey = wallet._key.privkey)
 
-        revocabledelivery = createRDTX(commitment.get("addressRSMC"),address_self, deposit, commitment.get("txId"),
-                                       commitment.get("scriptRSMC"))
+        message = {
+            "MessageType": "Founder",
+            "Sender": founder,
+            "Receiver": partner,
+            "TxNonce": 0,
+            "ChannelName": channel_name,
+            "NetMagic": magic,
+            "MessageBody": {
+                "FounderDeposit": founder_deposit,
+                "PartnerDeposit": partner_deposit,
+                "Commitment": commitment,
+                "AssetType": asset_type.upper(),
+            }
+        }
 
-        message = { "MessageType":"Founder",
-                    "Sender": "{}@{}".format(self_pubkey, gateway_ip),
-                    "Receiver":"{}@{}".format(partner_pubkey, partner_ip),
-                    "TxNonce": 0,
-                    "ChannelName":channel_name,
-                    "MessageBody": {
-                                      "Founder": founder,
-                                      "Commitment":commitment,
-                                       "RevocableDelivery":revocabledelivery,
-                                       "AssetType":asset_type.upper(),
-                                       "Deposit": deposit,
-                                       "RoleIndex":role_index,
-                                      },
-                    "Comments": comments
-                 }
+        # Add comments in the messages
+        if comments:
+            message.update({"Comments": comments})
+
+        # authourized the deposit to the contract
+        FounderResponsesMessage.approve(wallet._key.pubkey, founder_deposit,wallet._key.privkey)
+
         FounderMessage.send(message)
 
     def verify(self):
-        if self.sender == self.receiver:
-            return False, "Not Support Sender is Receiver"
-        if self.receiver != self.wallet.url:
-            return False, "The Endpoint is Not Me"
         return True, None
-
-    def create_verify_tx(self):
-        if self.role_index == 0:
-            walletfounder = {
-                "pubkey": self.receiver_pubkey,
-                "deposit": float(self.deposit)
-            }
-            walletpartner = {
-                "pubkey": self.sender_pubkey,
-                "deposit": float(self.deposit)
-            }
-            Txfounder = createFundingTx(walletpartner,walletfounder)
-        elif self.role_index == 1:
-            walletfounder = {
-                "pubkey": self.sender_pubkey,
-                "deposit": float(self.deposit)
-            }
-            walletpartner = {
-                "pubkey": self.receiver_pubkey,
-                "deposit": float(self.deposit)
-            }
-            Txfounder = createFundingTx(walletpartner, walletfounder)
-
-        commitment = createCTX(Txfounder.get("addressFunding"), self.deposit, self.deposit, self.sender_pubkey,
-                           self.receiver_pubkey, Txfounder.get("scriptFunding"))
-
-        address_self = pubkey_to_address(self.sender_pubkey)
-
-        revocabledelivery = createRDTX(commitment.get("addressRSMC"), address_self, self.deposit, commitment.get("txId"),
-                                   commitment.get("scriptRSMC"))
-        return {"Founder":Txfounder,
-                "CTx":commitment,
-                "RTx":revocabledelivery}
-
-
-    def send_responses(self, role_index, error = None):
-        founder_sig = {"txDataSign": self.sign_message(self.founder.get("txData")),
-                        "originalData": self.founder}
-        commitment_sig = {"txDataSign": self.sign_message(self.commitment.get("txData")),
-                       "originalData": self.commitment}
-        rd_sig = {"txDataSign": self.sign_message(self.revocable_delivery.get("txData")),
-                       "originalData": self.revocable_delivery}
-        if error:
-            message_response = { "MessageType":"FounderFail",
-                                "Sender": self.receiver,
-                                "Receiver":self.sender,
-                                 "ChannelName":self.channel_name,
-                                "TxNonce": 0,
-                                "MessageBody": {"Founder": self.founder,
-                                                  "Commitment":self.commitment,
-                                                  "RevocableDelivery":self.revocable_delivery,
-                                                "AssetType":self.asset_type.upper(),
-                                                "Deposit":self.deposit,
-                                                "RoleIndex": role_index,
-                                                },
-                                 "Comments": self.comments,
-                                 "Error":error
-                                }
-        else:
-            message_response = { "MessageType":"FounderSign",
-                                "Sender": self.receiver,
-                                "Receiver":self.sender,
-                                 "ChannelName":self.channel_name,
-                                "TxNonce": 0,
-                                "MessageBody": {"Founder": founder_sig,
-                                                  "Commitment":commitment_sig,
-                                                  "RevocableDelivery":rd_sig,
-                                                "AssetType": self.asset_type.upper(),
-                                                "Deposit": self.deposit,
-                                                "RoleIndex": role_index,
-                                                },
-                                 "Comments": self.comments
-                                }
-        FounderMessage.send(message_response)
-        LOG.info("Send FounderMessage Response:  {}".format(json.dumps(message_response )))
-        return None
 
 
 class FounderResponsesMessage(TransactionMessage):
@@ -466,53 +409,17 @@ class FounderResponsesMessage(TransactionMessage):
     }
     """
     def __init__(self, message, wallet):
-        super().__init__(message, wallet)
-        self.channel_name = message.get("ChannelName")
-        self.founder = self.message_body.get("Founder")
-        self.commitment = self.message_body.get("Commitment")
-        self.revocable_delivery = self.message_body.get("RevocableDelivery")
-        self.asset_type = self.message_body.get("AssetType")
-        self.deposit = self.message_body.get("Deposit")
-        self.transaction = TrinityTransaction(self.channel_name, self.wallet)
-        self.role_index = self.message_body.get("RoleIndex")
-        self.comments = self.message.get("Comments")
+        super().__init__(message,wallet)
+        # assert 0 == self.tx_nonce, 'Nonce must be zero.'
 
-    def _check_transaction_file(self):
-        if not self.wallet.LoadStoredData(self.channel_name):
-            self.wallet.SaveStoredData(self.channel_name, "{}.data".format(self.channel_name))
+        self.channel_name    = message.get("ChannelName")
+        self.asset_type      = self.message_body.get("AssetType")
+        self.founder_deposit = self.message_body.get("FounderDeposit")
+        self.partner_deposit = self.message_body.get("PartnerDeposit")
 
-    def _handle_0_message(self):
-        self.transaction.update_transaction("0", Founder=self.founder, Commitment=self.commitment,
-                                            RD=self.revocable_delivery)
-
-    def _handle_1_message(self):
-        self.transaction.update_transaction("0", Founder=self.founder, Commitment=self.commitment,
-                                            RD=self.revocable_delivery)
-        result = self.send_founder_raw_transaction()
-        if result is True:
-            ch.Channel.channel(self.channel_name).update_channel(state=EnumChannelState.OPENING.name)
-            print("Channel Now is Opening")
-            txid = self.founder.get("originalData").get("txId")
-            register_monitor(txid, monitor_founding, self.channel_name, EnumChannelState.OPENED.name)
-        else:
-            message_response = {"MessageType": "FounderFail",
-                                "Sender": self.receiver,
-                                "Receiver": self.sender,
-                                "ChannelName": self.channel_name,
-                                "TxNonce": 0,
-                                "MessageBody":self.message_body,
-                                "Error": "SendFounderRawTransactionFail",
-                                "Comments":"retry" if self.comments != "retry" else None
-                                }
-            Message.send(message_response)
-            ch.Channel.channel(self.channel_name).delete_channel()
-
-    def _handle_error_message(self):
-        ch.Channel.channel(self.channel_name).delete_channel()
-        #ToDo  Just walk around
-        if self.comments == "retry":
-            ch.create_channel(self.wallet.url, self.sender, self.asset_type,self.deposit, comments=self.comments,
-                              channel_name=self.channel_name)
+        self.commitment = self.message_body.get('Commitment')
+        self.status     = self.message.get('Status')
+        self.comments   = self.message.get("Comments")
 
     def send_founder_raw_transaction(self):
         signdata = self.founder.get("txDataSign")
@@ -534,21 +441,21 @@ class FounderResponsesMessage(TransactionMessage):
         self.transaction.update_transaction(str(self.tx_nonce), Balance=balance, State="confirm")
 
     def handle_message(self):
-        LOG.info("Handle FounderResponsesMessage: {}".format(str(self.message)))
-        if self.error:
-            LOG.error("FounderResponsesMessage Error: {}" .format(str(self.message)))
-            return self._handle_error_message()
-        verify, error = self.verify()
-        if verify:
-            self._check_transaction_file()
-            if self.role_index == 0:
-                self._handle_0_message()
-            elif self.role_index == 1:
-                self._handle_1_message()
-            else:
-                LOG.error("Not correct role index, expect 0 or 1 but get {}".format(str(self.role_index)))
-                return None
-        return None
+        self.handle()
+
+    def handle(self):
+        super(FounderResponsesMessage, self).handle()
+
+        if not (EnumResponseStatus.RESPONSE_OK == self.status):
+            LOG.error('Fonder failed to create channels. Status<{}>'.format(self.status))
+            return
+
+        verified, error = self.verify()
+        if verified:
+
+            pass
+        else:
+            LOG.error('Handle FounderSign failed: {}'.format(error))
 
     def verify(self):
         if self.sender == self.receiver:
@@ -557,7 +464,71 @@ class FounderResponsesMessage(TransactionMessage):
             return False, "The Endpoint is Not Me"
         return True, None
 
+    @staticmethod
+    def create(channel_name, founder, partner, asset_type, founder_deposit, partner_deposit,
+               magic, response_status, wallet=None, comments=None):
+        """
 
+        :param channel_name:
+        :param founder:
+        :param partner:
+        :param asset_type:
+        :param founder_deposit:
+        :param receiver_deposit:
+        :param wallet:
+        :param comments:
+        :return:
+        """
+        assert founder.__contains__('@'), 'Invalid founder URL format.'
+        assert partner.__contains__('@'), 'Invalid founder URL format.'
+
+        message = {
+            "MessageType": "FounderSign",
+            "Sender": partner,
+            "Receiver": founder,
+            "TxNonce": 0,
+            "ChannelName": channel_name,
+            "NetMagic": magic
+        }
+
+        if response_status == EnumResponseStatus.RESPONSE_OK:
+            try:
+                founder_deposit = float(founder_deposit)
+                partner_deposit = float(partner_deposit)
+
+                if not (0 < partner_deposit < founder_deposit):
+                    response_status = EnumResponseStatus.RESPONSE_FONDER_DEPOSIT_NOT_ENOUGH
+                    raise Exception(response_status.name)
+
+                founder_addr = founder.strip().split('@')[0]
+                partner_addr = partner.strip().split('@')[0]
+
+                # Sign this data to the
+                commitment = FounderMessage.sign_content(typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
+                                                         valueList=[channel_name, 0, founder_addr, founder_deposit, partner_addr, partner_deposit],
+                                                         privtKey = wallet._key.privkey)
+
+                # update channel transaction history
+
+                message.update({
+                    "MessageBody": {
+                        "Commitment": commitment,
+                        "AssetType": asset_type.upper()
+                    }
+                })
+            except Exception as error:
+                if response_status == EnumResponseStatus.RESPONSE_OK:
+                    response_status = EnumResponseStatus.RESPONSE_EXCEPTION_HAPPENED
+                LOG.error('Exception occurred. {}'.format(error))
+
+        # fill message status
+        message.update({'Status': response_status.value})
+
+        # Add comments in the messages
+        if comments:
+            message.update({"Comments": comments})
+
+        FounderResponsesMessage.send(message)
 
 
 class RsmcMessage(TransactionMessage):
@@ -581,55 +552,45 @@ class RsmcMessage(TransactionMessage):
 
     def __init__(self, message, wallet):
         super().__init__(message,wallet)
+        # assert 0 == self.tx_nonce, 'Nonce MUST be larger than zero'
+
         self.channel_name = message.get("ChannelName")
-        self.commitment = self.message_body.get("Commitment")
-        self.revocable_delivery = self.message_body.get("RevocableDelivery")
-        self.breach_remedy = self.message_body.get("BreachRemedy")
-        self.transaction = TrinityTransaction(self.channel_name, self.wallet)
-        self.sender_pubkey, self.sender_ip= self.sender.split("@")
-        self.receiver_pubkey, self.receiver_ip = self.receiver.split("@")
-        self.sender_address = pubkey_to_address(self.sender_pubkey)
-        self.receiver_address = pubkey_to_address(self.receiver_pubkey)
-        self.value = self.message_body.get("Value")
+
         self.asset_type = self.message_body.get("AssetType")
-        self.transaction = TrinityTransaction(self.channel_name, self.wallet)
-        self.role_index = self.message_body.get("RoleIndex")
-        self.comments = self.message_body.get("Comments")
+        self.payment_count = self.message_body.get("PaymentCount")
+        self.sender_balance = self.message_body.get("SenderBalance")
+        self.receiver_balance = self.message_body.get("ReceiverBalance")
+        self.commitment         = self.message_body.get('Commitment')
+        self.comments = self.message.get("Comments")
 
     def handle_message(self):
-        LOG.info("Handle RsmcMessage : {}".format(str(self.message)))
-        verify, error = self.verify()
-        if verify:
-            if self.role_index == 0:
-                return self._handle_0_message()
-            elif self.role_index == 1:
-                return self._handle_1_message()
-            elif self.role_index == 2:
-                return self._handle_2_message()
-            elif self.role_index == 3:
-                return self._handle_3_message()
-            else:
-                LOG.error("Not correct role index, expect 0/1/2/3 but get {}".format(str(self.role_index)))
-                return None
+        self.handle()
+
+    def handle(self):
+        super(RsmcMessage, self).handle()
+        verified, error = self.verify()
+        if verified:
+            # todo
+            RsmcResponsesMessage.create(self.channel_name, self.wallet, self.sender, self.receiver,
+                                        self.sender_balance, self.receiver_balance, self.payment_count, self.tx_nonce)
+
+            pass
         else:
-            self.send_responses(error = error)
+            LOG.error('Handle message')
+        pass
 
     @staticmethod
-    def create(channel_name, wallet, sender_pubkey, receiver_pubkey, value, partner_ip,gateway_ip ,
-               tx_nonce, asset_type="TNC",cli =False,router = None, next_router=None,
-               role_index=0, comments=None):
+    def create(channel_name, wallet, sender, receiver, payment, nonce, asset_type="TNC",
+               cli=False, router = None, next_router=None, comments=None):
         """
 
         :param channel_name:
         :param wallet:
-        :param sender_pubkey:
-        :param receiver_pubkey:
-        :param value:
-        :param partner_ip:
-        :param gateway_ip:
-        :param tx_nonce:
+        :param sender:
+        :param receiver:
+        :param payment:
+        :param nounce:
         :param asset_type:
-        :param breachremedy:
         :param cli:
         :param router:
         :param next_router:
@@ -637,28 +598,26 @@ class RsmcMessage(TransactionMessage):
         :param comments:
         :return:
         """
-        message = RsmcMessage.generateRSMC(channel_name, wallet, sender_pubkey, receiver_pubkey, value, partner_ip,
-                                           gateway_ip, tx_nonce, asset_type, cli, router, next_router, role_index, comments)
-        LOG.info("Send RsmcMessage role index 1 message  ")
-        RsmcMessage.send(message)
-
+        try:
+            message = RsmcMessage.generateRSMC(channel_name, wallet, sender, receiver, payment, nonce,
+                                               asset_type, cli, router, next_router, comments)
+            RsmcMessage.send(message)
+        except Exception as error:
+            LOG.error(error)
+            return
 
     @staticmethod
-    def generateRSMC(channel_name, wallet, sender_pubkey, receiver_pubkey, value, partner_ip, gateway_ip ,
-               tx_nonce, asset_type="TNC",cli =False,router = None, next_router=None,
-               role_index=0, comments=None):
+    def generateRSMC(channel_name, wallet, sender, receiver, payment, nonce, asset_type="TNC",
+                     cli=False, router=None, next_router=None, comments=None):
         """
 
         :param channel_name:
         :param wallet:
-        :param sender_pubkey:
-        :param receiver_pubkey:
-        :param value:
-        :param partner_ip:
-        :param gateway_ip:
-        :param tx_nonce:
+        :param sender:
+        :param receiver:
+        :param payment:
+        :param nounce:
         :param asset_type:
-        :param breachremedy:
         :param cli:
         :param router:
         :param next_router:
@@ -666,6 +625,9 @@ class RsmcMessage(TransactionMessage):
         :param comments:
         :return:
         """
+        assert sender.__contains__('@'), 'Invalid sender<{}> URL format'.format(sender)
+        assert receiver.__contains__('@'), 'Invalid receiver<{}> URL format.'.format(receiver)
+        assert 0 == nonce, 'Nonce MUST be larger than zero'
 
         transaction = TrinityTransaction(channel_name, wallet)
         founder = transaction.get_founder()
@@ -675,170 +637,123 @@ class RsmcMessage(TransactionMessage):
         balance = channel.get_balance()
         #balance = transaction.get_balance(str(int(tx_nonce)-1))
         LOG.debug("Rsmc Create get balance {}".format(str(balance)))
+        assert balance, 'Void balance<{}> for asset <{}>.'.format(balance, asset_type)
 
-        if balance:
-            sender_balance = balance.get(sender_pubkey)
-            receiver_balance = balance.get(receiver_pubkey)
-            balance_value = sender_balance.get(asset_type.upper())
-            receiver_balance_value = receiver_balance.get(asset_type.upper())
-            LOG.info("RSMC Balance  %s" %(str(balance_value)))
-        else:
-            balance_value = 0
-            receiver_balance_value = 0
+        sender_addr     = sender.strip().split('@')[0]
+        receiver_addr   = receiver.strip().split('@')[0]
+        asset_type      = asset_type.upper()
+        payment         = float(payment)
+
+        sender_balance = float(balance.get(sender_addr, {}).get(asset_type, 0))
+        assert 0 < payment <= sender_balance, 'Sender balance<{}> is not enough.'.format(sender_balance)
+        receiver_balance = float(balance.get(receiver_addr, {}).get(asset_type, 0))
         
-        if role_index in [0,2]:
-            check_blance_ok = (0 < value <= balance_value)
-            sender_balance = float(balance_value) - float(value)
-            receiver_balance = float(receiver_balance_value) + float(value)
-        elif role_index in [1,3]:
-            check_blance_ok = (0 < value <= receiver_balance_value)
-            sender_balance = float(balance_value) + float(value)
-            receiver_balance = float(receiver_balance_value) - float(value)
-        else:
-            check_blance_ok = False
+        # calculate the balances of both
+        sender_balance      = sender_balance - payment
+        receiver_balance    = receiver_balance + payment
 
-        if not check_blance_ok:
-            return CreateTranscation.ack(channel_name, receiver_pubkey, partner_ip, "No Balance or Exceed the balance", cli)
-        elif 'pending' == tx_state:
-            return CreateTranscation.ack(channel_name, receiver_pubkey, partner_ip, "TX is pending", cli)
+        # sender sign
+        commitment = RsmcMessage.sign_content(
+            typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
+            valueList=[channel_name, 0, sender_addr, sender_balance, receiver_addr, receiver_balance],
+            privtKey = wallet._key.privkey)
 
-        message = {}
-        if role_index == 0 or role_index == 1:
-            commitment = createCTX(founder["originalData"]["addressFunding"], sender_balance, receiver_balance,
-                               sender_pubkey, receiver_pubkey, founder["originalData"]["scriptFunding"])
+        # TODO: MUST record this commitment and balance info
+        # update transaction of
 
-            revocabledelivery = createRDTX(commitment.get("addressRSMC"), pubkey_to_address(sender_pubkey), sender_balance,
-                                       commitment.get("txId"),
-                                       commitment.get("scriptRSMC"))
-            message = { "MessageType":"Rsmc",
-                    "Sender": "{}@{}".format(sender_pubkey, gateway_ip),
-                    "Receiver":"{}@{}".format(receiver_pubkey, partner_ip),
-                    "TxNonce": tx_nonce,
-                    "ChannelName":channel_name,
-                    "MessageBody": {
-                                      "Commitment":commitment,
-                                       "RevocableDelivery":revocabledelivery,
-                                       "AssetType":asset_type.upper(),
-                                       "Value": value,
-                                       "RoleIndex":role_index,
-                                       "Comments":comments
-                                      }
-                 }
-            balance = {}
-            subitem = {}
-            subitem.setdefault(asset_type.upper(), sender_balance)
-            balance.setdefault(sender_pubkey, subitem)
-            subitem = {}
-            subitem.setdefault(asset_type.upper(), receiver_balance)
-            balance.setdefault(receiver_pubkey, subitem)
-            transaction.update_transaction(str(tx_nonce), Balance=balance, State="pending")
-            if router and next_router:
-                message.setdefault("Router", router)
-                message.setdefault("NextRouter", next_router)
+        message = {
+            "MessageType":"Rsmc",
+            "Sender": sender,
+            "Receiver": receiver,
+            "TxNonce": nonce,
+            "ChannelName":channel_name,
+            "NetMagic": RsmcMessage.get_magic(),
+            "MessageBody": {
+                "AssetType":asset_type.upper(),
+                "PaymentCount": payment,
+                "SenderBalance": sender_balance,
+                "ReceiverBalance": receiver_balance,
+                "Commitment": commitment,
+            }
+        }
 
-        elif role_index == 2 or role_index == 3:
-            tx = transaction.get_tx_nonce(tx_nonce=str(int(tx_nonce)-1))
-            if tx.get("Commitment"):
-                commitment = tx.get("Commitment").get("originalData")
-                rscmcscript = commitment["scriptRSMC"]
-            elif tx.get("HCTX"):
-                commitment = tx.get("HCTX").get("originalData")
-                rscmcscript = commitment["RSMCscript"]
-
-            breachremedy = createBRTX(founder["originalData"]["addressFunding"], pubkey_to_address(receiver_pubkey), sender_balance,
-                                      rscmcscript)
-            breachremedy_sign = sign(wallet, breachremedy.get("txData"))
-            breachremedy_info = {"txDataSign": breachremedy_sign,
-                                 "originalData":breachremedy}
-
-            message = {"MessageType": "Rsmc",
-                       "Sender": "{}@{}".format(sender_pubkey, gateway_ip),
-                       "Receiver": "{}@{}".format(receiver_pubkey, partner_ip),
-                       "TxNonce": tx_nonce,
-                       "ChannelName": channel_name,
-                       "MessageBody": {
-                           "BreachRemedy": breachremedy_info,
-                           "AssetType": asset_type.upper(),
-                           "Value": value,
-                           "RoleIndex":role_index,
-                           "Comments":comments
-                           }
-                       }
+        if comments:
+            message.update({"Comments": comments})
 
         return message
 
 
-    def _check_balance(self, balance):
-        pass
+    # def _check_balance(self, balance):
+    #     pass
 
     def verify(self):
         return True, None
 
-    def store_monitor_commitement(self):
-        ctxid = self.commitment.get("txID")
-        self.transaction.update_transaction(str(self.tx_nonce), MonitorTxId=ctxid)
-
-    def _handle_0_message(self):
-        LOG.info("RSMC handle 0 message {}".format(json.dumps(self.message)))
-        # recorc monitor commitment txid
-        self.store_monitor_commitement()
-        self.send_responses()
-
-        # send 1 message
-        RsmcMessage.create(self.channel_name,self.wallet,
-                               self.receiver_pubkey,self.sender_pubkey,
-                               self.value,self.sender_ip,self.receiver_ip,self.tx_nonce,
-                           asset_type=self.asset_type.upper(), role_index= 1, comments=self.comments)
-
-
-    def _handle_1_message(self):
-        LOG.info("RSMC handle 1 message  {}".format(json.dumps(self.message)))
-        self.store_monitor_commitement()
-        self.send_responses()
-
-        # send 2 message
-        RsmcMessage.create(self.channel_name, self.wallet,
-                           self.receiver_pubkey, self.sender_pubkey,
-                           self.value, self.sender_ip, self.receiver_ip, self.tx_nonce,
-                           asset_type=self.asset_type.upper(), role_index=2, comments=self.comments)
-
-    def _handle_2_message(self):
-        # send 3 message
-        self.transaction.update_transaction(str(self.tx_nonce), BR=self.breach_remedy)
-        RsmcMessage.create(self.channel_name, self.wallet,
-                           self.receiver_pubkey, self.sender_pubkey,
-                           self.value, self.sender_ip, self.receiver_ip, self.tx_nonce,
-                           asset_type=self.asset_type.upper(), role_index=3, comments=self.comments)
-        self.confirm_transaction()
-
-    def _handle_3_message(self):
-        self.transaction.update_transaction(str(self.tx_nonce), BR=self.breach_remedy)
-        self.confirm_transaction()
-
-    def confirm_transaction(self):
-        ctx = self.transaction.get_tx_nonce(str(self.tx_nonce))
-        monitor_ctxid = ctx.get("MonitorTxId")
-        txData = ctx.get("RD").get("originalData").get("txData")
-        txDataself = self.sign_message(txData)
-        txDataother = self.sign_message(ctx.get("RD").get("txDataSign")),
-        witness = ctx.get("RD").get("originalData").get("witness")
-        register_monitor(monitor_ctxid, monitor_height, txData + witness, txDataother, txDataself)
-        balance = self.transaction.get_balance(str(self.tx_nonce))
-        self.transaction.update_transaction(str(self.tx_nonce), State="confirm")
-        ch.Channel.channel(self.channel_name).update_channel(balance=balance)
-        ch.sync_channel_info_to_gateway(self.channel_name, "UpdateChannel")
-        last_tx = self.transaction.get_tx_nonce(str(int(self.tx_nonce) - 1))
-        monitor_ctxid = last_tx.get("MonitorTxId")
-        btxDataself = ctx.get("BR").get("originalData").get("txData")
-        btxsignself = self.sign_message(btxDataself)
-        btxsignother =  ctx.get("BR").get("txDataSign")
-        bwitness = ctx.get("BR").get("originalData").get("witness")
-        try:
-            self.confirm_payment()
-        except Exception as e:
-            LOG.info("Confirm payment error {}".format(str(e)))
-
-        register_monitor(monitor_ctxid, monitor_height, btxDataself + bwitness, btxsignother, btxsignself)
+    # def store_monitor_commitement(self):
+    #     ctxid = self.commitment.get("txID")
+    #     self.transaction.update_transaction(str(self.tx_nonce), MonitorTxId=ctxid)
+    #
+    # def _handle_0_message(self):
+    #     LOG.info("RSMC handle 0 message {}".format(json.dumps(self.message)))
+    #     # recorc monitor commitment txid
+    #     self.store_monitor_commitement()
+    #     self.send_responses()
+    #
+    #     # send 1 message
+    #     RsmcMessage.create(self.channel_name,self.wallet,
+    #                            self.receiver_pubkey,self.sender_pubkey,
+    #                            self.value,self.sender_ip,self.receiver_ip,self.tx_nonce,
+    #                        asset_type=self.asset_type.upper(), role_index= 1, comments=self.comments)
+    #
+    #
+    # def _handle_1_message(self):
+    #     LOG.info("RSMC handle 1 message  {}".format(json.dumps(self.message)))
+    #     self.store_monitor_commitement()
+    #     self.send_responses()
+    #
+    #     # send 2 message
+    #     RsmcMessage.create(self.channel_name, self.wallet,
+    #                        self.receiver_pubkey, self.sender_pubkey,
+    #                        self.value, self.sender_ip, self.receiver_ip, self.tx_nonce,
+    #                        asset_type=self.asset_type.upper(), role_index=2, comments=self.comments)
+    #
+    # def _handle_2_message(self):
+    #     # send 3 message
+    #     self.transaction.update_transaction(str(self.tx_nonce), BR=self.breach_remedy)
+    #     RsmcMessage.create(self.channel_name, self.wallet,
+    #                        self.receiver_pubkey, self.sender_pubkey,
+    #                        self.value, self.sender_ip, self.receiver_ip, self.tx_nonce,
+    #                        asset_type=self.asset_type.upper(), role_index=3, comments=self.comments)
+    #     self.confirm_transaction()
+    #
+    # def _handle_3_message(self):
+    #     self.transaction.update_transaction(str(self.tx_nonce), BR=self.breach_remedy)
+    #     self.confirm_transaction()
+    #
+    # def confirm_transaction(self):
+    #     ctx = self.transaction.get_tx_nonce(str(self.tx_nonce))
+    #     monitor_ctxid = ctx.get("MonitorTxId")
+    #     txData = ctx.get("RD").get("originalData").get("txData")
+    #     txDataself = self.sign_message(txData)
+    #     txDataother = self.sign_message(ctx.get("RD").get("txDataSign")),
+    #     witness = ctx.get("RD").get("originalData").get("witness")
+    #     register_monitor(monitor_ctxid, monitor_height, txData + witness, txDataother, txDataself)
+    #     balance = self.transaction.get_balance(str(self.tx_nonce))
+    #     self.transaction.update_transaction(str(self.tx_nonce), State="confirm")
+    #     ch.Channel.channel(self.channel_name).update_channel(balance=balance)
+    #     ch.sync_channel_info_to_gateway(self.channel_name, "UpdateChannel")
+    #     last_tx = self.transaction.get_tx_nonce(str(int(self.tx_nonce) - 1))
+    #     monitor_ctxid = last_tx.get("MonitorTxId")
+    #     btxDataself = ctx.get("BR").get("originalData").get("txData")
+    #     btxsignself = self.sign_message(btxDataself)
+    #     btxsignother =  ctx.get("BR").get("txDataSign")
+    #     bwitness = ctx.get("BR").get("originalData").get("witness")
+    #     try:
+    #         self.confirm_payment()
+    #     except Exception as e:
+    #         LOG.info("Confirm payment error {}".format(str(e)))
+    #
+    #     register_monitor(monitor_ctxid, monitor_height, btxDataself + bwitness, btxsignother, btxsignself)
 
     def confirm_payment(self):
         for key, value in Payment.HashR.items():
@@ -846,41 +761,41 @@ class RsmcMessage(TransactionMessage):
                 PaymentAck.create(value[1], key)
                 Payment(self.wallet,value[1]).delete_hr(key)
 
-    def send_responses(self, error = None):
-        if not error:
-            commitment_sig = {"txDataSign": self.sign_message(self.commitment.get("txData")),
-                              "originalData": self.commitment}
-            rd_sig = {"txDataSign": self.sign_message(self.revocable_delivery.get("txData")),
-                      "originalData": self.revocable_delivery}
-            message_response = {"MessageType": "RsmcSign",
-                                "Sender": self.receiver,
-                                "Receiver": self.sender,
-                                "TxNonce": self.tx_nonce,
-                                "ChannelName": self.channel_name,
-                                "MessageBody": {"Commitment": commitment_sig,
-                                                "RevocableDelivery": rd_sig,
-                                                "Value": self.value,
-                                                "RoleIndex": self.role_index,
-                                                "Comments":self.comments
-                                                }
-                                }
-            self.send(message_response)
-        else:
-            message_response = {"MessageType": "RsmcFail",
-                                "Sender": self.receiver,
-                                "Receiver": self.sender,
-                                "TxNonce": self.tx_nonce,
-                                "ChannelName": self.channel_name,
-                                "MessageBody": {"Commitment": self.commitment,
-                                                "RevocableDelivery": self.revocable_delivery,
-                                                "Value": self.value,
-                                                "RoleIndex": self.role_index,
-                                                "Comments":self.comments
-                                                },
-                                "Error": error
-                                }
-            self.send(message_response)
-            LOG.info("Send RsmcMessage Response {}".format(json.dumps(message_response)))
+    # def send_responses(self, error = None):
+    #     if not error:
+    #         commitment_sig = {"txDataSign": self.sign_message(self.commitment.get("txData")),
+    #                           "originalData": self.commitment}
+    #         rd_sig = {"txDataSign": self.sign_message(self.revocable_delivery.get("txData")),
+    #                   "originalData": self.revocable_delivery}
+    #         message_response = {"MessageType": "RsmcSign",
+    #                             "Sender": self.receiver,
+    #                             "Receiver": self.sender,
+    #                             "TxNonce": self.tx_nonce,
+    #                             "ChannelName": self.channel_name,
+    #                             "MessageBody": {"Commitment": commitment_sig,
+    #                                             "RevocableDelivery": rd_sig,
+    #                                             "Value": self.value,
+    #                                             "RoleIndex": self.role_index,
+    #                                             "Comments":self.comments
+    #                                             }
+    #                             }
+    #         self.send(message_response)
+    #     else:
+    #         message_response = {"MessageType": "RsmcFail",
+    #                             "Sender": self.receiver,
+    #                             "Receiver": self.sender,
+    #                             "TxNonce": self.tx_nonce,
+    #                             "ChannelName": self.channel_name,
+    #                             "MessageBody": {"Commitment": self.commitment,
+    #                                             "RevocableDelivery": self.revocable_delivery,
+    #                                             "Value": self.value,
+    #                                             "RoleIndex": self.role_index,
+    #                                             "Comments":self.comments
+    #                                             },
+    #                             "Error": error
+    #                             }
+    #         self.send(message_response)
+    #         LOG.info("Send RsmcMessage Response {}".format(json.dumps(message_response)))
 
 
 class RsmcResponsesMessage(TransactionMessage):
@@ -898,24 +813,119 @@ class RsmcResponsesMessage(TransactionMessage):
     }
     """
     def __init__(self, message, wallet):
-        super().__init__(message, wallet)
-        self.channel_name = message.get("ChannelName")
-        self.breach_remedy = self.message_body.get("BreachRemedy")
-        self.commitment = self.message_body.get("Commitment")
-        self.revocable_delivery = self.message_body.get("RevocableDelivery")
+        super().__init__(message,wallet)
+
         self.transaction = TrinityTransaction(self.channel_name, self.wallet)
+        self.channel_name = message.get("ChannelName")
+
+        self.asset_type     = self.message_body.get("AssetType")
+        self.payment_count  = self.message_body.get("PaymentCount")
+        self.sender_balance = self.message_body.get("SenderBalance")
+        self.receiver_balance = self.message_body.get("ReceiverBalance")
+        self.commitment = self.message_body.get('Commitment')
+        self.comments   = self.message.get("Comments")
+        self.status     = self.message.get('Status')
 
     def handle_message(self):
-        LOG.info("Handle RsmcResponsesMessage: {}".format(json.dumps(self.message)))
-        if self.error:
-            return "{} message error"
-        verify, error = self.verify()
-        if verify:
-            # Todo Breach Remedy  Transaction
-            self.transaction.update_transaction(str(self.tx_nonce), Commitment=self.commitment,
-                                                RD=self.revocable_delivery, BR = self.breach_remedy)
-            ctx = self.commitment.get("originalData").get("txId")
-            register_monitor(ctx, monitor_founding,self.channel_name, EnumChannelState.CLOSED.name)
+        self.handle()
+
+    def handle(self):
+        super(RsmcResponsesMessage, self).handle()
+
+        verified, error = self.verify()
+        if verified:
+            # TODO: update transaction information
+            LOG.info('update transaction')
+        else:
+            LOG.error('Handle RsmcRespnose error: {}'.format(error))
+
+    @staticmethod
+    def create(channel_name, wallet, sender, receiver, sender_balance, receiver_balance, payment, nonce,
+               asset_type="TNC", cli=False, router = None, next_router=None, comments=None):
+        """
+
+        :param channel_name:
+        :param wallet:
+        :param sender:
+        :param receiver:
+        :param sender_balance:
+        :param receiver_balance:
+        :param payment:
+        :param nonce:
+        :param asset_type:
+        :param cli:
+        :param router:
+        :param next_router:
+        :param comments:
+        :return:
+        """
+
+        transaction = TrinityTransaction(channel_name, wallet)
+        founder = transaction.get_founder()
+        tx_state = transaction.get_transaction_state()
+        channel = ch.Channel.channel(channel_name)
+        balance = channel.get_balance()
+        status = EnumResponseStatus.RESPONSE_OK
+
+        try:
+            assert sender.__contains__('@'), 'Invalid sender<{}> URL format'.format(sender)
+            assert receiver.__contains__('@'), 'Invalid receiver<{}> URL format.'.format(receiver)
+            assert balance, 'Void balance<{}> for asset <{}>.'.format(balance, asset_type)
+
+            sender_addr     = sender.strip().split('@')[0]
+            receiver_addr   = receiver.strip().split('@')[0]
+            asset_type      = asset_type.upper()
+            payment         = float(payment)
+
+            this_sender_balance = float(balance.get(sender_addr, {}).get(asset_type, 0))
+            this_receiver_balance = float(balance.get(receiver_addr, {}).get(asset_type, 0))
+
+            # calculate the balances of both
+            this_sender_balance      = this_sender_balance - payment
+            this_receiver_balance    = this_receiver_balance + payment
+
+            assert (0 < this_sender_balance == float(sender_balance)), \
+                'Unmatched balance of sender<{}>, balance<{}:{}>, payment<{}>'.format(sender, sender_balance,
+                                                                                      this_sender_balance, payment)
+            assert (0 < this_receiver_balance == float(receiver_balance)), \
+                'Unmatched balance of sender<{}>, balance<{}:{}>, payment<{}>'.format(receiver, receiver_balance,
+                                                                                      this_receiver_balance, payment)
+
+
+            # sender sign
+            commitment = RsmcMessage.sign_content(
+                typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
+                valueList=[channel_name, 0, sender_addr, sender_balance, receiver_addr, receiver_balance],
+                privtKey = wallet._key.privkey)
+        except Exception as error:
+            LOG.exception(error)
+            status = EnumResponseStatus.RESPONSE_EXCEPTION_HAPPENED
+
+        # TODO: MUST record this commitment and balance info
+        # update transaction of
+
+        message = {
+            "MessageType":"RsmcSign",
+            "Sender": sender,
+            "Receiver": receiver,
+            "TxNonce": nonce,
+            "ChannelName":channel_name,
+            "NetMagic": RsmcMessage.get_magic(),
+            "MessageBody": {
+                "AssetType":asset_type.upper(),
+                "PaymentCount": payment,
+                "SenderBalance": sender_balance,
+                "ReceiverBalance": receiver_balance,
+                "Commitment": commitment,
+            }
+        }
+
+        message.update({'Status': status.value})
+
+        if comments:
+            message.update({"Comments": comments})
+
+        RsmcResponsesMessage.send(message)
 
     def verify(self):
         return True, None
