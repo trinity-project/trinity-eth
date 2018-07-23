@@ -6,8 +6,8 @@ from ethereum.utils import checksum_encode, ecrecover_to_pub,safe_ord
 from eth_hash.backends.pysha3 import keccak256
 import binascii
 from web3 import Web3
-from config import setting
-from client import Client
+from .config import setting
+from .client import Client
 
 import sys
 

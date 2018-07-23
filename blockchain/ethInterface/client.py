@@ -4,7 +4,7 @@ from ethereum import utils
 from ethereum.utils import ecsign, normalize_key, int_to_big_endian, checksum_encode
 from web3 import Web3, HTTPProvider
 from ethereum.transactions import Transaction
-from config import setting
+from .config import setting
 
 class Client(object):
 

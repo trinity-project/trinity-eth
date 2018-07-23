@@ -26,14 +26,14 @@ SOFTWARE."""
 from log import LOG
 #from neo.Core.Blockchain import Blockchain
 import time
-from wallet.TransactionManagement.transaction import BlockHightRegister, TxIDRegister,TxDataDir, crypto_channel
+from wallet.TransactionManagement.transaction import BlockHightRegister, TxIDRegister
 import os
 from wallet.Interface.gate_way import send_message
 import copy
 from .interface import get_block_count, get_bolck, send_raw
 from wallet.TransactionManagement import message as ms
 
-BlockHeightRecord = os.path.join(TxDataDir,"block.data")
+BlockHeightRecord = os.path.join('./',"block.data")
 
 
 class Monitor(object):
