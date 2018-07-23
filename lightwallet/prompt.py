@@ -111,9 +111,6 @@ class PromptInterface(object):
                     print("please provide matching passwords that are at least 1 characters long")
                     return
 
-                self.Wallet = Wallet.Create(path=path, password=passwd1)
-                print("Wallet %s " % json.dumps(self.Wallet.ToJson(), indent=4))
-
                 try:
                     self.Wallet = Wallet.Create(path=path, password=passwd1)
                     print("Wallet %s " % json.dumps(self.Wallet.ToJson(), indent=4))
