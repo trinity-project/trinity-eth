@@ -278,8 +278,14 @@ class TransactionMessage(Message):
         return '0x'+content
 
     @staticmethod
-    def approve(public_key, deposit, private_key):
-        TransactionMessage._interface.approve_default(public_key, deposit, private_key)
+    def approve(address, deposit, private_key):
+        TransactionMessage._interface.approve_default(address, deposit, private_key)
+
+    @staticmethod
+    def deposit(address,channelId, nonce, funder, funderAmount, partner, partnerAmount,
+                funderSignature, partnerSignature, privateKey):
+        TransactionMessage._interface.deposit(address,channelId, nonce, funder, funderAmount, partner, partnerAmount,
+                                              funderSignature, partnerSignature, privateKey)
 
 
 class FounderMessage(TransactionMessage):
@@ -327,7 +333,11 @@ class FounderMessage(TransactionMessage):
         if not verify:
             status = EnumResponseStatus.RESPONSE_FAIL
         else:
-            FounderResponsesMessage.approve(self.wallet._key.pubkey, self.partner_deposit, self.wallet._key.privkey)
+            FounderResponsesMessage.approve(self.receiver.strip().split('@')[0], self.partner_deposit, self.wallet._key.privkey)
+            # add channel to dbs
+            ch.Channel(self.sender, self.receiver).add_channel(src_addr = self.sender.strip().split('@')[0],
+                                                               dest_addr = self.receiver.strip().split('@')[0],
+                                                               state = EnumChannelState.INIT.name)
             # record
             ch.Channel.add_trade(self.channel_name,
                                  nonce = 0,
@@ -398,8 +408,13 @@ class FounderMessage(TransactionMessage):
             message.update({"Comments": comments})
 
         # authourized the deposit to the contract
-        FounderMessage.approve(wallet._key.pubkey, founder_deposit,wallet._key.privkey)
+        FounderMessage.approve(founder_addr, founder_deposit,wallet._key.privkey)
 
+        # add channel
+        # channel: str, src_addr: str, dest_addr: str, state: str, alive_block: int,
+        # deposit:dict
+        ch.Channel(founder, partner).add_channel(src_addr = founder_addr, dest_addr = partner_addr,
+                                                 state = EnumChannelState.INIT.name)
         # record this transaction
         ch.Channel.add_trade(channel_name,
                              nonce = 0,
@@ -482,7 +497,17 @@ class FounderResponsesMessage(TransactionMessage):
         if verified:
             # update transaction
             ch.Channel.update_trade(self.channel_name, self.tx_nonce, receiver_commit = self.commitment)
-            pass
+
+            fonder = ch.Channel.query_trade(self.channel_name, nonce=0).get('content')[0]
+            if fonder:
+                FounderResponsesMessage.deposit(fonder.sender, self.channel_name, 0,
+                                                fonder.sender, self.founder_deposit,
+                                                fonder.receiver, self.partner_deposit,
+                                                fonder.sender_commit, fonder.receiver_commit,
+                                                self.wallet._key.privkey)
+            else:
+                LOG.error('Error to broadcast Fonder to block chain.')
+
         else:
             LOG.error('Handle FounderSign failed: {}'.format(error))
 

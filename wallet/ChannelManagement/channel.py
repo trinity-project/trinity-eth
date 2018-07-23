@@ -88,12 +88,6 @@ class Channel(object):
         ch.channel_name = channelname
         return ch
 
-    def _init_channle_name(self):
-        md5s = hashlib.md5(self.founder.encode())
-        md5s.update(self.partner.encode())
-        md5s.update(str(time.time()).encode())
-        return md5s.hexdigest().upper()
-
     def create(self, asset_type, deposit, cli=True, comments=None, channel_name=None):
         if Channel.get_channel(self.founder_address, self.partner_address):
             print("Channel already exist")
@@ -137,6 +131,19 @@ class Channel(object):
 
     def delete_channel(self):
         return APIChannel.delete_channel(self.channel_name)
+
+    def add_channel(self, **kwargs):
+        channel_name = self.__new_channel()
+        kwargs.update({'channel': channel_name, 'alive_block': 0})
+        return APIChannel.add_channel(**kwargs)
+
+    def __new_channel(self):
+        md5_part1 = hashlib.md5(self.founder.encode())
+        md5_part1.update(str(time.time()).encode())
+        md5_part2 = hashlib.md5(self.partner.encode())
+        md5_part2.update(str(time.time()).encode())
+
+        return md5_part1.hexdigest().upper() + md5_part2.hexdigest().upper()
 
     @property
     def state(self):
@@ -214,7 +221,7 @@ class Channel(object):
         return APITransaction('trade'+channel_name).update_transaction(nonce, **kwargs)
 
     @staticmethod
-    def get_trade(channel_name, nonce, *args, **kwargs):
+    def query_trade(channel_name, nonce, *args, **kwargs):
         return APITransaction('trade'+channel_name).query_transaction(nonce, *args, **kwargs)
 
 
