@@ -1,0 +1,30 @@
+[[source]]
+
+url = "https://pypi.python.org/simple"
+verify_ssl = true
+name = "pypi"
+
+
+[packages]
+
+websockets = "*"
+treelib = "*"
+aiohttp = "*"
+jsonrpcserver = "*"
+jsonrpcclient = {extras = ["aiohttp"]}
+requests = "*"
+networkx = "*"
+pymongo = "*"
+uvloop = "*"
+
+
+[dev-packages]
+
+pylint = "*"
+psutil = "*"
+matplotlib = "*"
+
+
+[requires]
+
+python_version = "3.6"
