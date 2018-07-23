@@ -25,6 +25,7 @@ import hashlib
 import time
 from model.channel_model import APIChannel
 from model.base_enum import EnumChannelState
+from model.transaction_model import APITransaction
 from wallet.TransactionManagement import message as mg
 from wallet.utils import convert_number_auto
 from wallet.Interface.gate_way import sync_channel
@@ -203,6 +204,19 @@ class Channel(object):
             return "Partner"
         else:
             return None
+
+    @staticmethod
+    def add_trade(channel_name, **kwargs):
+        return APITransaction('trade'+channel_name).add_transaction(*kwargs)
+
+    @staticmethod
+    def update_trade(channel_name, nonce, **kwargs):
+        return APITransaction('trade'+channel_name).update_transaction(nonce, **kwargs)
+
+    @staticmethod
+    def get_trade(channel_name, nonce, *args, **kwargs):
+        return APITransaction('trade'+channel_name).query_transaction(nonce, *args, **kwargs)
+
 
 
 def create_channel(founder, partner, asset_type, depoist: float, cli=True, comments=None, channel_name=None):

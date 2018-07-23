@@ -45,6 +45,12 @@ from wallet.TransactionManagement.payment import Payment
 from enum import IntEnum
 
 
+class EnumTradeType(IntEnum):
+    TRADE_TYPE_FONDER   = 0x0
+    TRADE_TYPE_RSMC     = 0x10
+    TRADE_TYPE_HTLC     = 0x20
+
+
 class EnumResponseStatus(IntEnum):
     RESPONSE_OK     = 0x0
 
@@ -322,6 +328,16 @@ class FounderMessage(TransactionMessage):
             status = EnumResponseStatus.RESPONSE_FAIL
         else:
             FounderResponsesMessage.approve(self.wallet._key.pubkey, self.partner_deposit, self.wallet._key.privkey)
+            # record
+            ch.Channel.add_trade(self.channel_name,
+                                 nonce = 0,
+                                 type = EnumTradeType.TRADE_TYPE_FONDER.value,
+                                 sender = self.sender,
+                                 sender_balance = {self.asset_type.upper(): self.founder_deposit},
+                                 sender_commit = self.commitment,
+                                 receiver = self.receiver,
+                                 receiver_balance = {self.asset_type.upper(): self.partner_deposit},
+                                 receiver_commit = None)
 
         # send response
         FounderResponsesMessage.create(self.channel_name, self.sender, self.receiver, self.asset_type,
@@ -382,12 +398,24 @@ class FounderMessage(TransactionMessage):
             message.update({"Comments": comments})
 
         # authourized the deposit to the contract
-        FounderResponsesMessage.approve(wallet._key.pubkey, founder_deposit,wallet._key.privkey)
+        FounderMessage.approve(wallet._key.pubkey, founder_deposit,wallet._key.privkey)
+
+        # record this transaction
+        ch.Channel.add_trade(channel_name,
+                             nonce = 0,
+                             type = EnumTradeType.TRADE_TYPE_FONDER.value,
+                             sender = founder_addr,
+                             sender_balance = {asset_type.upper(): founder_deposit},
+                             sender_commit = commitment,
+                             receiver = partner_addr,
+                             receiver_balance = {asset_type.upper(): partner_deposit},
+                             receiver_commit = None)
 
         FounderMessage.send(message)
 
     def verify(self):
         return True, None
+
 
 
 class FounderResponsesMessage(TransactionMessage):
@@ -452,7 +480,8 @@ class FounderResponsesMessage(TransactionMessage):
 
         verified, error = self.verify()
         if verified:
-
+            # update transaction
+            ch.Channel.update_trade(self.channel_name, self.tx_nonce, receiver_commit = self.commitment)
             pass
         else:
             LOG.error('Handle FounderSign failed: {}'.format(error))
@@ -516,6 +545,9 @@ class FounderResponsesMessage(TransactionMessage):
                         "AssetType": asset_type.upper()
                     }
                 })
+
+                # update transaction
+                ch.Channel.update_trade(channel_name, 0, receiver_commit = commitment)
             except Exception as error:
                 if response_status == EnumResponseStatus.RESPONSE_OK:
                     response_status = EnumResponseStatus.RESPONSE_EXCEPTION_HAPPENED
