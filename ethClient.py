@@ -2,7 +2,7 @@ import binascii
 import rlp
 from ethereum import utils
 from ethereum.utils import ecsign, normalize_key, int_to_big_endian, checksum_encode, privtoaddr
-from solc import compile_source, compile_files
+from solc import compile_files
 from web3 import Web3, HTTPProvider
 from ethereum.transactions import Transaction
 
@@ -528,11 +528,6 @@ CONTRACT_ABI=[
         "type": "function"
     }
 ]
-
-def load_solidity_code(filepath):
-    with open(filepath) as f:
-        content = f.read()
-        return content
 
 
 def hander_contract_args(args):

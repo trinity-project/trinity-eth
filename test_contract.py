@@ -28,6 +28,12 @@ w3 = Web3(HTTPProvider('https://ropsten.infura.io/pZc5ZTRYM8wYfRPtoQal'))
 # addr=sha3(encode_int32(x) + encode_int32(y))[12:]
 
 
+from eth_hash.backends.pysha3 import keccak256
+
+# x=keccak256("f2ee7b0466feb5d6c50d655885c8387ddcf1739929c17bbda3977e330eca895c".encode())
+x=keccak256(bytes.fromhex( "f2ee7b0466feb5d6c50d655885c8387ddcf1739929c17bbda3977e330eca895c"))
+print(x)
+
 # print(addr)
 
 
