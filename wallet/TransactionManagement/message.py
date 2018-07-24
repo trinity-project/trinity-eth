@@ -245,9 +245,7 @@ class CreateTranscation(Message):
 
 class TransactionMessage(Message):
     #__init__(self, url, contract_address, contract_abi, asset_address, asset_abi)
-    _interface = EthInterface(settings.NODEURL,
-                              settings.Eth_Contract_address, settings.Eth_Contract_abi,
-                              settings.TNC, settings.TNC_abi)
+    _interface = None
     """
 
     """
@@ -270,6 +268,15 @@ class TransactionMessage(Message):
         return res
 
     @staticmethod
+    def _eth_interface():
+        if not TransactionMessage._interface:
+            TransactionMessage._interface = EthInterface(settings.NODEURL,
+                                                         settings.Eth_Contract_address, settings.Eth_Contract_abi,
+                                                         settings.TNC, settings.TNC_abi)
+
+        return TransactionMessage._interface
+
+    @staticmethod
     def sign_content(*args, **kwargs):
         """
 
@@ -278,18 +285,18 @@ class TransactionMessage(Message):
         typeList = args[0] if 0 < len(args) else kwargs.get('typeList')
         valueList = args[1] if 1 < len(args) else kwargs.get('valueList')
         privtKey = args[2] if 2 < len(args) else kwargs.get('privtKey')
-        content = TransactionMessage._interface.sign_args(typeList, valueList, privtKey).decode()
+        content = TransactionMessage._eth_interface().sign_args(typeList, valueList, privtKey).decode()
         return '0x'+content
 
     @staticmethod
     def approve(address, deposit, private_key):
-        TransactionMessage._interface.approve_default(address, deposit, private_key)
+        TransactionMessage._eth_interface().approve_default(address, deposit, private_key)
 
     @staticmethod
     def deposit(address,channelId, nonce, funder, funderAmount, partner, partnerAmount,
                 funderSignature, partnerSignature, privateKey):
-        TransactionMessage._interface.deposit(address,channelId, nonce, funder, funderAmount, partner, partnerAmount,
-                                              funderSignature, partnerSignature, privateKey)
+        TransactionMessage._eth_interface().deposit(address,channelId, nonce, funder, funderAmount, partner,
+                                                    partnerAmount, funderSignature, partnerSignature, privateKey)
 
 
 class FounderMessage(TransactionMessage):
