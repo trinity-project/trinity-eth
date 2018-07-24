@@ -369,11 +369,15 @@ class FounderMessage(TransactionMessage):
         if not verify:
             status = EnumResponseStatus.RESPONSE_FAIL
         else:
+            founder_addr = self.sender.strip().split('@')[0]
+            partner_addr = self.receiver.strip().split('@')[0]
             FounderResponsesMessage.approve(self.receiver.strip().split('@')[0], self.partner_deposit, self.wallet._key.private_key_string)
             # add channel to dbs
-            ch.Channel(self.sender, self.receiver).add_channel(src_addr = self.sender.strip().split('@')[0],
-                                                               dest_addr = self.receiver.strip().split('@')[0],
-                                                               state = EnumChannelState.INIT.name)
+            ch.Channel(self.sender, self.receiver).add_channel(channel = self.channel_name, src_addr = self.sender,
+                                                               dest_addr = self.receiver,
+                                                               state = EnumChannelState.INIT.name,
+                                                               deposit = {founder_addr:{self.asset_type.upper(): self.founder_deposit},
+                                                                          partner_addr:{self.asset_type.upper(): self.partner_deposit}})
             # record
             ch.Channel.add_trade(self.channel_name,
                                  nonce = 0,
@@ -449,8 +453,10 @@ class FounderMessage(TransactionMessage):
         # add channel
         # channel: str, src_addr: str, dest_addr: str, state: str, alive_block: int,
         # deposit:dict
-        ch.Channel(founder, partner).add_channel(src_addr = founder_addr, dest_addr = partner_addr,
-                                                 state = EnumChannelState.INIT.name)
+        ch.Channel(founder, partner).add_channel(src_addr = founder, dest_addr = partner,
+                                                 state = EnumChannelState.INIT.name,
+                                                 deposit = {founder_addr:{asset_type.upper(): founder_deposit},
+                                                            partner_addr: {asset_type.upper(): partner_deposit}})
         # record this transaction
         ch.Channel.add_trade(channel_name,
                              nonce = 0,

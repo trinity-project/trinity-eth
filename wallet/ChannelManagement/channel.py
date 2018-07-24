@@ -142,7 +142,9 @@ class Channel(object):
         return APIChannel.delete_channel(self.channel_name)
 
     def add_channel(self, **kwargs):
-        channel_name = self.__new_channel()
+        channel_name = kwargs.get('channel')
+        if channel_name:
+            channel_name = self.__new_channel()
         kwargs.update({'channel': channel_name, 'alive_block': 0})
         return APIChannel.add_channel(**kwargs)
 

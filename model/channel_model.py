@@ -105,8 +105,8 @@ class APIChannel(object):
 
     @classmethod
     @rpc_response('AddChannel')
-    def add_channel(cls, *args):
-        return cls.table.add_one(*args)
+    def add_channel(cls, *args, **kwargs):
+        return cls.table.add_one(*args, **kwargs)
 
     @classmethod
     @rpc_response('DeleteChannel')
