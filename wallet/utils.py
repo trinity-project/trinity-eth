@@ -29,6 +29,9 @@ import hashlib
 from log.log import LOG
 
 
+SupportAssetType = ["TNC", "ETH", "GAS"]
+
+
 def to_aes_key(password):
     """
 

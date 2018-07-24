@@ -244,7 +244,7 @@ class UserPromptInterface(PromptInterface):
         if command == 'create':
             if not self.Channel:
                 self._channel_noopen()
-            assert len(arguments) == 4
+            assert 5 >= len(arguments) >= 4, 'Length of arguments should be 4 or 5'
             if not self.Wallet:
                 raise Exception("Please Open The Wallet First")
             partner = get_arg(arguments, 1)
