@@ -37,7 +37,7 @@ from wallet.utils import sign,\
     get_magic
 from blockchain.monior import register_block, \
     register_monitor
-from blockchain.ethInterface.service import Interface as EthInterface
+from blockchain.ethInterface import Interface as EthInterface
 from model import APIChannel
 from log import LOG
 import json
