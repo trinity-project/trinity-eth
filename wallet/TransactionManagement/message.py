@@ -43,6 +43,7 @@ from log import LOG
 import json
 from wallet.TransactionManagement.payment import Payment
 from enum import IntEnum
+from lightwallet.Settings import settings
 
 
 class EnumTradeType(IntEnum):
@@ -243,7 +244,10 @@ class CreateTranscation(Message):
 
 
 class TransactionMessage(Message):
-    _interface = EthInterface()
+    #__init__(self, url, contract_address, contract_abi, asset_address, asset_abi)
+    _interface = EthInterface(settings.NODEURL,
+                              settings.Eth_Contract_address, settings.Eth_Contract_abi,
+                              settings.TNC, settings.TNC_abi)
     """
 
     """
