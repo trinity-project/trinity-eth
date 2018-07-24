@@ -12,13 +12,13 @@ class Interface(object):
 
     def __init__(self, url, contract_address, contract_abi, asset_address, asset_abi):
         self.eth_client=Client(eth_url=url)
+        self.contract_address = checksum_encode(contract_address)
 
         self.contract=self.eth_client.get_contract_instance(contract_address,contract_abi)
         self.asset_contract=self.eth_client.get_contract_instance(asset_address,asset_abi)
 
-    def approve(self, invoker, ethContractAddress, assetAmount, key):
-        ethContractAddress = checksum_encode(ethContractAddress)
-        txId = self.eth_client.contruct_Transaction(invoker, self.asset_contract, "approve",[ethContractAddress,assetAmount], key)
+    def approve(self, invoker, assetAmount, key):
+        txId = self.eth_client.contruct_Transaction(invoker, self.asset_contract, "approve",[self.contract_address, assetAmount], key)
         return {
             "txData":txId
         }

@@ -248,6 +248,7 @@ class TransactionMessage(Message):
     #__init__(self, url, contract_address, contract_abi, asset_address, asset_abi)
     _interface = None
     _web3_client = None
+    _trinity_coef = pow(10, 8)
     """
 
     """
@@ -294,18 +295,33 @@ class TransactionMessage(Message):
         typeList = args[0] if 0 < len(args) else kwargs.get('typeList')
         valueList = args[1] if 1 < len(args) else kwargs.get('valueList')
         privtKey = args[2] if 2 < len(args) else kwargs.get('privtKey')
-        content = TransactionMessage._eth_client().sign_args(typeList, valueList, privtKey).decode()
-        return '0x'+content
+
+        for idx in range(len(typeList)):
+            if typeList[idx] in ['uint256']:
+                valueList[idx] = TransactionMessage.multiply(valueList[idx])
+
+        content = TransactionMessage._web3_client().sign_args(typeList, valueList, privtKey).decode()
+        return '0x' + content
 
     @staticmethod
     def approve(address, deposit, private_key):
-        TransactionMessage._eth_interface().approve_default(address, deposit, private_key)
+        TransactionMessage._eth_interface().approve(address, TransactionMessage.multiply(deposit), private_key)
 
     @staticmethod
-    def deposit(address,channelId, nonce, funder, funderAmount, partner, partnerAmount,
-                funderSignature, partnerSignature, privateKey):
-        TransactionMessage._eth_interface().deposit(address,channelId, nonce, funder, funderAmount, partner,
-                                                    partnerAmount, funderSignature, partnerSignature, privateKey)
+    def deposit(address,channelId, nonce, founder, founder_amount, partner, partner_amount,
+                founder_sign, partner_sign, private_key):
+        TransactionMessage._eth_interface().deposit(address,channelId, nonce,
+                                                    founder, TransactionMessage.multiply(founder_amount),
+                                                    partner, TransactionMessage.multiply(partner_amount),
+                                                    founder_sign, partner_sign, private_key)
+
+    @staticmethod
+    def multiply(asset_count):
+        return int(asset_count * TransactionMessage._trinity_coef)
+
+    @staticmethod
+    def divide(asset_count):
+        return asset_count / TransactionMessage._trinity_coef
 
 
 class FounderMessage(TransactionMessage):

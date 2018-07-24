@@ -177,7 +177,7 @@ def check_partner(wallet, partner):
     :return:
     """
     temp_partner = partner
-    if partner.startwith('0x'):
+    if partner.startswith('0x'):
         temp_partner = partner.replace('0x', '')
     p = re.match(r"[0-9|a-f|A-F]{40}@\d+\.\d+\.\d+\.\d+:\d+", temp_partner.strip())
     if p:

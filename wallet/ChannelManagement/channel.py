@@ -152,7 +152,7 @@ class Channel(object):
         md5_part2 = hashlib.md5(self.partner.encode())
         md5_part2.update(str(time.time()).encode())
 
-        return md5_part1.hexdigest().upper() + md5_part2.hexdigest().upper()
+        return '0x' + md5_part1.hexdigest().upper() + md5_part2.hexdigest().upper()
 
     @property
     def state(self):
