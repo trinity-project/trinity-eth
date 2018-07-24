@@ -111,7 +111,7 @@ class Client(object):
         contract = self.get_contract_instance(contract_address, abi)
         return contract.functions.balanceOf(address).call()/(10**8)
 
-    def get_allowance_of_erc20(self,contract_address, abi, approver, spender):
+    def get_approved_asset(self,contract_address, abi, approver, spender):
         """
         :param contract_address:
         :param abi:
