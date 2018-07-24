@@ -42,7 +42,7 @@ def get_block_count():
     return EthClient.get_block_count()
 
 
-def get_bolck(index):
+def get_block(index):
     return EthClient.get_block(index)
 
 
