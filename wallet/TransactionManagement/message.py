@@ -38,6 +38,7 @@ from wallet.utils import sign,\
 from blockchain.monior import register_block, \
     register_monitor
 from blockchain.ethInterface import Interface as EthInterface
+from blockchain.web3client import Client as EthWebClient
 from model import APIChannel
 from log import LOG
 import json
@@ -246,6 +247,7 @@ class CreateTranscation(Message):
 class TransactionMessage(Message):
     #__init__(self, url, contract_address, contract_abi, asset_address, asset_abi)
     _interface = None
+    _web3_client = None
     """
 
     """
@@ -277,6 +279,13 @@ class TransactionMessage(Message):
         return TransactionMessage._interface
 
     @staticmethod
+    def _eth_client():
+        if not TransactionMessage._interface:
+            TransactionMessage._web3_client = EthWebClient(settings.NODEURL)
+
+        return TransactionMessage._web3_client
+
+    @staticmethod
     def sign_content(*args, **kwargs):
         """
 
@@ -285,7 +294,7 @@ class TransactionMessage(Message):
         typeList = args[0] if 0 < len(args) else kwargs.get('typeList')
         valueList = args[1] if 1 < len(args) else kwargs.get('valueList')
         privtKey = args[2] if 2 < len(args) else kwargs.get('privtKey')
-        content = TransactionMessage._eth_interface().sign_args(typeList, valueList, privtKey).decode()
+        content = TransactionMessage._eth_client().sign_args(typeList, valueList, privtKey).decode()
         return '0x'+content
 
     @staticmethod

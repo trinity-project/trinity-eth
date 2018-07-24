@@ -257,8 +257,8 @@ class UserPromptInterface(PromptInterface):
                 print("Now we just support TNC, mulit-asset will coming soon")
                 return None
 
-            if not check_onchain_balance(self.Wallet.pubkey, asset_type, deposit):
-                print("Now the balance on chain is less then the deposit")
+            if not check_onchain_balance(self.Wallet.address, asset_type, deposit):
+                print("Now the balance on-chain is less than the deposit.")
                 return None
 
             if not check_partner(self.Wallet, partner):
