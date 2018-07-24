@@ -1,10 +1,7 @@
 import binascii
 import requests
-from ethereum.utils import ecsign, normalize_key, \
-    int_to_big_endian
+from ethereum.utils import ecsign, normalize_key, int_to_big_endian
 from web3 import Web3, HTTPProvider
-
-
 
 def get_privtKey_from_keystore(filename,password):
     with open(filename) as keyfile:
@@ -85,10 +82,9 @@ class Client(object):
 
     def sign_args(self,typeList, valueList, privtKey):
         '''
-
         :param typeList: ['bytes32', 'bytes32', 'uint256', 'uint256']
         :param valueList: ["0x3ae88fe370c39384fc16da2c9e768cf5d2495b48", "0x9da26fc2e1d6ad9fdd46138906b0104ae68a65d8", 1, 1]
-        :param privtKey: "095e53c9c20e23fd01eaad953c01da9e9d3ed9bebcfed8e5b2c2fce94037d963"
+        :param privtKey: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
         :return:
         '''
         data_hash = Web3.soliditySha3(typeList, valueList)
@@ -140,8 +136,22 @@ class Client(object):
         return self.web3.eth.getFilterLogs(filter_id)
 
 
+    def call_contract(self,contract,method,args):
+        return contract.functions[method](*args).call()
 
 
+    def contruct_Transaction(self, invoker, contract, method, args, key, gasLimit=4600000):
+        tx_dict = contract.functions[method](*args).buildTransaction({
+            "gas": gasLimit,
+            'gasPrice': self.web3.eth.gasPrice*2,
+            'nonce': self.web3.eth.getTransactionCount(checksum_encode(invoker)),
+        })
+        signed = self.web3.eth.account.signTransaction(tx_dict, key)
+        tx_id = self.web3.eth.sendRawTransaction(signed.rawTransaction)
+
+        return binascii.hexlify(tx_id).decode()
+
+'''
 if __name__ == "__main__":
     myclient = Client("https://ropsten.infura.io")
     print(myclient.get_block_count())
@@ -299,25 +309,26 @@ if __name__ == "__main__":
     #
     # # tx = myclient.invoke_contract(invoker="0x9dA26FC2E1D6Ad9FDD46138906b0104ae68a65D8", contract=contract,
     # #                               method="approve", args=("0x3aE88fe370c39384FC16dA2C9e768Cf5d2495b48", 300))
-    # # rawdata = myclient.sign(tx, privtKey= "b6a03207128827eaae0d31d97a7a6243de31f2baf99eabd764e33389ecf436fc")
+    # # rawdata = myclient.sign(tx, privtKey= "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
     # # tx_id = myclient.broadcast(rawdata)
     #
     # a=myclient.sign_args(typeList=['bytes32', 'bytes32', 'uint256', 'uint256',"uint256"],
     #                      valueList=["0x3ae88fe370c39384fc16da2c9e768cf5d2495b48","0x537C8f3d3E18dF5517a58B3fB9D9143697996802",20,20,0],
-    #                      privtKey="095e53c9c20e23fd01eaad953c01da9e9d3ed9bebcfed8e5b2c2fce94037d963")
+    #                      privtKey="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
     # b=myclient.sign_args(typeList=['bytes32', 'bytes32', 'uint256', 'uint256',"uint256"],
     #                      valueList=["0x3ae88fe370c39384fc16da2c9e768cf5d2495b48","0x537C8f3d3E18dF5517a58B3fB9D9143697996802",20,20,0],
-    #                      privtKey="34c50c398a4aad207e25eeca7d799b966805d48c8fd47a2a9dbc66d9224ff7c1")
+    #                      privtKey="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
     #
     # c=myclient.sign_args(typeList=['bytes32', 'bytes32', 'uint256', 'uint256',"uint256"],
     #                      valueList=["0x3ae88fe370c39384fc16da2c9e768cf5d2495b48","0x9dA26FC2E1D6Ad9FDD46138906b0104ae68a65D8",10,10,0],
-    #                      privtKey="095e53c9c20e23fd01eaad953c01da9e9d3ed9bebcfed8e5b2c2fce94037d963")
+    #                      privtKey="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
     #
     # d=myclient.sign_args(typeList=['bytes32', 'bytes32', 'uint256', 'uint256',"uint256"],
     #                      valueList=["0x3ae88fe370c39384fc16da2c9e768cf5d2495b48","0x9dA26FC2E1D6Ad9FDD46138906b0104ae68a65D8",10,10,0],
-    #                      privtKey="b6a03207128827eaae0d31d97a7a6243de31f2baf99eabd764e33389ecf436fc")
+    #                      privtKey="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
     # print(a)
     # print(b)
     # # print(c)
     # # print(d)
     # pass
+    '''
