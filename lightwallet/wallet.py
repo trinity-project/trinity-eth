@@ -235,7 +235,7 @@ class Wallet(object):
         :return:
         """
         if asset.upper() == "TNC":
-            return settings.TNC, settings.TNCabi, 8
+            return settings.TNC, settings.TNC_abi, 8
         else:
             return self.search_asset(asset)
 
@@ -278,7 +278,7 @@ class Wallet(object):
 
         :return:
         """
-        return settings.EthClient.get_balance_of_erc20(settings.TNC, settings.TNCabi,
+        return settings.EthClient.get_balance_of_erc20(settings.TNC, settings.TNC_abi,
                                                        self._key.address)
 
     def ToJsonFile(self, path):
