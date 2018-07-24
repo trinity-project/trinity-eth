@@ -1,6 +1,6 @@
 import binascii
 import requests
-from ethereum.utils import ecsign, normalize_key, int_to_big_endian
+from ethereum.utils import ecsign, normalize_key, int_to_big_endian, checksum_encode
 from web3 import Web3, HTTPProvider
 
 def get_privtKey_from_keystore(filename,password):

@@ -300,7 +300,7 @@ class TransactionMessage(Message):
             if typeList[idx] in ['uint256']:
                 valueList[idx] = TransactionMessage.multiply(valueList[idx])
 
-        content = TransactionMessage._web3_client().sign_args(typeList, valueList, privtKey).decode()
+        content = TransactionMessage._eth_client().sign_args(typeList, valueList, privtKey).decode()
         return '0x' + content
 
     @staticmethod
