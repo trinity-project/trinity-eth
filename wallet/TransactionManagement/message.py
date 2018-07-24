@@ -369,7 +369,7 @@ class FounderMessage(TransactionMessage):
         if not verify:
             status = EnumResponseStatus.RESPONSE_FAIL
         else:
-            FounderResponsesMessage.approve(self.receiver.strip().split('@')[0], self.partner_deposit, self.wallet._key.privkey)
+            FounderResponsesMessage.approve(self.receiver.strip().split('@')[0], self.partner_deposit, self.wallet._key.private_key_string)
             # add channel to dbs
             ch.Channel(self.sender, self.receiver).add_channel(src_addr = self.sender.strip().split('@')[0],
                                                                dest_addr = self.receiver.strip().split('@')[0],
@@ -422,7 +422,7 @@ class FounderMessage(TransactionMessage):
         # Sign this data to the
         commitment = FounderMessage.sign_content(typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
                                                  valueList=[channel_name, 0, founder_addr, founder_deposit, partner_addr, partner_deposit],
-                                                 privtKey = wallet._key.privkey)
+                                                 privtKey = wallet._key.private_key_string)
 
         message = {
             "MessageType": "Founder",
@@ -444,7 +444,7 @@ class FounderMessage(TransactionMessage):
             message.update({"Comments": comments})
 
         # authourized the deposit to the contract
-        FounderMessage.approve(founder_addr, founder_deposit,wallet._key.privkey)
+        FounderMessage.approve(founder_addr, founder_deposit,wallet._key.private_key_string)
 
         # add channel
         # channel: str, src_addr: str, dest_addr: str, state: str, alive_block: int,
@@ -540,7 +540,7 @@ class FounderResponsesMessage(TransactionMessage):
                                                 fonder.sender, self.founder_deposit,
                                                 fonder.receiver, self.partner_deposit,
                                                 fonder.sender_commit, fonder.receiver_commit,
-                                                self.wallet._key.privkey)
+                                                self.wallet._key.private_key_string)
             else:
                 LOG.error('Error to broadcast Fonder to block chain.')
 
@@ -596,7 +596,7 @@ class FounderResponsesMessage(TransactionMessage):
                 # Sign this data to the
                 commitment = FounderMessage.sign_content(typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
                                                          valueList=[channel_name, 0, founder_addr, founder_deposit, partner_addr, partner_deposit],
-                                                         privtKey = wallet._key.privkey)
+                                                         privtKey = wallet._key.private_key_string)
 
                 # update channel transaction history
 
@@ -749,7 +749,7 @@ class RsmcMessage(TransactionMessage):
         commitment = RsmcMessage.sign_content(
             typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
             valueList=[channel_name, 0, sender_addr, sender_balance, receiver_addr, receiver_balance],
-            privtKey = wallet._key.privkey)
+            privtKey = wallet._key.private_key_string)
 
         # TODO: MUST record this commitment and balance info
         # update transaction of
@@ -989,7 +989,7 @@ class RsmcResponsesMessage(TransactionMessage):
             commitment = RsmcMessage.sign_content(
                 typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
                 valueList=[channel_name, 0, sender_addr, sender_balance, receiver_addr, receiver_balance],
-                privtKey = wallet._key.privkey)
+                privtKey = wallet._key.private_key_string)
         except Exception as error:
             LOG.exception(error)
             status = EnumResponseStatus.RESPONSE_EXCEPTION_HAPPENED

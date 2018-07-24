@@ -10,6 +10,7 @@ from ethereum.utils import privtopub
 from ethereum.utils import sha3, is_string, encode_hex, checksum_encode, to_string, decode_hex
 import bitcoin
 from eth_account import Account as EAccount
+import binascii
 
 
 
@@ -140,6 +141,11 @@ class Account(EAccount):
             return self._privatekey
         else:
             return None
+
+    @property
+    def private_key_string(self):
+        if self.privkey:
+            return binascii.hexlify(self.privkey).decode()
 
     @property
     def pubkey(self):

@@ -15,7 +15,7 @@ class SettingsHolder:
     DIR_CURRENT = os.path.dirname(os.path.abspath(__file__))
     ADDRESS_VERSION = 23
 
-    TNC = "0x0c34a8fd0109df360c7cf7ca454404901db77f5e"
+    #TNC = "0x0c34a8fd0109df360c7cf7ca454404901db77f5e"
 
 
     NODEURL = None
