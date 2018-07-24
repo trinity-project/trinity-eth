@@ -27,6 +27,7 @@ from blockchain.interface import get_balance
 import re
 import hashlib
 from log.log import LOG
+from lightwallet.Settings import settings
 
 
 SupportAssetType = ["TNC", "ETH", "GAS"]
@@ -121,7 +122,7 @@ def check_support_asset_type(asset_type):
         return False
 
 
-def check_onchain_balance(pubkey,asset_type,depoist):
+def check_onchain_balance(pubkey, asset_type, depoist):
     """
 
     :param wallet:
@@ -129,7 +130,7 @@ def check_onchain_balance(pubkey,asset_type,depoist):
     :param depoist:
     :return:
     """
-    balance = get_balance(pubkey, asset_type)
+    balance = get_balance(pubkey, asset_type, settings.TNC, settings.TNC_abi)
     if float(depoist) <= float(balance):
         return True
     else:
@@ -175,10 +176,13 @@ def check_partner(wallet, partner):
     :param partner:
     :return:
     """
-    p = re.match(r"[0-9|a-f]{66}@\d+\.\d+\.\d+\.\d+:\d+", partner.strip())
+    temp_partner = partner
+    if partner.startwith('0x'):
+        temp_partner = partner.replace('0x', '')
+    p = re.match(r"[0-9|a-f|A-F]{40}@\d+\.\d+\.\d+\.\d+:\d+", temp_partner.strip())
     if p:
         par_pubkey, ip = partner.strip().split("@")
-        if par_pubkey == wallet.pubkey:
+        if par_pubkey == wallet.address:
             return False
         else:
             return True
@@ -194,7 +198,7 @@ def get_wallet_info(pubkey):
     """
     balance = {}
     for i in Configure["AssetType"].keys():
-        b = get_balance(pubkey, i.upper())
+        b = get_balance(pubkey, i.upper(), settings.TNC, settings.TNC)
         balance[i] = b
     message = {
                    "Publickey": pubkey,
@@ -225,7 +229,7 @@ def convert_float(number, decimals=8):
 
 def get_magic():
     magic = Configure.get('Magic')
-    return magic.get('Block').strip() + magic.get('Trinity').strip()
+    return magic.get('Block').__str__() + magic.get('Trinity').__str__()
 
 
 if __name__ == "__main__":
