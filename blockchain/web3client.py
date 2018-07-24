@@ -111,6 +111,17 @@ class Client(object):
         contract = self.get_contract_instance(contract_address, abi)
         return contract.functions.balanceOf(address).call()/(10**8)
 
+    def get_allowance_of_erc20(self,contract_address, abi, approver, spender):
+        """
+        :param contract_address:
+        :param abi:
+        :param approver: the owner address of asset
+        :param spender: the address be authorized to spend
+        :return:
+        """
+        contract = self.get_contract_instance(contract_address, abi)
+        return contract.functions.allowance(approver, spender).call()/(10**8)
+
     def get_block_count(self):
         """
 
