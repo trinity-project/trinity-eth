@@ -30,7 +30,7 @@ from wallet.TransactionManagement.transaction import BlockHightRegister, TxIDReg
 import os
 from wallet.Interface.gate_way import send_message
 import copy
-from .interface import get_block_count, get_bolck, send_raw
+from .interface import get_block_count, get_block, send_raw
 from wallet.TransactionManagement import message as ms
 
 BlockHeightRecord = os.path.join('./',"block.data")
@@ -90,11 +90,11 @@ def monitorblock():
 
         block_delta = int(blockheight_onchain) - int(blockheight)
 
-        if blockheight:
+        if 0 < block_delta:
             try:
                 if block_delta < 2000:
-                    block = get_bolck(int(blockheight))
-                    handle_message(int(blockheight),block)
+                    block = get_block(int(blockheight))
+                    # handle_message(int(blockheight),block)
                     if Monitor.BlockPause:
                         pass
                     else:
@@ -165,7 +165,7 @@ def record_block(txid, block_height):
 
 if __name__  == "__main__":
    blockcount = get_block_count()
-   print(get_bolck(int(blockcount)-1))
+   print(get_block(int(blockcount) - 1))
 
    raw="d101a00400ca9a3b14f5db0e4427fbf90d1fa21c741545b3fd0a12e68314d31081412" \
        "47338aa337da861b31ee214ce460fec53c1087472616e73666572675e7fb71d90044445" \
