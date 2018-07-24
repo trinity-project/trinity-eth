@@ -244,7 +244,7 @@ class UserPromptInterface(PromptInterface):
         if command == 'create':
             if not self.Channel:
                 self._channel_noopen()
-            assert len(arguments) == 4
+            assert 5 >= len(arguments) >= 4, 'Length of arguments should be 4 or 5'
             if not self.Wallet:
                 raise Exception("Please Open The Wallet First")
             partner = get_arg(arguments, 1)
@@ -252,6 +252,7 @@ class UserPromptInterface(PromptInterface):
             if asset_type:
                 asset_type = asset_type.upper()
             deposit = float(get_arg(arguments, 3).strip())
+            partner_deposit = float(get_arg(arguments, 4).strip()) if get_arg(arguments, 4) else deposit
             if not check_support_asset_type(asset_type):
                 print("Now we just support TNC, mulit-asset will coming soon")
                 return None
@@ -268,7 +269,7 @@ class UserPromptInterface(PromptInterface):
                 print("Partner balance on chain is less than the deposit")
                 return None
 
-            create_channel(self.Wallet.url, partner,asset_type, deposit)
+            create_channel(self.Wallet.url, partner, asset_type, deposit, partner_deposit, wallet=self.Wallet)
 
         elif command == "enable":
             if not self.enable_channel():

@@ -25,6 +25,7 @@ import hashlib
 import time
 from model.channel_model import APIChannel
 from model.base_enum import EnumChannelState
+from model.transaction_model import APITransaction
 from wallet.TransactionManagement import message as mg
 from wallet.utils import convert_number_auto
 from wallet.Interface.gate_way import sync_channel
@@ -87,13 +88,10 @@ class Channel(object):
         ch.channel_name = channelname
         return ch
 
-    def _init_channle_name(self):
-        md5s = hashlib.md5(self.founder.encode())
-        md5s.update(self.partner.encode())
-        md5s.update(str(time.time()).encode())
-        return md5s.hexdigest().upper()
+    def create(self, asset_type, deposit, partner_deposit = None, cli=True, comments=None, channel_name=None, wallet = None):
+        if not partner_deposit:
+            partner_deposit = deposit
 
-    def create(self, asset_type, deposit, cli=True, comments=None, channel_name=None):
         if Channel.get_channel(self.founder_address, self.partner_address):
             print("Channel already exist")
             return False
@@ -104,16 +102,22 @@ class Channel(object):
         subitem = {}
         subitem.setdefault(asset_type, deposit)
         self.deposit[self.founder_address] = subitem
+
+        subitem.setdefault(asset_type, partner_deposit)
         self.deposit[self.partner_address] = subitem
-        self.channel_name = channel_name
+        self.channel_name = self.__new_channel()
 
         result = APIChannel.add_channel(self.channel_name, self.founder, self.partner,
                                         EnumChannelState.INIT.name, 0, self.deposit)
         if cli:
             deposit = convert_number_auto(asset_type.upper(), deposit)
-            if 0 >= deposit:
-                LOG.error('Could not trigger register channel because of illegal deposit<{}>.'.format(deposit))
+            partner_deposit = convert_number_auto(asset_type.upper(), partner_deposit)
+            if 0 >= deposit or 0 >= partner_deposit:
+                LOG.error('Could not trigger register channel because of illegal deposit<{}:{}>.'.format(deposit, partner_deposit))
                 return False
+
+            mg.FounderMessage.create(self.channel_name, self.founder, self.partner, asset_type,
+                                     deposit, partner_deposit, mg.Message.get_magic(), wallet=wallet)
             message = {"MessageType": "RegisterChannel",
                        "Sender": self.founder,
                        "Receiver": self.partner,
@@ -136,6 +140,19 @@ class Channel(object):
 
     def delete_channel(self):
         return APIChannel.delete_channel(self.channel_name)
+
+    def add_channel(self, **kwargs):
+        channel_name = self.__new_channel()
+        kwargs.update({'channel': channel_name, 'alive_block': 0})
+        return APIChannel.add_channel(**kwargs)
+
+    def __new_channel(self):
+        md5_part1 = hashlib.md5(self.founder.encode())
+        md5_part1.update(str(time.time()).encode())
+        md5_part2 = hashlib.md5(self.partner.encode())
+        md5_part2.update(str(time.time()).encode())
+
+        return md5_part1.hexdigest().upper() + md5_part2.hexdigest().upper()
 
     @property
     def state(self):
@@ -204,9 +221,23 @@ class Channel(object):
         else:
             return None
 
+    @staticmethod
+    def add_trade(channel_name, **kwargs):
+        return APITransaction('trade'+channel_name).add_transaction(*kwargs)
 
-def create_channel(founder, partner, asset_type, depoist: float, cli=True, comments=None, channel_name=None):
-    return Channel(founder, partner).create(asset_type, depoist, cli, comments, channel_name)
+    @staticmethod
+    def update_trade(channel_name, nonce, **kwargs):
+        return APITransaction('trade'+channel_name).update_transaction(nonce, **kwargs)
+
+    @staticmethod
+    def query_trade(channel_name, nonce, *args, **kwargs):
+        return APITransaction('trade'+channel_name).query_transaction(nonce, *args, **kwargs)
+
+
+
+def create_channel(founder, partner, asset_type, depoist: float, partner_deposit = None, cli=True,
+                   comments=None, channel_name=None, wallet = None):
+    return Channel(founder, partner).create(asset_type, depoist, partner_deposit, cli, comments, channel_name, wallet= wallet)
 
 
 def filter_channel_via_address(address1, address2, state=None):

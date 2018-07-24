@@ -32,6 +32,9 @@ import json
 from blockchain.web3client import Client
 from lightwallet.Settings import settings
 from ethereum.utils import checksum_encode
+from model.history_model import APIHistory
+import time
+from log import LOG
 
 
 class Wallet(object):
@@ -54,6 +57,7 @@ class Wallet(object):
         self._passwordHash=None
         self.locked = False
         self.name = path.split(".")[0]
+        self.history = APIHistory()
 
         if create:
             self.uuid = uuid.uuid1()
@@ -167,7 +171,7 @@ class Wallet(object):
         """
         return self._accounts[0]["account"].GetAddress()
 
-    def send_eth(self,addresss_to, value, gasLimit=25600):
+    def send_eth(self,address_to, value, gasLimit=25600):
         """
 
         :param addresss_to:
@@ -176,11 +180,27 @@ class Wallet(object):
         :return:
         """
 
-        addresss_to = checksum_encode(addresss_to)
+        addresss_to = checksum_encode(address_to)
         tx = settings.EthClient.construct_common_tx(self._key.address, addresss_to, value, gasLimit)
         rawdata = self.SignTX(tx)
-        tx_id = self.SendRawTransaction(rawdata.rawTransaction)
-        return binascii.hexlify(tx_id).decode()
+        return self._sendraw_and_recordhistory(rawdata=rawdata,asset_id="Eth", sendto=address_to, value=value)
+
+
+    def _sendraw_and_recordhistory(self, rawdata,asset_id, sendto, value):
+        try:
+            tx_id = self.SendRawTransaction(rawdata.rawTransaction)
+
+        except Exception as e:
+            raise Exception(e)
+
+        tx_id = binascii.hexlify(tx_id).decode()
+        try:
+            self.record_history(tx_id=tx_id, asset_id=asset_id, sendto=sendto, value=value)
+        except Exception as e:
+            LOG.error("Record history error {}".format(e))
+
+        return tx_id
+
 
     def send_erc20(self, asset, address_to, value, gasLimit=25600, gasprice=None):
         """
@@ -204,8 +224,9 @@ class Wallet(object):
         tx = settings.EthClient.construct_erc20_tx(contract_instance, self._key.address,
                                                    int(value*10*decimals), gasLimit, gasprice)
         rawdata = self.SignTX(tx)
-        tx_id = self.SendRawTransaction(rawdata.rawTransaction)
-        return binascii.hexlify(tx_id).decode()
+
+        asset = "{}({})".format(asset, conract_address)
+        return self._sendraw_and_recordhistory(rawdata, asset, address_to, value)
 
     def get_contract(self, asset):
         """
@@ -214,7 +235,7 @@ class Wallet(object):
         :return:
         """
         if asset.upper() == "TNC":
-            return settings.TNC, settings.TNCabi, 8
+            return settings.TNC, settings.TNC_abi, 8
         else:
             return self.search_asset(asset)
 
@@ -257,7 +278,7 @@ class Wallet(object):
 
         :return:
         """
-        return settings.EthClient.get_balance_of_erc20(settings.TNC, settings.TNCabi,
+        return settings.EthClient.get_balance_of_erc20(settings.TNC, settings.TNC_abi,
                                                        self._key.address)
 
     def ToJsonFile(self, path):
@@ -311,4 +332,58 @@ class Wallet(object):
             f.write(json.dumps(wallet_info).encode())
 
     def SendRawTransaction(self, rawdata):
+        """
+
+        :param rawdata:
+        :return:
+        """
         return settings.EthClient.broadcast(rawdata)
+
+    def record_history(self, tx_id,asset_id, sendto, value):
+        """
+
+        :param asset_id:
+        :param sendto:
+        :param value:
+        :return:
+        """
+
+
+        self.history.set_history_collection(self.address)
+        his = {"tx_id":tx_id,
+               "asset":asset_id,
+               "sender":self.address,
+               "receiver":sendto,
+               "value":value,
+               "block":"null",
+               "state":"waiting"}
+        return self.history.add_history(**his)
+
+    def update_history(self, tx_id, block, state):
+        """
+
+        :param tx_id:
+        :param block:
+        :param state:
+        :return:
+        """
+        self.history.set_history_collection(self.address)
+
+        return self.history.update_history(tx_id,block=block,state=state)
+
+    def query_history(self,**kwargs):
+        """
+
+        :param kwargs:
+        :return:
+        """
+        self.history.set_history_collection(self.address)
+        if not kwargs:
+            return self.history.batch_query_history({})
+        else:
+            return self.history.batch_query_history(kwargs)
+
+
+
+
+

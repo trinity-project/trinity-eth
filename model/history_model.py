@@ -33,7 +33,7 @@ class TBLHistory(DBManager):
     """
     def add_one(self, **kwargs):
         # to check whether the state is correct:
-        return super(TBLHistory, self).add(*kwargs)
+        return super(TBLHistory, self).add(**kwargs)
 
     @property
     @connection_singleton
@@ -45,40 +45,81 @@ class TBLHistory(DBManager):
         return self.client.trans_db.get_collection(self.collection)
 
     def set_collection(self, collection):
+        """
+
+        :param collection:
+        :return:
+        """
         self.collection = collection
 
+    @property
+    def primary_key(self):
+        return "tx_id"
 
 
 
-class APITransaction(object):
-    table = TBLHistory()
+
+class APIHistory(object):
+    """
+
+    """
+    def __init__(self):
+        self.table = TBLHistory()
+
+    def set_history_collection(self, collection_index):
+        """
+
+        :param collection_index:
+        :return:
+        """
+        self.table.set_collection(collection_index)
 
 
-    def get_transation(cls, history_index):
-        cls.table = TBLHistory().set_collection(history_index)
+    def add_history(self, **args):
+        """
+
+        :param args:
+        :return:
+        """
+        return self.table.add_one(**args)
 
 
-    def add_transaction(cls, *args):
-        return cls.table.add_one(*args)
+    def query_history(self, transaction, *args, **kwargs):
+        """
 
-    def delete_transaction(cls, transaction):
-        return cls.table.delete_one(transaction)
-
-
-    def batch_delete_transaction(cls, filters):
-        return cls.table.delete_many(filters)
-
-
-    def query_transaction(cls, transaction, *args, **kwargs):
-        return cls.table.query_one(transaction, *args, **kwargs)
+        :param transaction:
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        return self.table.query_one(transaction, *args, **kwargs)
 
 
-    def batch_query_transaction(cls, filters, *args, **kwargs):
-        return cls.table.query_many(filters, *args, **kwargs)
+    def batch_query_history(self, filters, *args, **kwargs):
+        """
+
+        :param filters:
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        return self.table.query_many(filters, *args, **kwargs)
 
 
-    def update_transaction(cls, transaction, **kwargs):
-        return cls.table.update_one(transaction, **kwargs)
+    def update_history(self, tx_id, **kwargs):
+        """
 
-    def batch_update_transaction(cls, filters, **kwargs):
-        return cls.table.update_many(filters, **kwargs)
+        :param tx_id:
+        :param kwargs:
+        :return:
+        """
+        return self.table.update_one(tx_id, **kwargs)
+
+    def batch_update_history(self, filters, **kwargs):
+        """
+
+        :param filters:
+        :param kwargs:
+        :return:
+        """
+        return self.table.update_many(filters, **kwargs)

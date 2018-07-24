@@ -29,6 +29,9 @@ import hashlib
 from log.log import LOG
 
 
+SupportAssetType = ["TNC", "ETH", "GAS"]
+
+
 def to_aes_key(password):
     """
 
@@ -220,6 +223,9 @@ def convert_float(number, decimals=8):
     return round(float(number),decimals)
 
 
+def get_magic():
+    magic = Configure.get('Magic')
+    return magic.get('Block').strip() + magic.get('Trinity').strip()
 
 
 if __name__ == "__main__":
