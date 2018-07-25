@@ -160,7 +160,7 @@ class DBManager(object):
 
         # create primary key if user specify primary_key one valid value
         if self.primary_key:
-            if kwargs.get(self.primary_key):
+            if kwargs.__contains__(self.primary_key):
                 self.db_table.create_index(self.primary_key, unique=True)
             else:
                 LOG.error('Could not find the primary key {} in the table item {}.'.format(self.primary_key, kwargs))

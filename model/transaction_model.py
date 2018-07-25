@@ -42,7 +42,7 @@ class TBLTransaction(DBManager):
 
     @property
     def db_table(self):
-        return self.client.trans_db.get_collection(self.collection)
+        return self.client.trans_db[self.collection]
 
     def set_collection(self, collection):
         self.collection = collection
