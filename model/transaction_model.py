@@ -33,7 +33,7 @@ class TBLTransaction(DBManager):
     """
     def add_one(self, **kwargs):
         # to check whether the state is correct:
-        return super(TBLTransaction, self).add(*kwargs)
+        return super(TBLTransaction, self).add(**kwargs)
 
     @property
     @connection_singleton
@@ -61,13 +61,13 @@ class TBLTransaction(DBManager):
 
 
 class APITransaction(object):
+    table = TBLTransaction()
 
     def __init__(self, transaction_index):
-        self.table = TBLTransaction().set_collection(transaction_index)
+        TBLTransaction().set_collection(transaction_index)
 
-
-    def add_transaction(self, *args):
-        return self.table.add_one(*args)
+    def add_transaction(self, **kwargs):
+        return self.table.add_one(**kwargs)
 
     def delete_transaction(self, transaction):
         return self.table.delete_one(transaction)

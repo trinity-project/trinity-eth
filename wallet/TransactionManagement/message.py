@@ -45,23 +45,26 @@ import json
 from wallet.TransactionManagement.payment import Payment
 from enum import IntEnum
 from lightwallet.Settings import settings
+import time
+import time
 
 
 class EnumTradeType(IntEnum):
-    TRADE_TYPE_FONDER   = 0x0
-    TRADE_TYPE_RSMC     = 0x10
-    TRADE_TYPE_HTLC     = 0x20
+    TRADE_TYPE_FOUNDER = 0x0
+    TRADE_TYPE_RSMC = 0x10
+    TRADE_TYPE_HTLC = 0x20
 
 
 class EnumResponseStatus(IntEnum):
-    RESPONSE_OK     = 0x0
+    RESPONSE_OK = 0x0
 
-    # Fonder Message
-    RESPONSE_FONDER_DEPOSIT_NOT_ENOUGH = 0x10
+    # Founder Message
+    RESPONSE_FOUNDER_DEPOSIT_NOT_ENOUGH = 0x10
+    RESPONSE_FOUNDER_NONCE_NOT_ZERO = 0x11
 
     # Common response error
     RESPONSE_EXCEPTION_HAPPENED = 0xF0
-    RESPONSE_FAIL   = 0XFF
+    RESPONSE_FAIL = 0XFF
 
 
 class Message(object):
@@ -308,9 +311,16 @@ class TransactionMessage(Message):
         TransactionMessage._eth_interface().approve(address, TransactionMessage.multiply(deposit), private_key)
 
     @staticmethod
-    def deposit(address,channelId, nonce, founder, founder_amount, partner, partner_amount,
+    def get_approved_asset(address):
+        return TransactionMessage._eth_interface().get_approved_asset(settings.TNC,
+                                                                      settings.Eth_Contract_abi,
+                                                                      address,
+                                                                      settings.Eth_Contract_address)
+
+    @staticmethod
+    def deposit(address, channel_id, nonce, founder, founder_amount, partner, partner_amount,
                 founder_sign, partner_sign, private_key):
-        TransactionMessage._eth_interface().deposit(address,channelId, nonce,
+        TransactionMessage._eth_interface().deposit(address,channel_id, nonce,
                                                     founder, TransactionMessage.multiply(founder_amount),
                                                     partner, TransactionMessage.multiply(partner_amount),
                                                     founder_sign, partner_sign, private_key)
@@ -323,9 +333,41 @@ class TransactionMessage(Message):
     def divide(asset_count):
         return asset_count / TransactionMessage._trinity_coef
 
+    @staticmethod
+    def sync_timer(callback, expected_result, timeout = 60, *args, **kwargs):
+        # TODO: One temporary solution to handle some actions which approve message to on-chain
+        # TODO: please delete this function if monitor event is ready
+        total_timeout = timeout
+
+        while 0 < total_timeout:
+            result = callback(*args, **kwargs)
+            print(result)
+            
+            if result:
+                print(result)
+                break
+            
+            total_timeout  = total_timeout - 15
+            time.sleep(15)
+
+
 
 class FounderMessage(TransactionMessage):
     """
+    {
+        "MessageType": "Founder",
+        "Sender": founder,
+        "Receiver": partner,
+        "TxNonce": 0,
+        "ChannelName": channel_name,
+        "NetMagic": magic,
+        "MessageBody": {
+            "FounderDeposit": founder_deposit,
+            "PartnerDeposit": partner_deposit,
+            "Commitment": commitment,
+            "AssetType": asset_type.upper(),
+        }
+    }
     transaction massage:
     { "MessageType":"Founder",
     "Sender": "9090909090909090909090909@127.0.0.1:20553",
@@ -346,7 +388,7 @@ class FounderMessage(TransactionMessage):
 
     def __init__(self, message, wallet=None):
         super().__init__(message,wallet)
-        assert 0 == self.tx_nonce, 'Nonce must be zero.'
+        # assert 0 == self.tx_nonce, 'Nonce must be zero.'
 
         self.channel_name = message.get("ChannelName")
         self.asset_type = self.message_body.get("AssetType")
@@ -381,7 +423,7 @@ class FounderMessage(TransactionMessage):
             # record
             ch.Channel.add_trade(self.channel_name,
                                  nonce = 0,
-                                 type = EnumTradeType.TRADE_TYPE_FONDER.value,
+                                 type = EnumTradeType.TRADE_TYPE_FOUNDER.value,
                                  sender = self.sender,
                                  sender_balance = {self.asset_type.upper(): self.founder_deposit},
                                  sender_commit = self.commitment,
@@ -448,7 +490,14 @@ class FounderMessage(TransactionMessage):
             message.update({"Comments": comments})
 
         # authourized the deposit to the contract
-        FounderMessage.approve(founder_addr, founder_deposit,wallet._key.private_key_string)
+        try:
+            FounderMessage.approve(founder_addr, founder_deposit, wallet._key.private_key_string)
+        except Exception as e:
+            print(e)
+
+        # TODO: currently, here wait for result with 60 seconds.
+        # TODO: need trigger later by async mode
+        FounderMessage.sync_timer(FounderMessage.get_approved_asset, '', 60, founder_addr)
 
         # add channel
         # channel: str, src_addr: str, dest_addr: str, state: str, alive_block: int,
@@ -460,7 +509,7 @@ class FounderMessage(TransactionMessage):
         # record this transaction
         ch.Channel.add_trade(channel_name,
                              nonce = 0,
-                             type = EnumTradeType.TRADE_TYPE_FONDER.value,
+                             type = EnumTradeType.TRADE_TYPE_FOUNDER.value,
                              sender = founder_addr,
                              sender_balance = {asset_type.upper(): founder_deposit},
                              sender_commit = commitment,
@@ -532,7 +581,7 @@ class FounderResponsesMessage(TransactionMessage):
         super(FounderResponsesMessage, self).handle()
 
         if not (EnumResponseStatus.RESPONSE_OK == self.status):
-            LOG.error('Fonder failed to create channels. Status<{}>'.format(self.status))
+            LOG.error('Founder failed to create channels. Status<{}>'.format(self.status))
             return
 
         verified, error = self.verify()
@@ -540,15 +589,15 @@ class FounderResponsesMessage(TransactionMessage):
             # update transaction
             ch.Channel.update_trade(self.channel_name, self.tx_nonce, receiver_commit = self.commitment)
 
-            fonder = ch.Channel.query_trade(self.channel_name, nonce=0).get('content')[0]
-            if fonder:
-                FounderResponsesMessage.deposit(fonder.sender, self.channel_name, 0,
-                                                fonder.sender, self.founder_deposit,
-                                                fonder.receiver, self.partner_deposit,
-                                                fonder.sender_commit, fonder.receiver_commit,
+            founder = ch.Channel.query_trade(self.channel_name, nonce=0).get('content')[0]
+            if founder:
+                FounderResponsesMessage.deposit(founder.sender, self.channel_name, 0,
+                                                founder.sender, self.founder_deposit,
+                                                founder.receiver, self.partner_deposit,
+                                                founder.sender_commit, founder.receiver_commit,
                                                 self.wallet._key.private_key_string)
             else:
-                LOG.error('Error to broadcast Fonder to block chain.')
+                LOG.error('Error to broadcast Founder to block chain.')
 
         else:
             LOG.error('Handle FounderSign failed: {}'.format(error))
@@ -593,7 +642,7 @@ class FounderResponsesMessage(TransactionMessage):
                 partner_deposit = float(partner_deposit)
 
                 if not (0 < partner_deposit < founder_deposit):
-                    response_status = EnumResponseStatus.RESPONSE_FONDER_DEPOSIT_NOT_ENOUGH
+                    response_status = EnumResponseStatus.RESPONSE_FOUNDER_DEPOSIT_NOT_ENOUGH
                     raise Exception(response_status.name)
 
                 founder_addr = founder.strip().split('@')[0]

@@ -6,131 +6,333 @@ from ethereum.utils import checksum_encode, ecrecover_to_pub,safe_ord
 from eth_hash.backends.pysha3 import keccak256
 import binascii
 from web3 import Web3
-from web3client import Client
+from .web3client import Client
+
 
 class Interface(object):
+    """
 
+    """
     __species = None
     __first_init = True
 
     def __new__(cls, *args, **kwargs):
-        if cls.__species == None:
+        if not cls.__species:
             cls.__species = object.__new__(cls)
         return cls.__species
 
     def __init__(self, url, contract_address, contract_abi, asset_address, asset_abi):
-        if (self.__first_init):
+        """
+
+        :param url:
+        :param contract_address:
+        :param contract_abi:
+        :param asset_address:
+        :param asset_abi:
+        """
+        if self.__first_init:
             self.__class__.__first_init = False
-            self.eth_client=Client(eth_url=url)
+            self.eth_client = Client(eth_url=url)
             self.contract_address = checksum_encode(contract_address)
 
             self.contract=self.eth_client.get_contract_instance(contract_address,contract_abi)
             self.asset_contract=self.eth_client.get_contract_instance(asset_address,asset_abi)
 
-    def test(self):
-        return  self.eth_client
+    def approve(self, invoker, asset_amount, invoker_key):
+        """
 
-    def approve(self, invoker, assetAmount, key):
-        txId = self.eth_client.contruct_Transaction(invoker, self.asset_contract, "approve",[self.contract_address, assetAmount], key)
+        :param invoker:
+        :param asset_amount:
+        :param invoker_key:
+        :return:
+        """
+        tx_id = self.eth_client.contruct_Transaction(invoker, self.asset_contract, "approve", [self.contract_address, asset_amount], invoker_key)
         return {
-            "txData":txId
+            "txData":tx_id
         }
 
-    def setSettleTimeout(self, invoker, timeoutValue, key):
-        txId = self.eth_client.contruct_Transaction(invoker, self.contract, "setSettleTimeout",[timeoutValue], key)
+    def get_approved_asset(self, contract_address, abi, approver, spender):
+        """
+        :parameters: refer to the member function of eth_client
+        """
+        return self.eth_client.get_approved_asset(contract_address, abi, approver, spender)
+
+    def set_settle_timeout(self, invoker, timeout, invoker_key):
+        """
+
+        :param invoker:
+        :param timeout:
+        :param invoker_key:
+        :return:
+        """
+        tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "setSettleTimeout", [timeout], invoker_key)
         return {
-            "txData":txId
+            "txData":tx_id
         }
 
-    def setToken(self, invoker, tokenAddress, key):
-        txId = self.eth_client.contruct_Transaction(invoker, self.contract, "setToken",[tokenAddress], key)
+    def set_token(self, invoker, token_address, invoker_key):
+        """
+
+        :param invoker:
+        :param token_address:
+        :param invoker_key:
+        :return:
+        """
+        tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "setToken", [token_address], invoker_key)
         return {
-            "txData":txId
+            "txData":tx_id
         }     
     
-    def deposit(self, invoker,channelId, nonce, funder, funderAmount, partner, partnerAmount, funderSignature, partnerSignature, key):  
-        funderAddress=checksum_encode(funder)
-        partnerAddress=checksum_encode(partner)
-        txId=self.eth_client.contruct_Transaction(invoker,self.contract,"deposit",[channelId, nonce, funder, funderAmount, partner, partnerAmount, funderSignature, partnerSignature],key)
-        return {
-            "txData":txId
-        }
+    def deposit(self, invoker, channel_id, nonce, founder, founder_amount,
+                partner, partner_amount, founder_signature, partner_signature, invoker_key):
+        """
 
-    
-    def updateDeposit(self,invoker,channelId,nonce,funder, funderAmount, partner, partnerAmount, funderSignature, partnerSignature,key):
-        funder = checksum_encode(funder)
-        partner = checksum_encode(partner)    
-        txId = self.eth_client.contruct_Transaction(invoker, self.contract, "updateDeposit", [channelId,nonce,funder,funderAmount,partner,partnerAmount,funderSignature,partnerSignature],key)
-        return {
-            "txData":txId
-        }
-
-    def quickCloseChannel(self,invoker,channelId,nonce,closer,closerBalance,partner,partnerBalance,closerSignature,partnerSignature,key):
-        closer = checksum_encode(closer)
+        :param invoker:
+        :param channel_id:
+        :param nonce:
+        :param founder:
+        :param founder_amount:
+        :param partner:
+        :param partner_amount:
+        :param founder_signature:
+        :param partner_signature:
+        :param invoker_key:
+        :return:
+        """
+        founder = checksum_encode(founder)
         partner = checksum_encode(partner)
-        txId = self.eth_client.contruct_Transaction(invoker, self.contract, "quickCloseChannel", [channelId,nonce,closer,closerBalance,partner,partnerBalance,closerSignature,partnerSignature],key)
+        tx_id = self.eth_client.contruct_Transaction(invoker, self.contract,"deposit",
+                                                     [channel_id, nonce,
+                                                      founder, founder_amount,
+                                                      partner, partner_amount,
+                                                      founder_signature, partner_signature], invoker_key)
         return {
-            "txData":txId
+            "txData":tx_id
         }
 
-    def closeChannel(self, invoker,channelId,nonce,partnerA,closeBalanceA,partnerB,closeBalanceB,signedStringA,signedStringB,key):
-        partnerA = checksum_encode(partnerA)
-        partnerB = checksum_encode(partnerB)
-        txId = self.eth_client.contruct_Transaction(invoker, self.contract, "closeChannel", [channelId,nonce,partnerA,closeBalanceA,partnerB,closeBalanceB,signedStringA,signedStringB],key)
+    def update_deposit(self, invoker, channel_id, nonce, founder, founder_amount,
+                       partner, partner_amount, founder_signature, partner_signature, invoker_key):
+        """
+
+        :param invoker:
+        :param channel_id:
+        :param nonce:
+        :param founder:
+        :param founder_amount:
+        :param partner:
+        :param partner_amount:
+        :param founder_signature:
+        :param partner_signature:
+        :param invoker_key:
+        :return:
+        """
+        founder = checksum_encode(founder)
+        partner = checksum_encode(partner)    
+        tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "updateDeposit",
+                                                     [channel_id, nonce,
+                                                      founder, founder_amount,
+                                                      partner, partner_amount,
+                                                      founder_signature, partner_signature], invoker_key)
         return {
-            "txData":txId
+            "txData":tx_id
         }
 
-    def updateTransaction(self, invoker,channelId, nonce, partnerA, updateBalanceA, partnerB, updateBalanceB, signedStringA, signedStringB,key):
-        partnerA = checksum_encode(partnerA)
-        partnerB = checksum_encode(partnerB)
-        txId = self.eth_client.contruct_Transaction(invoker, self.contract, "updateTransaction", [channelId, nonce, partnerA, updateBalanceA, partnerB, updateBalanceB, signedStringA, signedStringB],key)
+    def quick_close_channel(self, invoker, channel_id, nonce, founder, founder_balance,
+                            partner, partner_balance, founder_signature, partner_signature, invoker_key):
+        """
+
+        :param invoker:
+        :param channel_id:
+        :param nonce:
+        :param founder:
+        :param founder_balance:
+        :param partner:
+        :param partner_balance:
+        :param founder_signature:
+        :param partner_signature:
+        :param invoker_key:
+        :return:
+        """
+        founder = checksum_encode(founder)
+        partner = checksum_encode(partner)
+        tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "quickCloseChannel",
+                                                     [channel_id, nonce,
+                                                      founder, founder_balance,
+                                                      partner, partner_balance,
+                                                      founder_signature, partner_signature], invoker_key)
         return {
-            "txData":txId
+            "txData":tx_id
         }
 
-    def settleTransaction(self,invoker,channelId,key):
-        txId=self.eth_client.contruct_Transaction(invoker,self.contract,"settleTransaction",[channelId],key)
+    def close_channel(self, invoker, channel_id, nonce, founder, founder_balance,
+                      partner, partner_balance, founder_signature, partner_signature, invoker_key):
+        """
+
+        :param invoker:
+        :param channel_id:
+        :param nonce:
+        :param founder:
+        :param founder_balance:
+        :param partner:
+        :param partner_balance:
+        :param founder_signature:
+        :param partner_signature:
+        :param invoker_key:
+        :return:
+        """
+        founder = checksum_encode(founder)
+        partner = checksum_encode(partner)
+        tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "closeChannel",
+                                                     [channel_id, nonce,
+                                                      founder, founder_balance,
+                                                      partner, partner_balance,
+                                                      founder_signature, partner_signature],invoker_key)
         return {
-            "txData":txId
+            "txData":tx_id
         }
 
-    def withdraw(self, invoker, channelId, nonce, sender, receiver, lockPeriod, lockAmount, lockHash, senderSignature, receiverSignature, secret, key):
-        partnerA = checksum_encode(sender)
-        partnerB = checksum_encode(receiver)
-        txId = self.eth_client.contruct_Transaction(invoker, self.contract, "withdraw", [channelId, nonce, sender, receiver, lockPeriod, lockAmount, lockHash, senderSignature, receiverSignature, secret],key)
+    def update_transaction(self, invoker, channel_id, nonce, founder, founder_balance,
+                           partner, partner_balance, founder_signature, partner_signature, invoker_key):
+        """
+        
+        :param invoker: 
+        :param channel_id: 
+        :param nonce: 
+        :param founder: 
+        :param founder_balance: 
+        :param partner: 
+        :param partner_balance: 
+        :param founder_signature: 
+        :param partner_signature: 
+        :param invoker_key:
+        :return: 
+        """
+        founder = checksum_encode(founder)
+        partner = checksum_encode(partner)
+        tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "updateTransaction",
+                                                    [channel_id, nonce,
+                                                     founder, founder_balance,
+                                                     partner, partner_balance,
+                                                     founder_signature, partner_signature],invoker_key)
         return {
-            "txData":txId
+            "txData":tx_id
         }
 
-    def withdrawUpdate(self, invoker, channelId, nonce, sender, receiver, lockPeriod, lockAmount, lockHash, senderSignature, receiverSignature, key):
-        partnerA = checksum_encode(sender)
-        partnerB = checksum_encode(receiver)
-        txId = self.eth_client.contruct_Transaction(invoker, self.contract, "withdrawUpdate", [channelId, nonce, sender, receiver, lockPeriod, lockAmount, lockHash, senderSignature, receiverSignature],key)
+    def settle_transaction(self, invoker, channel_id, invoker_key):
+        """
+
+        :param invoker:
+        :param channel_id:
+        :param invoker_key:
+        :return:
+        """
+        tx_id = self.eth_client.contruct_Transaction(invoker, self.contract,"settleTransaction",
+                                                     [channel_id], invoker_key)
         return {
-            "txData":txId
+            "txData":tx_id
         }
 
-    def withdrawSettle(self, invoker, channelId, nonce, sender, receiver, lockPeriod, lockAmount, lockHash, senderSignature, receiverSignature, secret, key):
-        partnerA = checksum_encode(sender)
-        partnerB = checksum_encode(receiver)
-        txId = self.eth_client.contruct_Transaction(invoker, self.contract, "withdrawSettle", [channelId, nonce, sender, receiver, lockPeriod, lockAmount, lockHash, senderSignature, receiverSignature, secret],key)
+    def withdraw(self, invoker, channel_id, nonce, founder, partner, lockPeriod, lock_amount, lock_hash,
+                 founder_signature, partner_signature, secret, invoker_key):
+        """
+
+        :param invoker:
+        :param channel_id:
+        :param nonce:
+        :param founder:
+        :param partner:
+        :param lockPeriod:
+        :param lock_amount:
+        :param lock_hash:
+        :param founder_signature:
+        :param partner_signature:
+        :param secret:
+        :param invoker_key:
+        :return:
+        """
+        founder = checksum_encode(founder)
+        partner = checksum_encode(partner)
+        tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "withdraw",
+                                                     [channel_id, nonce, founder, partner,
+                                                      lockPeriod, lock_amount, lock_hash,
+                                                      founder_signature, partner_signature, secret],invoker_key)
         return {
-            "txData":txId
+            "txData":tx_id
+        }
+
+    def withdraw_update(self, invoker, channel_id, nonce, founder, partner, lock_period, lock_amount, lock_hash,
+                        founder_signature, partner_signature, invoker_key):
+        """
+
+        :param invoker:
+        :param channel_id:
+        :param nonce:
+        :param founder:
+        :param partner:
+        :param lock_period:
+        :param lock_amount:
+        :param lock_hash:
+        :param founder_signature:
+        :param partner_signature:
+        :param invoker_key:
+        :return:
+        """
+        founder = checksum_encode(founder)
+        partner = checksum_encode(partner)
+        tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "withdrawUpdate",
+                                                     [channel_id, nonce, founder, partner,
+                                                      lock_period, lock_amount, lock_hash,
+                                                      founder_signature, partner_signature], invoker_key)
+        return {
+            "txData":tx_id
+        }
+
+    def withdraw_settle(self, invoker, channel_id, nonce, founder, partner, lock_period, lock_amount, lock_hash,
+                        founder_signature, partner_signature, secret, invoker_key):
+        """
+
+        :param invoker:
+        :param channel_id:
+        :param nonce:
+        :param founder:
+        :param partner:
+        :param lock_period:
+        :param lock_amount:
+        :param lock_hash:
+        :param founder_signature:
+        :param partner_signature:
+        :param secret:
+        :param invoker_key:
+        :return:
+        """
+        founder = checksum_encode(founder)
+        partner = checksum_encode(partner)
+        tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "withdrawSettle",
+                                                     [channel_id, nonce, founder, partner,
+                                                      lock_period, lock_amount, lock_hash,
+                                                      founder_signature, partner_signature, secret], invoker_key)
+        return {
+            "txData":tx_id
         }    
 
-    def getChannelTotal(self):
-        allChannels=self.eth_client.call_contract(self.contract,"getChannelCount",[])
+    def get_channel_total(self):
+        """
+
+        :return:
+        """
+        all_channels = self.eth_client.call_contract(self.contract,"getChannelCount",[])
         return {
-            "totalChannels":allChannels
+            "totalChannels": all_channels
         }
 
-    def getChannelInfoById(self,channelId):
-        channelInfo=self.eth_client.call_contract(self.contract,"getChannelById",[channelId])
+    def get_channel_info_by_id(self, channel_id):
+        """
+
+        :param channel_id:
+        :return:
+        """
+        channel_info = self.eth_client.call_contract(self.contract,"getChannelById",[channel_id])
         return {
-            "channelInfo":channelInfo
+            "channelInfo": channel_info
         }        
 
-
-
-        
