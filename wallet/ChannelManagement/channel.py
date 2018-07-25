@@ -107,8 +107,6 @@ class Channel(object):
         self.deposit[self.partner_address] = subitem
         self.channel_name = self.__new_channel()
 
-        result = APIChannel.add_channel(self.channel_name, self.founder, self.partner,
-                                        EnumChannelState.INIT.name, 0, self.deposit)
         if cli:
             deposit = convert_number_auto(asset_type.upper(), deposit)
             partner_deposit = convert_number_auto(asset_type.upper(), partner_deposit)

@@ -88,7 +88,7 @@ class DBClient(object):
     def __init__(self):
         self.db_client = pymongo.MongoClient(self.uri)
         self.db = self.db_client.get_database(self.db_name)
-        self.trans_db=self.db_client.get_database(self.db_trans_name)
+        self.trans_db = self.db_client.get_database(self.db_trans_name)
         self.history_db = self.db_client.get_database(self.db_history_name)
 
     def close(self):
@@ -120,7 +120,7 @@ class DBClient(object):
         uri_list.append('{}:{}/'.format(cfg['host'], cfg['port']))
 
         # database name
-        uri_list.append(self.db_name)
+        #uri_list.append(self.db_name)
 
         self.__uri = ''.join(uri_list)
         LOG.info('Trinity Configuration DB URI: {}'.format(self.__uri))
@@ -129,15 +129,15 @@ class DBClient(object):
 
     @property
     def db_name(self):
-        return cfg['channel'] if cfg.get("channel") else "Channel"
+        return cfg.get("channel", "Channel")
 
     @property
     def db_trans_name(self):
-        return cfg["trans"] if cfg.get("trans") else "Transaction"
+        return cfg.get("channel", "Transaction")
 
     @property
     def db_history_name(self):
-        return cfg["history"] if cfg.get("history") else "History"
+        return cfg.get("history", "History")
 
 
 class DBManager(object):
