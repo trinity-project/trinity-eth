@@ -419,6 +419,10 @@ class FounderMessage(TransactionMessage):
             except Exception as error:
                 LOG.error(type(error), error)
 
+            # TODO: currently, here wait for result with 60 seconds.
+            # TODO: need trigger later by async mode
+            FounderMessage.sync_timer(FounderMessage.get_approved_asset, '', 60, self.receiver.strip().split('@')[0])
+
             # add channel to dbs
             channel_inst = ch.Channel(self.sender, self.receiver)
             channel_inst.add_channel(channel = self.channel_name, src_addr = self.sender,
@@ -599,11 +603,11 @@ class FounderResponsesMessage(TransactionMessage):
             # update transaction
             ch.Channel.update_trade(self.channel_name, self.tx_nonce, receiver_commit = self.commitment)
 
-            founder = ch.Channel.query_trade(self.channel_name, nonce=0).get('content')[0]
+            founder = ch.Channel.query_trade(self.channel_name, nonce=0)[0]
             if founder:
                 FounderResponsesMessage.deposit(founder.sender, self.channel_name, 0,
-                                                founder.sender, self.founder_deposit,
-                                                founder.receiver, self.partner_deposit,
+                                                founder.sender, founder.sender_balance.get(self.asset_type.upper()),
+                                                founder.receiver, founder.receiver_balance.get(self.asset_type.upper()),
                                                 founder.sender_commit, founder.receiver_commit,
                                                 self.wallet._key.private_key_string)
 
