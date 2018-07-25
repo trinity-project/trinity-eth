@@ -413,8 +413,12 @@ class FounderMessage(TransactionMessage):
         else:
             founder_addr = self.sender.strip().split('@')[0]
             partner_addr = self.receiver.strip().split('@')[0]
-            FounderMessage.approve(self.receiver.strip().split('@')[0], self.partner_deposit,
-                                   self.wallet._key.private_key_string)
+            try:
+                FounderMessage.approve(self.receiver.strip().split('@')[0], self.partner_deposit,
+                                       self.wallet._key.private_key_string)
+            except Exception as error:
+                LOG.error(type(error), error)
+
             # add channel to dbs
             channel_inst = ch.Channel(self.sender, self.receiver)
             channel_inst.add_channel(channel = self.channel_name, src_addr = self.sender,
