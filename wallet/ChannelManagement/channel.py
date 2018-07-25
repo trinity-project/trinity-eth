@@ -225,7 +225,7 @@ class Channel(object):
 
     @staticmethod
     def add_trade(channel_name, **kwargs):
-        return APITransaction('trade'+channel_name).add_transaction(*kwargs)
+        return APITransaction('trade'+channel_name).add_transaction(**kwargs)
 
     @staticmethod
     def update_trade(channel_name, nonce, **kwargs):

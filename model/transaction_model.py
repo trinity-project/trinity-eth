@@ -59,7 +59,6 @@ class TBLTransaction(DBManager):
 
 
 
-
 class APITransaction(object):
     table = TBLTransaction()
 

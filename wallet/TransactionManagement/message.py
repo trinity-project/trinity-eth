@@ -313,7 +313,7 @@ class TransactionMessage(Message):
     @staticmethod
     def get_approved_asset(address):
         return TransactionMessage._eth_interface().get_approved_asset(settings.TNC,
-                                                                      settings.Eth_Contract_abi,
+                                                                      settings.TNC_abi,
                                                                       address,
                                                                       settings.Eth_Contract_address)
 
