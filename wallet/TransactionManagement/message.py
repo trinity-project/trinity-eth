@@ -284,7 +284,7 @@ class TransactionMessage(Message):
 
     @staticmethod
     def _eth_client():
-        if not TransactionMessage._interface:
+        if not TransactionMessage._web3_client:
             TransactionMessage._web3_client = EthWebClient(settings.NODEURL)
 
         return TransactionMessage._web3_client

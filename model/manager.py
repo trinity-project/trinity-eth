@@ -133,7 +133,7 @@ class DBClient(object):
 
     @property
     def db_trans_name(self):
-        return cfg.get("channel", "Transaction")
+        return cfg.get("trans", "Transaction")
 
     @property
     def db_history_name(self):
