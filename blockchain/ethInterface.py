@@ -6,16 +6,29 @@ from ethereum.utils import checksum_encode, ecrecover_to_pub,safe_ord
 from eth_hash.backends.pysha3 import keccak256
 import binascii
 from web3 import Web3
-from .web3client import Client
+from web3client import Client
 
 class Interface(object):
 
-    def __init__(self, url, contract_address, contract_abi, asset_address, asset_abi):
-        self.eth_client=Client(eth_url=url)
-        self.contract_address = checksum_encode(contract_address)
+    __species = None
+    __first_init = True
 
-        self.contract=self.eth_client.get_contract_instance(contract_address,contract_abi)
-        self.asset_contract=self.eth_client.get_contract_instance(asset_address,asset_abi)
+    def __new__(cls, *args, **kwargs):
+        if cls.__species == None:
+            cls.__species = object.__new__(cls)
+        return cls.__species
+
+    def __init__(self, url, contract_address, contract_abi, asset_address, asset_abi):
+        if (self.__first_init):
+            self.__class__.__first_init = False
+            self.eth_client=Client(eth_url=url)
+            self.contract_address = checksum_encode(contract_address)
+
+            self.contract=self.eth_client.get_contract_instance(contract_address,contract_abi)
+            self.asset_contract=self.eth_client.get_contract_instance(asset_address,asset_abi)
+
+    def test(self):
+        return  self.eth_client
 
     def approve(self, invoker, assetAmount, key):
         txId = self.eth_client.contruct_Transaction(invoker, self.asset_contract, "approve",[self.contract_address, assetAmount], key)
