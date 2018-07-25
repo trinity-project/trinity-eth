@@ -63,7 +63,7 @@ class APITransaction(object):
     table = TBLTransaction()
 
     def __init__(self, transaction_index):
-        TBLTransaction().set_collection(transaction_index)
+        self.table.set_collection(transaction_index)
 
     def add_transaction(self, **kwargs):
         return self.table.add_one(**kwargs)

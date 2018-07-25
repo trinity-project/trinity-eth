@@ -415,11 +415,12 @@ class FounderMessage(TransactionMessage):
             partner_addr = self.receiver.strip().split('@')[0]
             FounderResponsesMessage.approve(self.receiver.strip().split('@')[0], self.partner_deposit, self.wallet._key.private_key_string)
             # add channel to dbs
-            ch.Channel(self.sender, self.receiver).add_channel(channel = self.channel_name, src_addr = self.sender,
-                                                               dest_addr = self.receiver,
-                                                               state = EnumChannelState.INIT.name,
-                                                               deposit = {founder_addr:{self.asset_type.upper(): self.founder_deposit},
-                                                                          partner_addr:{self.asset_type.upper(): self.partner_deposit}})
+            channel_inst = ch.Channel(self.sender, self.receiver)
+            channel_inst.add_channel(channel = self.channel_name, src_addr = self.sender,
+                                     dest_addr = self.receiver,
+                                     state = EnumChannelState.INIT.name,
+                                     deposit = {founder_addr:{self.asset_type.upper(): self.founder_deposit},
+                                                partner_addr:{self.asset_type.upper(): self.partner_deposit}})
             # record
             ch.Channel.add_trade(self.channel_name,
                                  nonce = 0,
@@ -430,6 +431,10 @@ class FounderMessage(TransactionMessage):
                                  receiver = self.receiver,
                                  receiver_balance = {self.asset_type.upper(): self.partner_deposit},
                                  receiver_commit = None)
+
+            # update channel state
+            channel_inst.channel(self.channel_name).update_channel(state = EnumChannelState.OPENING.name)
+            LOG.info('Channel<{}> in opening state.'.format(self.channel_name))
 
         # send response
         FounderResponsesMessage.create(self.channel_name, self.sender, self.receiver, self.asset_type,
@@ -596,6 +601,10 @@ class FounderResponsesMessage(TransactionMessage):
                                                 founder.receiver, self.partner_deposit,
                                                 founder.sender_commit, founder.receiver_commit,
                                                 self.wallet._key.private_key_string)
+
+                # change channel state to OPENING
+                ch.Channel(self.receiver, self.sender).channel(self.channel_name).update_channel(state = EnumChannelState.OPENING.name)
+                LOG.info('Channel<{}> in opening state.'.format(self.channel_name))
             else:
                 LOG.error('Error to broadcast Founder to block chain.')
 
