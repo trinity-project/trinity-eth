@@ -407,7 +407,7 @@ class FounderMessage(TransactionMessage):
         super().handle()
         verify, error = self.verify()
 
-        status = EnumResponseStatus.RESPONSE_OK.value
+        status = EnumResponseStatus.RESPONSE_OK
         if not verify:
             status = EnumResponseStatus.RESPONSE_FAIL
         else:
@@ -590,7 +590,7 @@ class FounderResponsesMessage(TransactionMessage):
     def handle(self):
         super(FounderResponsesMessage, self).handle()
 
-        if not (EnumResponseStatus.RESPONSE_OK == self.status):
+        if not (EnumResponseStatus.RESPONSE_OK.name == self.status):
             LOG.error('Founder failed to create channels. Status<{}>'.format(self.status))
             return
 
