@@ -116,21 +116,14 @@ class Channel(object):
                 LOG.error('Could not trigger register channel because of illegal deposit<{}:{}>.'.format(deposit, partner_deposit))
                 return False
 
-            mg.FounderMessage.create(self.channel_name, self.founder, self.partner, asset_type,
+            try:
+                mg.FounderMessage.create(self.channel_name, self.founder, self.partner, asset_type,
                                      deposit, partner_deposit, mg.Message.get_magic(), wallet=wallet)
-            message = {"MessageType": "RegisterChannel",
-                       "Sender": self.founder,
-                       "Receiver": self.partner,
-                       "ChannelName": self.channel_name,
-                       "MessageBody": {
-                           "AssetType": asset_type,
-                           "Deposit": deposit,
-                           "Comments": comments
-                       }
-                       }
-            return mg.Message.send(message)
+            except Exception as error:
+                LOG.info('Create channel<{}> failed'.format(self.channel_name))
+                return False
 
-        return result
+        return True
 
     def delete(self):
         pass

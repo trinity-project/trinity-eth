@@ -413,7 +413,8 @@ class FounderMessage(TransactionMessage):
         else:
             founder_addr = self.sender.strip().split('@')[0]
             partner_addr = self.receiver.strip().split('@')[0]
-            FounderResponsesMessage.approve(self.receiver.strip().split('@')[0], self.partner_deposit, self.wallet._key.private_key_string)
+            FounderMessage.approve(self.receiver.strip().split('@')[0], self.partner_deposit,
+                                   self.wallet._key.private_key_string)
             # add channel to dbs
             channel_inst = ch.Channel(self.sender, self.receiver)
             channel_inst.add_channel(channel = self.channel_name, src_addr = self.sender,
@@ -433,7 +434,7 @@ class FounderMessage(TransactionMessage):
                                  receiver_commit = None)
 
             # update channel state
-            channel_inst.channel(self.channel_name).update_channel(state = EnumChannelState.OPENING.name)
+            channel_inst.channel(self.channel_name).update_channel(state=EnumChannelState.OPENING.name)
             LOG.info('Channel<{}> in opening state.'.format(self.channel_name))
 
         # send response
@@ -679,7 +680,7 @@ class FounderResponsesMessage(TransactionMessage):
                 LOG.error('Exception occurred. {}'.format(error))
 
         # fill message status
-        message.update({'Status': response_status.value})
+        message.update({'Status': response_status.name})
 
         # Add comments in the messages
         if comments:
