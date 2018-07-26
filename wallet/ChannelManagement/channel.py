@@ -227,6 +227,38 @@ class Channel(object):
     def query_trade(channel_name, nonce, *args, **kwargs):
         return APITransaction('trade'+channel_name).query_transaction(nonce, *args, **kwargs)
 
+    @property
+    def latest_trade(self):
+        return APITransaction('trade' + self.channel_name).sort(key='nonce')
+
+    # transaction related
+    def transfer(self, sender, receiver, asset_type, count, hash_random=None, wallet=None):
+        """
+
+        :param sender:
+        :param receiver:
+        :param asset_type:
+        :param count:
+        :param hash_random:
+        :param wallet:
+        :return:
+        """
+        # get nonce in the offline account book
+        if not not self.latest_trade:
+            LOG.error('No transaction records were found.')
+            return
+        latest_nonce = self.latest_trade.nonce
+
+        channel = self.get_channel(sender, receiver, EnumChannelState.OPENED.name)
+        if channel:
+            # RSMC transaction
+            mg.RsmcMessage.create(channel.channel, wallet, sender, receiver, count, int(latest_nonce)+1,
+                                  asset_type, comments=hash_random)
+        else:
+            # HTLC message
+            pass
+
+        return
 
 
 def create_channel(founder, partner, asset_type, depoist: float, partner_deposit = None, cli=True,

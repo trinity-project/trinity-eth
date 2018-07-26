@@ -28,6 +28,7 @@ from wallet.ChannelManagement.channel import create_channel, \
     chose_channel,\
     close_channel,\
     udpate_channel_when_setup
+from wallet.ChannelManagement import channel as ch
 from wallet.TransactionManagement import message as mg
 from wallet.TransactionManagement import transaction as trinitytx
 from wallet.Interface.rpc_interface import MessageList
@@ -302,68 +303,70 @@ class UserPromptInterface(PromptInterface):
             if asset_type:
                 asset_type = asset_type.upper()
 
-            receiverpubkey, receiverip= receiver.split("@")
-            channels = filter_channel_via_address(self.Wallet.url,receiver, EnumChannelState.OPENED.name)
-            LOG.debug("Channels {}".format(str(channels)))
-            ch = chose_channel(channels,self.Wallet.url.split("@")[0].strip(), count, asset_type)
-            if ch:
-                channel_name = ch.channel
-            else:
-                channel_name =None
-            gate_way_ip = self.Wallet.url.split("@")[1].strip()
+            ch.Channel(self.Wallet.url, receiver).transfer(self.Wallet.url, receiver, asset_type, count, hr, self.Wallet)
 
-            if channel_name:
-                tx_nonce = trinitytx.TrinityTransaction(channel_name, self.Wallet).get_latest_nonceid()
-                mg.RsmcMessage.create(channel_name,self.Wallet,self.Wallet.pubkey,
-                                      receiverpubkey, float(count), receiverip, gate_way_ip, str(tx_nonce+1),
-                                      asset_type=asset_type, comments=hr)
-            else:
-                message = {"MessageType":"GetRouterInfo",
-                           "Sender":self.Wallet.url,
-                            "Receiver": receiver,
-                           "MessageBody":{
-                               "AssetType":asset_type,
-                               "Value":count
-                               }
-                           }
-                result = gate_way.get_router_info(message)
-                routerinfo = json.loads(result.get("result"))
-                router=routerinfo.get("RouterInfo")
-                if router:
-                    if not hr:
-                        print("No hr in payments")
-                        return
-                    r = router.get("FullPath")
-                    LOG.info("Get Router {}".format(str(r)))
-                    n = router.get("Next")
-                    LOG.info("Get Next {}".format(str(n)))
-                    fee_router = [i for i in r if i[0] not in (self.Wallet.url, receiver)]
-                    if fee_router:
-                        fee = reduce(lambda x, y:x+y,[float(i[1]) for i in fee_router])
-                    else:
-                        fee = 0
-                    LOG.info("Get Fee {}".format(str(fee)))
-                    answer = prompt("will use fee %s , Do you still want tx? [Yes/No]> " %(str(fee)))
-                    if answer.upper() in["YES","Y"]:
-                        count = float(count) + float(fee)
-                        next = r[1][0]
-                        channels = filter_channel_via_address(self.Wallet.url, next, EnumChannelState.OPENED.name)
-                        LOG.debug("Channels {}".format(str(channels)))
-                        ch = chose_channel(channels, self.Wallet.url.split("@")[0].strip(), count, asset_type)
-                        if ch:
-                            channel_name = ch.channel
-                        else:
-                            print("Error, can not find the channel with next router")
-                            return None
-                        tx_nonce = trinitytx.TrinityTransaction(channel_name, self.Wallet).get_latest_nonceid()
-                        tx_nonce = int(tx_nonce)+1
-                        mg.HtlcMessage.create(channel_name, self.Wallet,self.Wallet.url, next,
-                                             count, hr,tx_nonce, role_index=0,asset_type=asset_type,
-                                              router=r, next_router=r[2][0], comments=comments)
-                    else:
-                        return None
-                else:
-                    return
+            # receiverpubkey, receiverip= receiver.split("@")
+            channels = filter_channel_via_address(self.Wallet.url,receiver, EnumChannelState.OPENED.name)
+            # LOG.debug("Channels {}".format(str(channels)))
+            # ch = chose_channel(channels,self.Wallet.url.split("@")[0].strip(), count, asset_type)
+            # if ch:
+            #     channel_name = ch.channel
+            # else:
+            #     channel_name =None
+            # gate_way_ip = self.Wallet.url.split("@")[1].strip()
+            #
+            # if channel_name:
+            #     tx_nonce = trinitytx.TrinityTransaction(channel_name, self.Wallet).get_latest_nonceid()
+            #     mg.RsmcMessage.create(channel_name,self.Wallet,self.Wallet.pubkey,
+            #                           receiverpubkey, float(count), receiverip, gate_way_ip, str(tx_nonce+1),
+            #                           asset_type=asset_type, comments=hr)
+            # else:
+            #     message = {"MessageType":"GetRouterInfo",
+            #                "Sender":self.Wallet.url,
+            #                 "Receiver": receiver,
+            #                "MessageBody":{
+            #                    "AssetType":asset_type,
+            #                    "Value":count
+            #                    }
+            #                }
+            #     result = gate_way.get_router_info(message)
+            #     routerinfo = json.loads(result.get("result"))
+            #     router=routerinfo.get("RouterInfo")
+            #     if router:
+            #         if not hr:
+            #             print("No hr in payments")
+            #             return
+            #         r = router.get("FullPath")
+            #         LOG.info("Get Router {}".format(str(r)))
+            #         n = router.get("Next")
+            #         LOG.info("Get Next {}".format(str(n)))
+            #         fee_router = [i for i in r if i[0] not in (self.Wallet.url, receiver)]
+            #         if fee_router:
+            #             fee = reduce(lambda x, y:x+y,[float(i[1]) for i in fee_router])
+            #         else:
+            #             fee = 0
+            #         LOG.info("Get Fee {}".format(str(fee)))
+            #         answer = prompt("will use fee %s , Do you still want tx? [Yes/No]> " %(str(fee)))
+            #         if answer.upper() in["YES","Y"]:
+            #             count = float(count) + float(fee)
+            #             next = r[1][0]
+            #             channels = filter_channel_via_address(self.Wallet.url, next, EnumChannelState.OPENED.name)
+            #             LOG.debug("Channels {}".format(str(channels)))
+            #             ch = chose_channel(channels, self.Wallet.url.split("@")[0].strip(), count, asset_type)
+            #             if ch:
+            #                 channel_name = ch.channel
+            #             else:
+            #                 print("Error, can not find the channel with next router")
+            #                 return None
+            #             tx_nonce = trinitytx.TrinityTransaction(channel_name, self.Wallet).get_latest_nonceid()
+            #             tx_nonce = int(tx_nonce)+1
+            #             mg.HtlcMessage.create(channel_name, self.Wallet,self.Wallet.url, next,
+            #                                  count, hr,tx_nonce, role_index=0,asset_type=asset_type,
+            #                                   router=r, next_router=r[2][0], comments=comments)
+            #         else:
+            #             return None
+            #     else:
+            #         return
 
         elif command == "qrcode":
             enable = get_arg(arguments,1)

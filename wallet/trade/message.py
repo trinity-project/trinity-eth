@@ -30,6 +30,11 @@ from wallet.utils import get_magic
 from log.log import LOG
 
 
+class EnumTransactionType(IntEnum):
+    TYPE_RSMC = 0x0
+    TYPE_HTLC = 0x1
+
+
 class EnumResponseStatus(IntEnum):
     RESPONSE_OK     = 0x0
 

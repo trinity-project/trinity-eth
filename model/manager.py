@@ -250,6 +250,20 @@ class DBManager(object):
         result = [ModelSet(**res) for res in cursor.limit(0)]
         return result if result else EnumStatusCode.DBQueryWithoutMatchedItems
 
+    def sort(self, key, descending=True):
+        if descending:
+            result = self.db_table.find().sort([(key, pymongo.DESCENDING)]).limit(1)
+        else:
+            result = self.db_table.find().sort([(key, pymongo.ASCENDING)]).limit(1)
+
+        result = [ModelSet(**res) for res in result]
+        return result
+
+    def query_many(self, filters, *args, **kwargs):
+        cursor = self.db_table.find(filters, *args, **kwargs)
+        result = [ModelSet(**res) for res in cursor.limit(0)]
+        return result if result else EnumStatusCode.DBQueryWithoutMatchedItems
+
     def is_all(self, filters):
         return 'all' == filters.get(self.primary_key)
 

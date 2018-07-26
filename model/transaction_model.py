@@ -77,6 +77,9 @@ class APITransaction(object):
     def query_transaction(self, transaction, *args, **kwargs):
         return self.table.query_one(transaction, *args, **kwargs)
 
+    def sort(self, key, descending=True):
+        return self.table.sort(key, descending)
+
     def batch_query_transaction(self, filters, *args, **kwargs):
         return self.table.query_many(filters, *args, **kwargs)
 
