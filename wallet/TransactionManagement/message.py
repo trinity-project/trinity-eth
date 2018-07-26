@@ -748,7 +748,7 @@ class RsmcMessage(TransactionMessage):
         pass
 
     @staticmethod
-    def create(channel_name, wallet, sender, receiver, payment, nonce, asset_type="TNC",
+    def create(channel_name, wallet, sender, receiver, payment, asset_type="TNC",
                cli=False, router = None, next_router=None, comments=None):
         """
 
@@ -767,7 +767,7 @@ class RsmcMessage(TransactionMessage):
         :return:
         """
         try:
-            message = RsmcMessage.generateRSMC(channel_name, wallet, sender, receiver, payment, nonce,
+            message = RsmcMessage.generateRSMC(channel_name, wallet, sender, receiver, payment,
                                                asset_type, cli, router, next_router, comments)
             RsmcMessage.send(message)
         except Exception as error:
@@ -795,22 +795,23 @@ class RsmcMessage(TransactionMessage):
         """
         assert sender.__contains__('@'), 'Invalid sender<{}> URL format'.format(sender)
         assert receiver.__contains__('@'), 'Invalid receiver<{}> URL format.'.format(receiver)
-        assert 0 == nonce, 'Nonce MUST be larger than zero'
 
-        transaction = TrinityTransaction(channel_name, wallet)
-        founder = transaction.get_founder()
-        LOG.debug("Rsmc Create  founder {}".format(json.dumps(founder)))
-        tx_state = transaction.get_transaction_state()
         channel = ch.Channel.channel(channel_name)
+
+        # get trade history
+        transaction = channel.latest_trade(channel_name)
+        # get nonce in the offline account book
+        if not transaction:
+            LOG.error('No transaction record is found.')
+            return
+        transaction = transaction[0]
         balance = channel.get_balance()
-        #balance = transaction.get_balance(str(int(tx_nonce)-1))
-        LOG.debug("Rsmc Create get balance {}".format(str(balance)))
         assert balance, 'Void balance<{}> for asset <{}>.'.format(balance, asset_type)
 
-        sender_addr     = sender.strip().split('@')[0]
-        receiver_addr   = receiver.strip().split('@')[0]
-        asset_type      = asset_type.upper()
-        payment         = float(payment)
+        sender_addr = sender.strip().split('@')[0]
+        receiver_addr = receiver.strip().split('@')[0]
+        asset_type = asset_type.upper()
+        payment = float(payment)
 
         sender_balance = float(balance.get(sender_addr, {}).get(asset_type, 0))
         assert 0 < payment <= sender_balance, 'Sender balance<{}> is not enough.'.format(sender_balance)
