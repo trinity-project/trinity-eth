@@ -81,7 +81,7 @@ class Channel(object):
     def channel(cls,channelname):
         try:
             channel = APIChannel.query_channel(channel=channelname)
-            channel_info = channel[0]
+            channel_info = channel["content"][0]
         except Exception as e:
             LOG.error(e)
             return None

@@ -59,7 +59,7 @@ class EnumResponseStatus(IntEnum):
     RESPONSE_OK = 0x0
 
     # Founder Message
-    RESPONSE_FOUNDER_DEPOSIT_NOT_ENOUGH = 0x10
+    RESPONSE_FOUNDER_DEPOSIT_LESS_THAN_PARTNER = 0x10
     RESPONSE_FOUNDER_NONCE_NOT_ZERO = 0x11
 
     # Common response error
@@ -516,7 +516,7 @@ class FounderMessage(TransactionMessage):
         # add channel
         # channel: str, src_addr: str, dest_addr: str, state: str, alive_block: int,
         # deposit:dict
-        ch.Channel(founder, partner).add_channel(src_addr = founder, dest_addr = partner,
+        ch.Channel(founder, partner).add_channel(channel = channel_name, src_addr = founder, dest_addr = partner,
                                                  state = EnumChannelState.INIT.name,
                                                  deposit = {founder_addr:{asset_type.upper(): founder_deposit},
                                                             partner_addr: {asset_type.upper(): partner_deposit}})
@@ -560,7 +560,7 @@ class FounderResponsesMessage(TransactionMessage):
         super().__init__(message,wallet)
         # assert 0 == self.tx_nonce, 'Nonce must be zero.'
 
-        self.channel_name    = message.get("ChannelName")
+        self.channel_name    = self.message.get("ChannelName")
         self.asset_type      = self.message_body.get("AssetType")
         self.founder_deposit = self.message_body.get("FounderDeposit")
         self.partner_deposit = self.message_body.get("PartnerDeposit")
@@ -659,8 +659,10 @@ class FounderResponsesMessage(TransactionMessage):
                 founder_deposit = float(founder_deposit)
                 partner_deposit = float(partner_deposit)
 
-                if not (0 < partner_deposit < founder_deposit):
-                    response_status = EnumResponseStatus.RESPONSE_FOUNDER_DEPOSIT_NOT_ENOUGH
+                if not (0 < partner_deposit <= founder_deposit):
+                    response_status = EnumResponseStatus.RESPONSE_FOUNDER_DEPOSIT_LESS_THAN_PARTNER
+                    LOG.error('Invalid deposit. founder<{}> MUST be not less than partner<{}>.'.format(founder_deposit,
+                                                                                                       partner_deposit))
                     raise Exception(response_status.name)
 
                 founder_addr = founder.strip().split('@')[0]
