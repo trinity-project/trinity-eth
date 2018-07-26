@@ -229,12 +229,13 @@ class Channel(object):
 
     @staticmethod
     def latest_trade(channel_name):
-        trade = APITransaction('trade' + channel_name).sort(key='nonce')
-        if not trade:
-            LOG.error('No transaction records were found.')
+        try:
+            trade = APITransaction('trade' + channel_name).sort(key='nonce')[0]
+        except Exception as error:
+            LOG.error('No transaction records were found for channel<{}>. Exception: {}'.format(channel_name, error))
             return None
-
-        return trade
+        else:
+            return trade
 
     # transaction related
     def transfer(self, sender, receiver, asset_type, count, hash_random=None, wallet=None):
