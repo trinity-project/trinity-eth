@@ -1151,7 +1151,7 @@ class RsmcResponsesMessage(TransactionMessage):
             }
         }
 
-        message.update({'Status': status.value})
+        message.update({'Status': status.name})
 
         if comments:
             message.update({"Comments": comments})
