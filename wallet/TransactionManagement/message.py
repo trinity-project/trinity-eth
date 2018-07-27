@@ -359,6 +359,18 @@ class TransactionMessage(Message):
     @staticmethod
     def quick_settle(invoker, channel_id, nonce, founder, founder_balance,
                      partner, partner_balance, founder_signature, partner_signature, invoker_key):
+
+        print(invoker)
+        print(channel_id)
+        print(nonce)
+        print(founder)
+        print(founder_balance)
+        print(partner)
+        print(partner_balance)
+        print(founder_signature)
+        print(partner_signature)
+        print(invoker_key)
+
         TransactionMessage._eth_interface().quick_close_channel(invoker, channel_id, nonce,
                                                                 founder, TransactionMessage.multiply(founder_balance),
                                                                 partner, TransactionMessage.multiply(partner_balance),
@@ -637,7 +649,7 @@ class FounderResponsesMessage(TransactionMessage):
             if founder:
                 FounderResponsesMessage.deposit(founder.address, self.channel_name, 0,
                                                 founder.address, founder.balance.get(self.asset_type.upper()),
-                                                founder.peer, founder.peer_commitment.get(self.asset_type.upper()),
+                                                founder.peer, founder.peer_balance.get(self.asset_type.upper()),
                                                 founder.commitment, founder.peer_commitment,
                                                 self.wallet._key.private_key_string)
 
@@ -1685,7 +1697,7 @@ class SettleMessage(TransactionMessage):
             LOG.error('Channel<{}> not found!'.format(channel_name))
             return
 
-        nonce = 0xFFFFFFFFFFFFFFFF
+        nonce = 0xFFFFFFFF
         asset_type = asset_type.upper()
 
         sender_addr = sender.split("@")[0].strip()
@@ -1728,7 +1740,7 @@ class SettleMessage(TransactionMessage):
                              peer = receiver,
                              peer_balance = {asset_type: receiver_balance},
                              peer_commitment = None,
-                             state = EnumTradeState.confirming)
+                             state = EnumTradeState.confirming.name)
 
     def verify(self):
         return True, EnumResponseStatus.RESPONSE_OK
@@ -1779,16 +1791,15 @@ class SettleResponseMessage(TransactionMessage):
             try:
                 settle = self.channel.query_trade(self.channel_name, nonce=str(nonce))[0]
             except Exception as error:
-                LOG('Transaction with none<0xFFFFFFFF> not found. Error: {}'.format(error))
+                LOG.error('Transaction with none<0xFFFFFFFF> not found. Error: {}'.format(error))
             else:
                 # call web3 interface to trigger transaction to on-chain
                 # quick_settle(invoker, channel_id, nonce, founder, founder_balance,
                 #              partner, partner_balance, founder_signature, partner_signature, invoker_key)
-                SettleResponseMessage.quick_settle(settle.address, self.channel_name, nonce,
-                                                settle.address, settle.balance.get(self.asset_type),
-                                                settle.peer, settle.peer_commitment.get(self.asset_type),
-                                                settle.commitment, settle.peer_commitment,
-                                                self.wallet._key.private_key_string)
+                SettleResponseMessage.quick_settle(settle.address.split('@')[0].strip(), self.channel_name, nonce,
+                                                settle.address.split('@')[0].strip(), settle.balance.get(self.asset_type),
+                                                settle.peer.split('@')[0].strip(), settle.peer_balance.get(self.asset_type),
+                                                settle.commitment, self.peer_commitment, self.wallet._key.private_key_string)
 
                 # TODO: register monitor event to set channel closed
                 pass
@@ -1856,7 +1867,7 @@ class SettleResponseMessage(TransactionMessage):
                              peer_balance = {asset_type: sender_balance},
                              peer_commitment = commitment,
                              state = trade_state.name)
-        ch.Channel.update_channel(channel_name, state=EnumChannelState.SETTLING.name)
+
         # TODO: register monitor event to set channel closed
         pass
 
