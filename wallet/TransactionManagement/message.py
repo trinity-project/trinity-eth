@@ -1684,7 +1684,7 @@ class SettleMessage(TransactionMessage):
             LOG.error('Channel<{}> not found!'.format(channel_name))
             return
 
-        nonce = -1
+        nonce = 0xFFFFFFFFFFFFFFFF
         asset_type = asset_type.upper()
 
         sender_addr = sender.split("@")[0].strip()
@@ -1765,6 +1765,7 @@ class SettleResponseMessage(TransactionMessage):
 
     def handle(self):
         super(SettleResponseMessage, self).handle()
+        nonce = 0xFFFFFFFFFFFFFFFF
 
         verified, status = self.verify()
         if verified:
@@ -1772,17 +1773,17 @@ class SettleResponseMessage(TransactionMessage):
             self.channel = ch.Channel.channel(self.channel_name)
 
             # update transaction
-            self.channel.update_trade(self.channel_name, -1, peer_commit = self.peer_commitment)
+            self.channel.update_trade(self.channel_name, nonce, peer_commit = self.peer_commitment)
 
             try:
-                settle = self.channel.query_trade(self.channel_name, nonce=-1)[0]
+                settle = self.channel.query_trade(self.channel_name, nonce=nonce)[0]
             except Exception as error:
-                LOG('Transaction with none<-1> not found. Error: {}'.format(error))
+                LOG('Transaction with none<0xFFFFFFFFFFFFFFFF> not found. Error: {}'.format(error))
             else:
                 # call web3 interface to trigger transaction to on-chain
                 # quick_settle(invoker, channel_id, nonce, founder, founder_balance,
                 #              partner, partner_balance, founder_signature, partner_signature, invoker_key)
-                SettleResponseMessage.quick_settle(settle.address, self.channel_name, -1,
+                SettleResponseMessage.quick_settle(settle.address, self.channel_name, nonce,
                                                 settle.address, settle.balance.get(self.asset_type),
                                                 settle.peer, settle.peer_commitment.get(self.asset_type),
                                                 settle.commitment, settle.peer_commitment,
@@ -1814,19 +1815,19 @@ class SettleResponseMessage(TransactionMessage):
         :param status:
         :return:
         """
-        message = {
-            "MessageType":"SettleSign",
-            "Sender": receiver,
-            "Receiver": sender,
-            "TxNonce": -1,   # int type
-            "ChannelName": channel_name,
-            "AssetType": asset_type,
-        }
         status = EnumResponseStatus.RESPONSE_OK
         sender_addr = sender.split("@")[0].strip()
         receiver_addr = receiver.split("@")[0].strip()
         trade_state = EnumTradeState.confirmed
-        nonce = -1
+        nonce = 0xFFFFFFFFFFFFFFFF
+        message = {
+            "MessageType":"SettleSign",
+            "Sender": receiver,
+            "Receiver": sender,
+            "TxNonce": nonce,   # int type
+            "ChannelName": channel_name,
+            "AssetType": asset_type,
+        }
 
         try:
             self_commitment = SettleMessage.sign_content(
@@ -1843,7 +1844,7 @@ class SettleResponseMessage(TransactionMessage):
 
         # add trade
         ch.Channel.add_trade(channel_name,
-                             nonce = -1,
+                             nonce = nonce,
                              type = EnumTradeType.TRADE_TYPE_SETTLE.value,
                              role = EnumTradeRole.TRADE_ROLE_PARTNER,
                              payment = 0,
