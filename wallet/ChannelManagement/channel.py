@@ -87,6 +87,7 @@ class Channel(object):
             LOG.error(e)
             return None
         ch = cls(cls.channel_set.src_addr, cls.channel_set.dest_addr)
+        ch.channel_set = cls.channel_set
         ch.channel_name = channelname
         return ch
 

@@ -1674,7 +1674,10 @@ class SettleMessage(TransactionMessage):
         :param asset_type:
         :return:
         """
-        assert wallet.url == sender, 'Wallet url<{}> is not equal to founder<{}>'.format(wallet.url, sender)
+        # assert wallet.url == sender, 'Wallet url<{}> is not equal to founder<{}>'.format(wallet.url, sender)
+        if wallet.url != sender:
+            receiver = sender
+            sender = wallet.url
 
         channel = ch.Channel.channel(channel_name)
         if not channel:
