@@ -49,14 +49,15 @@ import time
 
 
 class EnumTradeType(IntEnum):
-    TRADE_TYPE_FOUNDER_ROLE_FOUNDER = 0x0
-    TRADE_TYPE_FOUNDER_ROLE_PARTNER = 0x1
+    TRADE_TYPE_FOUNDER = 0x0
+    TRADE_TYPE_RSMC = 0x10
+    TRADE_TYPE_HTLC = 0x20
+    TRADE_TYPE_SETTLE = 0x30
 
-    TRADE_TYPE_RSMC_ROLE_FOUNDER = 0x10
-    TRADE_TYPE_RSMC_ROLE_PARTNER = 0x11
 
-    TRADE_TYPE_HTLC_ROLE_FOUNDER = 0x20
-    TRADE_TYPE_HTLC_ROLE_PARTNER = 0x21
+class EnumTradeRole(IntEnum):
+    TRADE_ROLE_FOUNDER = 0x1
+    TRADE_ROLE_PARTNER = 0x2
 
 
 class EnumTradeState(IntEnum):
@@ -70,6 +71,12 @@ class EnumTradeState(IntEnum):
 
 class EnumResponseStatus(IntEnum):
     RESPONSE_OK = 0x0
+    """
+        Question: Need we define some different response ok to distinguish the transaction type ????
+        .e.g:
+        RESPONSE_FOUNDER_OK # for creating channel message
+        RESPONSE_RSMC_OK    # for RSMC transaction message
+    """
 
     # Founder Message
     RESPONSE_FOUNDER_DEPOSIT_LESS_THAN_PARTNER = 0x10
@@ -89,12 +96,23 @@ class Message(object):
         self.message = message
         self.receiver = message.get("Receiver")
         self.sender = message.get("Sender")
-        assert self.sender != self.receiver, 'Sender should be different from receiver.'
+        #assert self.sender != self.receiver, 'Sender should be different from receiver.'
 
         self.message_type = message.get("MessageType")
         self.message_body = message.get("MessageBody")
         self.error = message.get("Error")
         # self.network_magic = get_magic()
+
+        try:
+            self.sender_address = self.sender.split('@')[0].strip()
+            self.receiver_address = self.receiver.split('@')[0].strip()
+        except Exception as error:
+            LOG.error('Invalid sender<{}> or receiver<{}> format from message<{}>. Error: {}'.format(self.sender,
+                                                                                                     self.receiver,
+                                                                                                     self.message_type,
+                                                                                                     error))
+            self.sender_address = None
+            self.receiver_address = None
 
     @property
     def network_magic(self):
@@ -303,7 +321,7 @@ class TransactionMessage(Message):
         return TransactionMessage._web3_client
 
     @staticmethod
-    def sign_content(*args, **kwargs):
+    def sign_content(start=3, *args, **kwargs):
         """
 
         :return:
@@ -312,7 +330,7 @@ class TransactionMessage(Message):
         valueList = args[1] if 1 < len(args) else kwargs.get('valueList')
         privtKey = args[2] if 2 < len(args) else kwargs.get('privtKey')
 
-        for idx in range(len(typeList)):
+        for idx in range(start, len(typeList)-start):
             if typeList[idx] in ['uint256']:
                 valueList[idx] = TransactionMessage.multiply(valueList[idx])
 
@@ -337,6 +355,13 @@ class TransactionMessage(Message):
                                                     founder, TransactionMessage.multiply(founder_amount),
                                                     partner, TransactionMessage.multiply(partner_amount),
                                                     founder_sign, partner_sign, private_key)
+
+    @staticmethod
+    def quick_settle(invoker, channel_id, nonce, founder, founder_balance,
+                     partner, partner_balance, founder_signature, partner_signature, invoker_key):
+        TransactionMessage._eth_interface().quick_close_channel(invoker, channel_id, nonce, founder,
+                                                                founder_balance, partner, partner_balance,
+                                                                founder_signature, partner_signature, invoker_key)
 
     @staticmethod
     def multiply(asset_count):
@@ -525,7 +550,8 @@ class FounderMessage(TransactionMessage):
         # record this transaction
         ch.Channel.add_trade(channel_name,
                              nonce = 0,
-                             type = EnumTradeType.TRADE_TYPE_FOUNDER_ROLE_FOUNDER.value,
+                             type = EnumTradeType.TRADE_TYPE_FOUNDER.value,
+                             role = EnumTradeRole.TRADE_ROLE_FOUNDER,
                              address = founder,
                              balance = {asset_type.upper(): founder_deposit},
                              commitment = commitment,
@@ -702,7 +728,8 @@ class FounderResponsesMessage(TransactionMessage):
         # record transaction
         ch.Channel.add_trade(channel_name,
                              nonce = 0,
-                             type = EnumTradeType.TRADE_TYPE_FOUNDER_ROLE_PARTNER.value,
+                             type = EnumTradeType.TRADE_TYPE_FOUNDER.value,
+                             role = EnumTradeRole.TRADE_ROLE_PARTNER,
                              address = partner,
                              balance = {asset_type: partner_deposit},
                              commitment = commitment,
@@ -843,14 +870,15 @@ class RsmcMessage(TransactionMessage):
         # sender sign
         commitment = RsmcMessage.sign_content(
             typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
-            valueList=[channel_name, 0, sender_addr, sender_balance, receiver_addr, receiver_balance],
+            valueList=[channel_name, nonce, sender_addr, sender_balance, receiver_addr, receiver_balance],
             privtKey = wallet._key.private_key_string)
 
         # TODO: MUST record this commitment and balance info
         # add the transaction history
         ch.Channel.add_trade(channel_name,
                              nonce = nonce,
-                             type = EnumTradeType.TRADE_TYPE_RSMC_ROLE_FOUNDER.value,
+                             type = EnumTradeType.TRADE_TYPE_RSMC.value,
+                             role = EnumTradeRole.TRADE_ROLE_FOUNDER,
                              payment = payment,
                              address = sender,
                              balance = {asset_type.upper(): sender_balance},
@@ -1110,7 +1138,7 @@ class RsmcResponsesMessage(TransactionMessage):
             # sender sign
             commitment = RsmcMessage.sign_content(
                 typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
-                valueList=[channel_name, 0, sender_addr, sender_balance, receiver_addr, receiver_balance],
+                valueList=[channel_name, nonce, sender_addr, sender_balance, receiver_addr, receiver_balance],
                 privtKey = wallet._key.private_key_string)
 
             # update channel balance
@@ -1125,9 +1153,10 @@ class RsmcResponsesMessage(TransactionMessage):
         # add the transaction history
         ch.Channel.add_trade(channel_name,
                              nonce = nonce,
-                             type = EnumTradeType.TRADE_TYPE_RSMC_ROLE_PARTNER.value,
+                             type = EnumTradeType.TRADE_TYPE_RSMC.value,
+                             role = EnumTradeRole.TRADE_ROLE_PARTNER,
                              payment = payment,
-                             address = receiver_balance,
+                             address = receiver,
                              balance = {asset_type.upper(): this_receiver_balance},
                              commitment = commitment,
                              peer = sender,
@@ -1582,153 +1611,249 @@ class HtlcResponsesMessage(TransactionMessage):
 
 class SettleMessage(TransactionMessage):
     """
-       { "MessageType":"Settle",
-      "Sender": self.receiver,
-      "Receiver":self.sender,
-      "TxNonce": 10,
-      "ChannelName":"090A8E08E0358305035709403",
-      "MessageBody": {
-                   "Balance":{},
-                   "Settlement":{}
-
-    }
+    {
+    "MessageType":"Settle",
+    "Sender": "0x9090909090909090909090909@127.0.0.1:20553",
+    "Receiver":"0x101010101001001010100101@127.0.0.1:20552",
+    "TxNonce": -1,   # int type
+    "ChannelName":"902ae9090232048575",
+    "AssetType": "TNC",
+    "MessageBody": {
+            "Commitment":"",
+            "SenderBalance": int(),
+            "ReceiverBalance": int()
+        }
     }
     """
 
     def __init__(self, message, wallet):
         super().__init__(message, wallet)
-        self.settlement = self.message_body.get("Settlement")
-        self.channel_name = self.message.get("ChannelName")
-        self.transaction = TrinityTransaction(self.channel_name, self.wallet)
-        self.tx_nonce = self.message.get("TxNonce")
-        self.balance = self.message_body.get("Balance")
+
+        self.channel = None
+        self.channel_name = self.message.get('ChannelName')
+        self.asset_type = self.message.get('AssetType', '').strip().upper()
+
+        self.commitment = self.message_body.get('Commitment')
+        self.sender_balance = self.message_body.get('SenderBalance')
+        self.receiver_balance = self.message_body.get("SenderBalance")
 
     def handle_message(self):
-        verify, error = self.verify()
-        if verify:
-            tx_id = self.settlement.get("txId")
-            txdata_sign = self.wallet.SignContent(self.settlement.get("txData"))
-            message = { "MessageType":"SettleSign",
-                        "Sender": self.receiver,
-                        "Receiver":self.sender,
-                        "TxNonce": self.tx_nonce,
-                        "ChannelName":self.channel_name,
-                        "MessageBody": {
-                                  "Settlement":{
-                                      "txDataSign":txdata_sign,
-                                      "originalData":self.settlement
-                                  }
-                       }
-                   }
-            Message.send(message)
-            ch.Channel.channel(self.channel_name).update_channel(state = EnumChannelState.SETTLING.name)
-            register_monitor(tx_id, monitor_founding, self.channel_name, EnumChannelState.CLOSED.name)
+        self.handle()
 
+    def handle(self):
+        super(SettleMessage, self).handle()
+        verified, status = self.verify()
+
+        self.channel = ch.Channel.channel(self.channel_name)
+
+        balance = self.channel.get_balance()
+        sender_balance = balance.get(self.sender_address).get(self.asset_type)
+        receiver_balance = balance.get(self.receiver_balance).get(self.asset_type)
+
+        # To create settle response message
+        SettleResponseMessage.create(self.wallet, self.channel_name, self.asset_type, self.sender, self.receiver,
+                                     sender_balance, receiver_balance, self.commitment)
+
+        if not verified:
+            LOG.error('Error<{}> occurred during verify message.'.format(status))
         else:
-            message = {"MessageType": "SettleSign",
-                       "Sender": self.receiver,
-                       "Receiver": self.sender,
-                       "TxNonce": self.tx_nonce,
-                       "ChannelName": self.channel_name,
-                       "MessageBody": {
-                           "Settlement": self.settlement,
-                           "Balance":self.balance
-                                    },
-                       "Error":error
-                       }
+            # trigger channel event
+            self.channel.update_channel(state=EnumChannelState.SETTLING.name)
 
-            Message.send(message)
+            # TODO: monitor event to set channel closed state
+            pass
 
     @staticmethod
-    def create(channel_name, wallet, sender, receiver, asset_type):
+    def create(wallet, channel_name, sender, receiver, asset_type):
         """
-           { "MessageType":"Settle",
-          "Sender": sender,
-          "Receiver":receiver,
-          "TxNonce": 10,
-          "ChannelName":"090A8E08E0358305035709403",
-          "MessageBody": {
-                       "Settlement":{}
-                       "Balance":{}
-        }
-        }
-        """
-        trans = TrinityTransaction(channel_name, wallet)
-        founder = trans.get_founder()
-        address_founder = founder["originalData"]["addressFunding"]
-        founder_script = founder["originalData"]["scriptFunding"]
-        tx_nonce = "-1"
-        channel = ch.Channel.channel(channel_name)
-        balance = channel.get_balance()
-        sender_pubkey = sender.split("@")[0].strip()
-        receiver_pubkey = receiver.split("@")[0].strip()
-        sender_balance = balance.get(sender_pubkey).get(asset_type.upper())
-        receiver_balance = balance.get(receiver_pubkey).get(asset_type.upper())
-        assert_id = get_asset_type_id(asset_type)
-        settlement_tx = createRefundTX(address_founder,float(sender_balance),receiver_balance,sender_pubkey,receiver_pubkey,
-                                    founder_script,assert_id)
 
-        message = { "MessageType":"Settle",
-          "Sender": sender,
-          "Receiver":receiver,
-          "TxNonce": tx_nonce,
-          "ChannelName":channel_name,
-          "MessageBody": {"Settlement":settlement_tx,
-                          "Balance": balance
-                           }
-         }
+        :param channel_name:
+        :param wallet:
+        :param sender:
+        :param receiver:
+        :param asset_type:
+        :return:
+        """
+        assert wallet.url == sender, 'Wallet url<{}> is not equal to founder<{}>'.format(wallet.url, sender)
+
+        channel = ch.Channel.channel(channel_name)
+        if not channel:
+            LOG.error('Channel<{}> not found!'.format(channel_name))
+            return
+
+        nonce = -1
+        asset_type = asset_type.upper()
+
+        sender_addr = sender.split("@")[0].strip()
+        receiver_addr = receiver.split("@")[0].strip()
+
+        balance = channel.get_balance()
+        sender_balance = balance.get(sender_addr).get(asset_type)
+        receiver_balance = balance.get(receiver_addr).get(asset_type)
+
+        commitment = SettleMessage.sign_content(
+            typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
+            valueList=[channel_name, nonce, sender_addr, sender_balance, receiver_addr, receiver_balance],
+            privtKey = wallet._key.private_key_string)
+
+        message = {
+            "MessageType":"Settle",
+            "Sender": sender,
+            "Receiver": receiver,
+            "TxNonce": nonce,
+            "ChannelName": channel_name,
+            "AssetType": asset_type,
+            "MessageBody": {
+                "Commitment": commitment,
+                "SenderBalance": sender_balance,
+                "ReceiverBalance": receiver_balance
+            }
+        }
         Message.send(message)
-        ch.Channel.channel(channel_name).update_channel(state=EnumChannelState.SETTLING.name)
+
+        # update channel
+        channel.update_channel(state=EnumChannelState.SETTLING.name)
+        ch.Channel.add_trade(channel_name,
+                             nonce = nonce,
+                             type = EnumTradeType.TRADE_TYPE_SETTLE.value,
+                             role = EnumTradeRole.TRADE_ROLE_FOUNDER,
+                             payment = 0,
+                             address = sender,
+                             balance = {asset_type: sender_balance},
+                             commitment = commitment,
+                             peer = receiver,
+                             peer_balance = {asset_type: receiver_balance},
+                             peer_commitment = None,
+                             state = EnumTradeState.confirming)
 
     def verify(self):
-        return True, None
+        return True, EnumResponseStatus.RESPONSE_OK
 
 
 class SettleResponseMessage(TransactionMessage):
     """
-       { "MessageType":"SettleSign",
-      "Sender": self.receiver,
-      "Receiver":self.sender,
-      "TxNonce": 10,
-      "ChannelName":"090A8E08E0358305035709403",
-      "MessageBody": {
-                   "Commitment":{}
-
-    }
+    {
+        "MessageType":"SettleSign",
+        "Sender": "0x9090909090909090909090909@127.0.0.1:20553",
+        "Receiver":"0x101010101001001010100101@127.0.0.1:20552",
+        "TxNonce": -1,   # int type
+        "ChannelName":"902ae9090232048575",
+        "AssetType": "TNC",
+        "MessageBody": {
+                "Commitment":"",
+            }
+        "Status": RESPONSE_OK
     }
     """
 
     def __init__(self, message, wallet):
         super().__init__(message, wallet)
-        self.settlement = self.message_body.get("Settlement")
-        self.channel_name = self.message.get("ChannelName")
-        self.transaction = TrinityTransaction(self.channel_name, self.wallet)
-        self.tx_nonce = self.message.get("TxNonce")
-        self.balance = self.message_body.get("Balance")
+
+        self.channel = None
+        self.channel_name = self.message.get('ChannelName')
+        self.asset_type = self.message.get('AssetType', '').strip().upper()
+        self.status = self.message.get('Status')
+        self.peer_commitment = self.message_body.get('Commitment')
+
+        self.wallet = wallet
 
     def handle_message(self):
-        verify, error = self.verify()
-        if verify:
-            tx_data = self.settlement.get("originalData").get("txData")
-            tx_data_sign_other = self.settlement.get("txDataSign")
-            tx_data_sign_self = self.wallet.SignContent(tx_data)
-            tx_id = self.settlement.get("originalData").get("txId")
-            witness = self.settlement.get("originalData").get("witness")
-            role = ch.Channel.channel(self.channel_name).get_role_in_channel(self.wallet.url)
-            if role =="Founder":
-                sign_self = tx_data_sign_self
-                sign_other = tx_data_sign_other
-            elif role == "Partner":
-                sign_self = tx_data_sign_other
-                sign_other = tx_data_sign_self
+        self.handle()
+
+    def handle(self):
+        super(SettleResponseMessage, self).handle()
+
+        verified, status = self.verify()
+        if verified:
+            # get channel info
+            self.channel = ch.Channel.channel(self.channel_name)
+
+            # update transaction
+            self.channel.update_trade(self.channel_name, -1, peer_commit = self.peer_commitment)
+
+            try:
+                settle = self.channel.query_trade(self.channel_name, nonce=-1)[0]
+            except Exception as error:
+                LOG('Transaction with none<-1> not found. Error: {}'.format(error))
             else:
-                raise Exception("Not Find the url")
-            raw_data = witness.format(signSelf=tx_data_sign_self, signOther=tx_data_sign_other)
-            TrinityTransaction.sendrawtransaction(TrinityTransaction.genarate_raw_data(tx_data, raw_data))
-            register_monitor(tx_id,monitor_founding,self.channel_name, EnumChannelState.CLOSED.name)
+                # call web3 interface to trigger transaction to on-chain
+                # quick_settle(invoker, channel_id, nonce, founder, founder_balance,
+                #              partner, partner_balance, founder_signature, partner_signature, invoker_key)
+                SettleResponseMessage.quick_settle(settle.address, self.channel_name, -1,
+                                                settle.address, settle.balance.get(self.asset_type),
+                                                settle.peer, settle.peer_commitment.get(self.asset_type),
+                                                settle.commitment, settle.peer_commitment,
+                                                self.wallet._key.private_key_string)
+
+                # TODO: register monitor event to set channel closed
+                pass
+        else:
+            LOG.error('Error<{}> occurred during verified the message<{}>.'.format(status, self.message_type))
 
     def verify(self):
+        if self.status not in EnumResponseStatus.RESPONSE_OK.__dict__.values():
+            return False, self.status
+
         return True, None
+
+    @staticmethod
+    def create(wallet, channel_name, asset_type, sender, receiver, sender_balance, receiver_balance, commitment):
+        """
+
+        :param wallet:
+        :param channel_name:
+        :param asset_type:
+        :param sender:
+        :param receiver:
+        :param sender_balance:
+        :param receiver_balance:
+        :param commitment:
+        :param status:
+        :return:
+        """
+        message = {
+            "MessageType":"SettleSign",
+            "Sender": receiver,
+            "Receiver": sender,
+            "TxNonce": -1,   # int type
+            "ChannelName": channel_name,
+            "AssetType": asset_type,
+        }
+        status = EnumResponseStatus.RESPONSE_OK
+        sender_addr = sender.split("@")[0].strip()
+        receiver_addr = receiver.split("@")[0].strip()
+        trade_state = EnumTradeState.confirmed
+        nonce = -1
+
+        try:
+            self_commitment = SettleMessage.sign_content(
+                typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
+                valueList=[channel_name, nonce, sender_addr, sender_balance, receiver_addr, receiver_balance],
+                privtKey = wallet._key.private_key_string)
+        except EnumChannelState as error:
+            LOG.error('Error occurred during create Settle response. Error: {}'.format(error))
+            status = EnumResponseStatus.RESPONSE_FAIL
+
+        message.update({"MessageBody": {"Commitment": self_commitment}})
+        message.update({'Status': status.name})
+        Message.send(message)
+
+        # add trade
+        ch.Channel.add_trade(channel_name,
+                             nonce = -1,
+                             type = EnumTradeType.TRADE_TYPE_SETTLE.value,
+                             role = EnumTradeRole.TRADE_ROLE_PARTNER,
+                             payment = 0,
+                             address = receiver,
+                             balance = {asset_type: receiver_balance},
+                             commitment = self_commitment,
+                             peer = sender,
+                             peer_balance = {asset_type: sender_balance},
+                             peer_commitment = commitment,
+                             state = trade_state.name)
+        ch.Channel.update_channel(channel_name, state=EnumChannelState.SETTLING.name)
+        # TODO: register monitor event to set channel closed
+        pass
 
 
 class PaymentLink(TransactionMessage):

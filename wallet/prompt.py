@@ -380,7 +380,7 @@ class UserPromptInterface(PromptInterface):
             channel_name = get_arg(arguments, 1)
             print("Closing channel {}".format(channel_name))
             if channel_name:
-                close_channel(channel_name, self.Wallet)
+                ch.Channel.quick_close(self.Wallet, channel_name)
             else:
                 print("No Channel Create")
 

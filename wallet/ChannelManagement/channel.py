@@ -43,6 +43,7 @@ class Channel(object):
         self.partner = partner
         self.founder_address = self.founder.strip().split("@")[0]
         self.partner_address = self.partner.strip().split("@")[0]
+        self.channel_set = None
 
     @staticmethod
     def get_channel(address1, address2, state=None):
@@ -81,11 +82,11 @@ class Channel(object):
     def channel(cls,channelname):
         try:
             channel = APIChannel.query_channel(channel=channelname)
-            channel_info = channel["content"][0]
+            cls.channel_set = channel["content"][0]
         except Exception as e:
             LOG.error(e)
             return None
-        ch = cls(channel_info.src_addr, channel_info.dest_addr)
+        ch = cls(cls.channel_set.src_addr, cls.channel_set.dest_addr)
         ch.channel_name = channelname
         return ch
 
@@ -260,6 +261,17 @@ class Channel(object):
 
         return
 
+    @staticmethod
+    def quick_close(wallet, channel_name):
+        channel = Channel.channel(channel_name)
+
+        if channel.channel_set:
+            mg.SettleMessage.create(wallet, channel_name, channel.src_addr, channel.dest_addr, 'TNC')
+        else:
+            LOG.error('Could not close channel<{}> since channel not found.'.format(channel_name))
+
+        return
+
 
 def create_channel(founder, partner, asset_type, depoist: float, partner_deposit = None, cli=True,
                    comments=None, channel_name=None, wallet = None):
@@ -310,7 +322,7 @@ def close_channel(channel_name, wallet):
     peer = ch.get_peer(wallet.url)
     # tx = trans.TrinityTransaction(channel_name, wallet)
     # tx.realse_transaction()
-    mg.SettleMessage.create(channel_name, wallet, wallet.url, peer, "TNC")  # ToDo
+    mg.SettleMessage.create(wallet, channel_name, wallet.url, peer, "TNC")  # ToDo
 
 
 def sync_channel_info_to_gateway(channel_name, type):
