@@ -330,7 +330,7 @@ class TransactionMessage(Message):
         valueList = args[1] if 1 < len(args) else kwargs.get('valueList')
         privtKey = args[2] if 2 < len(args) else kwargs.get('privtKey')
 
-        for idx in range(start, len(typeList)-start):
+        for idx in range(start, len(typeList)):
             if typeList[idx] in ['uint256']:
                 valueList[idx] = TransactionMessage.multiply(valueList[idx])
 
@@ -1647,9 +1647,9 @@ class SettleMessage(TransactionMessage):
 
         self.channel = ch.Channel.channel(self.channel_name)
 
-        balance = self.channel.get_balance()
+        balance = self.channel.channel_set.balance
         sender_balance = balance.get(self.sender_address).get(self.asset_type)
-        receiver_balance = balance.get(self.receiver_balance).get(self.asset_type)
+        receiver_balance = balance.get(self.receiver_address).get(self.asset_type)
 
         # To create settle response message
         SettleResponseMessage.create(self.wallet, self.channel_name, self.asset_type, self.sender, self.receiver,
@@ -1718,7 +1718,7 @@ class SettleMessage(TransactionMessage):
         # update channel
         channel.update_channel(state=EnumChannelState.SETTLING.name)
         ch.Channel.add_trade(channel_name,
-                             nonce = nonce,
+                             nonce = str(nonce),
                              type = EnumTradeType.TRADE_TYPE_SETTLE.value,
                              role = EnumTradeRole.TRADE_ROLE_FOUNDER,
                              payment = 0,
@@ -1766,7 +1766,7 @@ class SettleResponseMessage(TransactionMessage):
 
     def handle(self):
         super(SettleResponseMessage, self).handle()
-        nonce = 0xFFFFFFFFFFFFFFFF
+        nonce = 0xFFFFFFFF
 
         verified, status = self.verify()
         if verified:
@@ -1774,12 +1774,12 @@ class SettleResponseMessage(TransactionMessage):
             self.channel = ch.Channel.channel(self.channel_name)
 
             # update transaction
-            self.channel.update_trade(self.channel_name, nonce, peer_commit = self.peer_commitment)
+            self.channel.update_trade(self.channel_name, str(nonce), peer_commit = self.peer_commitment)
 
             try:
-                settle = self.channel.query_trade(self.channel_name, nonce=nonce)[0]
+                settle = self.channel.query_trade(self.channel_name, nonce=str(nonce))[0]
             except Exception as error:
-                LOG('Transaction with none<0xFFFFFFFFFFFFFFFF> not found. Error: {}'.format(error))
+                LOG('Transaction with none<0xFFFFFFFF> not found. Error: {}'.format(error))
             else:
                 # call web3 interface to trigger transaction to on-chain
                 # quick_settle(invoker, channel_id, nonce, founder, founder_balance,
@@ -1820,7 +1820,7 @@ class SettleResponseMessage(TransactionMessage):
         sender_addr = sender.split("@")[0].strip()
         receiver_addr = receiver.split("@")[0].strip()
         trade_state = EnumTradeState.confirmed
-        nonce = 0xFFFFFFFFFFFFFFFF
+        nonce = 0xFFFFFFFF
         message = {
             "MessageType":"SettleSign",
             "Sender": receiver,
@@ -1845,7 +1845,7 @@ class SettleResponseMessage(TransactionMessage):
 
         # add trade
         ch.Channel.add_trade(channel_name,
-                             nonce = nonce,
+                             nonce = str(nonce),
                              type = EnumTradeType.TRADE_TYPE_SETTLE.value,
                              role = EnumTradeRole.TRADE_ROLE_PARTNER,
                              payment = 0,
