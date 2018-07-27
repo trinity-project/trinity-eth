@@ -359,8 +359,9 @@ class TransactionMessage(Message):
     @staticmethod
     def quick_settle(invoker, channel_id, nonce, founder, founder_balance,
                      partner, partner_balance, founder_signature, partner_signature, invoker_key):
-        TransactionMessage._eth_interface().quick_close_channel(invoker, channel_id, nonce, founder,
-                                                                founder_balance, partner, partner_balance,
+        TransactionMessage._eth_interface().quick_close_channel(invoker, channel_id, nonce,
+                                                                founder, TransactionMessage.multiply(founder_balance),
+                                                                partner, TransactionMessage.multiply(partner_balance),
                                                                 founder_signature, partner_signature, invoker_key)
 
     @staticmethod
