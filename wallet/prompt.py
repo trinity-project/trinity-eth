@@ -38,7 +38,7 @@ from wallet.Interface import gate_way
 from wallet.configure import Configure
 from blockchain.interface import get_block_count
 from functools import reduce
-from blockchain.monior import monitorblock,Monitor
+from blockchain.monior import monitorblock,EventMonitor
 from wallet.TransactionManagement.payment import Payment
 import requests
 import qrcode_terminal
@@ -147,9 +147,9 @@ class UserPromptInterface(PromptInterface):
         try:
             out = [
                 (Token.Command, "[%s]" % settings.NET_NAME),
-                (Token.Default, str(Monitor.get_wallet_block_height())),
+                (Token.Default, str(EventMonitor.get_wallet_block_height())),
                 (Token.Command, '/'),
-                (Token.Default, str(Monitor.get_block_height()))]
+                (Token.Default, str(EventMonitor.get_block_height()))]
 
         except Exception as e:
             pass
@@ -190,7 +190,7 @@ class UserPromptInterface(PromptInterface):
         if self.Wallet:
             CurrentLiveWallet.update_current_wallet(self.Wallet)
             self.Wallet.BlockHeight = self.Wallet.LoadStoredData("BlockHeight")
-            Monitor.start_monitor(self.Wallet)
+            EventMonitor.start_monitor(self.Wallet)
             result = self.retry_channel_enable()
             if result:
                 udpate_channel_when_setup(self.Wallet.url)
@@ -202,7 +202,7 @@ class UserPromptInterface(PromptInterface):
             blockheight = get_block_count()
             self.Wallet.BlockHeight = blockheight
             self.Wallet.SaveStoredData("BlockHeight", blockheight)
-            Monitor.start_monitor(self.Wallet)
+            EventMonitor.start_monitor(self.Wallet)
             self.retry_channel_enable()
 
     def do_close_wallet(self):
@@ -213,7 +213,7 @@ class UserPromptInterface(PromptInterface):
     def quit(self):
         print('Shutting down. This may take about 15 sec to sync the block info')
         self.go_on = False
-        Monitor.stop_monitor()
+        EventMonitor.stop_monitor()
         self.do_close_wallet()
         CurrentLiveWallet.update_current_wallet(None)
         reactor.stop()

@@ -36,7 +36,8 @@ from wallet.utils import sign,\
     check_deposit,\
     get_magic
 from blockchain.monior import register_block, \
-    register_monitor
+    register_monitor, \
+    ws_instance
 from blockchain.ethInterface import Interface as EthInterface
 from blockchain.web3client import Client as EthWebClient
 from model import APIChannel
@@ -169,6 +170,7 @@ class RegisterMessage(Message):
                 "Error": error
             }
             Message.send(message)
+            
         founder_pubkey, founder_ip = self.sender.split("@")
         partner_pubkey, partner_ip = self.receiver.split("@")
         founder_address = pubkey_to_address(founder_pubkey)
@@ -359,18 +361,6 @@ class TransactionMessage(Message):
     @staticmethod
     def quick_settle(invoker, channel_id, nonce, founder, founder_balance,
                      partner, partner_balance, founder_signature, partner_signature, invoker_key):
-
-        print(invoker)
-        print(channel_id)
-        print(nonce)
-        print(founder)
-        print(founder_balance)
-        print(partner)
-        print(partner_balance)
-        print(founder_signature)
-        print(partner_signature)
-        print(invoker_key)
-
         TransactionMessage._eth_interface().quick_close_channel(invoker, channel_id, nonce,
                                                                 founder, TransactionMessage.multiply(founder_balance),
                                                                 partner, TransactionMessage.multiply(partner_balance),
@@ -419,21 +409,6 @@ class FounderMessage(TransactionMessage):
             "AssetType": asset_type.upper(),
         }
     }
-    transaction massage:
-    { "MessageType":"Founder",
-    "Sender": "9090909090909090909090909@127.0.0.1:20553",
-    "Receiver":"101010101001001010100101@127.0.0.1:20552",
-    "TxNonce": 0,
-    "ChannelName":"090A8E08E0358305035709403",
-    "MessageBody": {
-            "Founder": "",
-            "Commitment":"",
-            "RevocableDelivery":"",
-            "AssetType":"TNC",
-            "Deposit": 10,
-            "RoleIndex":0
-                    }
-    }
     """
 
 
@@ -472,7 +447,7 @@ class FounderMessage(TransactionMessage):
 
             # TODO: currently, here wait for result with 60 seconds.
             # TODO: need trigger later by async mode
-            FounderMessage.sync_timer(FounderMessage.get_approved_asset, '', 60, self.receiver.strip().split('@')[0])
+            # FounderMessage.sync_timer(FounderMessage.get_approved_asset, '', 60, self.receiver.strip().split('@')[0])
 
             # add channel to dbs
             channel_inst = ch.Channel(self.sender, self.receiver)
@@ -484,6 +459,10 @@ class FounderMessage(TransactionMessage):
             # update channel state
             channel_inst.channel(self.channel_name).update_channel(state=EnumChannelState.OPENING.name)
             LOG.info('Channel<{}> in opening state.'.format(self.channel_name))
+
+            channel_event = ch.ChannelDepositEvent(self.channel_name)
+            channel_event.register(ch.EnumEventAction.terminate_event, state=EnumChannelState.OPENED.name)
+            ws_instance.register_event(self.channel_name, channel_event)
 
         # send response
         FounderResponsesMessage.create(self.channel_name, self.sender, self.receiver, self.asset_type,
@@ -548,32 +527,34 @@ class FounderMessage(TransactionMessage):
             FounderMessage.approve(founder_addr, founder_deposit, wallet._key.private_key_string)
         except Exception as e:
             print(e)
+        else:
+            # TODO: currently, register event
+            # FounderMessage.sync_timer(FounderMessage.get_approved_asset, '', 60, founder_addr)
+            channel_event = ch.ChannelDepositEvent(channel_name)
+            channel_event.register(ch.EnumEventAction.prepare_event, founder_addr, founder_deposit, partner_addr, partner_deposit)
+            ws_instance.register_event(channel_name, channel_event)
 
-        # TODO: currently, here wait for result with 60 seconds.
-        # TODO: need trigger later by async mode
-        FounderMessage.sync_timer(FounderMessage.get_approved_asset, '', 60, founder_addr)
+            # add channel
+            # channel: str, src_addr: str, dest_addr: str, state: str, alive_block: int,
+            # deposit:dict
+            ch.Channel(founder, partner).add_channel(channel = channel_name, src_addr = founder, dest_addr = partner,
+                                                     state = EnumChannelState.INIT.name,
+                                                     deposit = {founder_addr:{asset_type.upper(): founder_deposit},
+                                                                partner_addr: {asset_type.upper(): partner_deposit}})
+            # record this transaction
+            ch.Channel.add_trade(channel_name,
+                                 nonce = 0,
+                                 type = EnumTradeType.TRADE_TYPE_FOUNDER.value,
+                                 role = EnumTradeRole.TRADE_ROLE_FOUNDER,
+                                 address = founder,
+                                 balance = {asset_type.upper(): founder_deposit},
+                                 commitment = commitment,
+                                 peer = partner,
+                                 peer_balance = {asset_type.upper(): partner_deposit},
+                                 peer_commitment = None,
+                                 state = EnumTradeState.confirming.name)
 
-        # add channel
-        # channel: str, src_addr: str, dest_addr: str, state: str, alive_block: int,
-        # deposit:dict
-        ch.Channel(founder, partner).add_channel(channel = channel_name, src_addr = founder, dest_addr = partner,
-                                                 state = EnumChannelState.INIT.name,
-                                                 deposit = {founder_addr:{asset_type.upper(): founder_deposit},
-                                                            partner_addr: {asset_type.upper(): partner_deposit}})
-        # record this transaction
-        ch.Channel.add_trade(channel_name,
-                             nonce = 0,
-                             type = EnumTradeType.TRADE_TYPE_FOUNDER.value,
-                             role = EnumTradeRole.TRADE_ROLE_FOUNDER,
-                             address = founder,
-                             balance = {asset_type.upper(): founder_deposit},
-                             commitment = commitment,
-                             peer = partner,
-                             peer_balance = {asset_type.upper(): partner_deposit},
-                             peer_commitment = None,
-                             state = EnumTradeState.confirming.name)
-
-        FounderMessage.send(message)
+            FounderMessage.send(message)
 
     def verify(self):
         return True, None
@@ -647,16 +628,21 @@ class FounderResponsesMessage(TransactionMessage):
 
             founder = ch.Channel.query_trade(self.channel_name, nonce=0)[0]
             if founder:
-                FounderResponsesMessage.deposit(founder.address, self.channel_name, 0,
-                                                founder.address, founder.balance.get(self.asset_type.upper()),
-                                                founder.peer, founder.peer_balance.get(self.asset_type.upper()),
-                                                founder.commitment, founder.peer_commitment,
-                                                self.wallet._key.private_key_string)
+                channel_event = ws_instance.get_event(self.channel_name)
+                if channel_event:
+                    channel_event.register(ch.EnumEventAction.action_event,
+                                           founder.address, self.channel_name, 0,
+                                           founder.address, founder.balance.get(self.asset_type.upper()),
+                                           founder.peer, founder.peer_balance.get(self.asset_type.upper()),
+                                           founder.commitment, founder.peer_commitment,
+                                           self.wallet._key.private_key_string)
 
-                # ToDo: need monitor event to trigger confirmed transaction
-                # change channel state to OPENING
-                ch.Channel(self.receiver, self.sender).channel(self.channel_name).update_channel(state = EnumChannelState.OPENING.name)
-                LOG.info('Channel<{}> in opening state.'.format(self.channel_name))
+                    # ToDo: need monitor event to trigger confirmed transaction
+                    # change channel state to OPENING
+                    ch.Channel(self.receiver, self.sender).channel(self.channel_name).update_channel(state = EnumChannelState.OPENING.name)
+                    LOG.info('Channel<{}> in opening state.'.format(self.channel_name))
+
+                    channel_event.register(ch.EnumEventAction.terminate_event, state=EnumChannelState.OPENED.name)
             else:
                 LOG.error('Error to broadcast Founder to block chain.')
 

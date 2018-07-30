@@ -23,6 +23,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 import hashlib
 import time
+from enum import Enum, IntEnum
 from model.channel_model import APIChannel
 from model.base_enum import EnumChannelState
 from model.transaction_model import APITransaction
@@ -32,11 +33,18 @@ from wallet.Interface.gate_way import sync_channel
 from log import LOG
 import json
 
+from blockchain.ethInterface import Interface as EthInterface
+from blockchain.web3client import Client as EthWebClient
+from lightwallet.Settings import settings
+
 
 class Channel(object):
     """
 
     """
+    _interface = None
+    _web3_client = None
+    _trinity_coef = pow(10, 8)
 
     def __init__(self, founder, partner):
         self.founder = founder
@@ -272,6 +280,198 @@ class Channel(object):
             LOG.error('Could not close channel<{}> since channel not found.'.format(channel_name))
 
         return
+
+    @staticmethod
+    def _eth_interface():
+        if not Channel._interface:
+            Channel._interface = EthInterface(settings.NODEURL,
+                                                         settings.Eth_Contract_address, settings.Eth_Contract_abi,
+                                                         settings.TNC, settings.TNC_abi)
+
+        return Channel._interface
+
+    @staticmethod
+    def _eth_client():
+        if not Channel._web3_client:
+            Channel._web3_client = EthWebClient(settings.NODEURL)
+
+        return Channel._web3_client
+
+    @staticmethod
+    def sign_content(start=3, *args, **kwargs):
+        """
+
+        :return:
+        """
+        typeList = args[0] if 0 < len(args) else kwargs.get('typeList')
+        valueList = args[1] if 1 < len(args) else kwargs.get('valueList')
+        privtKey = args[2] if 2 < len(args) else kwargs.get('privtKey')
+
+        for idx in range(start, len(typeList)):
+            if typeList[idx] in ['uint256']:
+                valueList[idx] = Channel.multiply(valueList[idx])
+
+        content = Channel._eth_client().sign_args(typeList, valueList, privtKey).decode()
+        return '0x' + content
+
+    @staticmethod
+    def approve(address, deposit, private_key):
+        Channel._eth_interface().approve(address, Channel.multiply(deposit), private_key)
+
+    @staticmethod
+    def get_approved_asset(address):
+        return Channel._eth_interface().get_approved_asset(settings.TNC,
+                                                                      settings.TNC_abi,
+                                                                      address,
+                                                                      settings.Eth_Contract_address)
+
+    @staticmethod
+    def approve_deposit(address, channel_id, nonce, founder, founder_amount, partner, partner_amount,
+                founder_sign, partner_sign, private_key):
+        Channel._eth_interface().deposit(address,channel_id, nonce,
+                                         founder, Channel.multiply(founder_amount),
+                                         partner, Channel.multiply(partner_amount),
+                                         founder_sign, partner_sign, private_key)
+
+    @staticmethod
+    def quick_settle(invoker, channel_id, nonce, founder, founder_balance,
+                     partner, partner_balance, founder_signature, partner_signature, invoker_key):
+        Channel._eth_interface().quick_close_channel(invoker, channel_id, nonce,
+                                                     founder, Channel.multiply(founder_balance),
+                                                     partner, Channel.multiply(partner_balance),
+                                                     founder_signature, partner_signature, invoker_key)
+
+    @staticmethod
+    def multiply(asset_count):
+        return int(asset_count * Channel._trinity_coef)
+
+    @staticmethod
+    def divide(asset_count):
+        return asset_count / Channel._trinity_coef
+
+
+class EventArgs(object):
+    """
+
+    """
+    def __init__(self, *args, **kwargs):
+        self.args = args
+        self.kwargs = kwargs
+
+
+class EnumEventAction(Enum):
+    prepare_event = 'prepare'
+    action_event = 'action'
+    terminate_event = 'terminate'
+
+
+class EnumEventType(Enum):
+    # both wallet are online
+    EVENT_TYPE_DEPOSIT = 0x0
+    EVENT_TYPE_RSMC = 0x04
+    EVENT_TYPE_HTLC = 0x08
+    EVENT_TYPE_QUICK_SETTLE = 0x0c
+
+    # One of Both wallets is online
+    EVENT_TYPE_SETTLE = 0x10
+
+    action_event = 'action'
+    terminate_event = 'terminate'
+
+
+class ChannelEvent(object):
+    """
+
+    """
+    def __init__(self, channel_name, event_type):
+        self.event_name = channel_name
+        self.event_type = event_type
+
+        self.channel = Channel.channel(channel_name)
+
+        self.event_is_ready = False
+        self.depend_on_prepare = False
+
+    def register(self, action_type, *args, **kwargs):
+        self.is_valid_action(action_type)
+
+        action_name = action_type.name
+
+        LOG.debug('Start to register {}-{} event.'.format(self.event_type, action_name))
+        self.__dict__.update({action_name: EventArgs(*args, **kwargs)})
+
+    def set_event_ready(self):
+        self.event_is_ready = True
+
+    def is_valid_action(self, action_type):
+        assert EnumEventAction.__contains__(action_type), 'Invalid action_type<{}>.'.format(action_type)
+
+    def prepare(self):
+        LOG.debug('Start to execute prepare event')
+        pass
+
+    def action(self):
+        LOG.debug('Start to execute action event')
+        pass
+
+    def terminate(self):
+        LOG.debug('Start to execute terminate event')
+        pass
+
+
+class ChannelDepositEvent(ChannelEvent):
+    def __init__(self, channel_name):
+        super(ChannelDepositEvent, self).__init__(channel_name, EnumEventType.EVENT_TYPE_DEPOSIT.name)
+        self.depend_on_prepare = True
+
+    def prepare(self):
+        super(ChannelDepositEvent, self).prepare()
+        if hasattr(self, EnumEventAction.prepare_event.name):
+            length_of_args = len(self.prepare_event.args)
+            address = self.prepare_event.args[0] if 1 == length_of_args else self.prepare_event.kwargs.get('address')
+            balance = self.prepare_event.args[1] if 2 == length_of_args else self.prepare_event.kwargs.get('balance')
+            peer_address = self.prepare_event.args[2] if 3 == length_of_args else self.prepare_event.kwargs.get('peer_address')
+            peer_balance = self.prepare_event.args[3] if 4 == length_of_args else self.prepare_event.kwargs.get('peer_balance')
+
+            try:
+                # approved balance
+                approved_balance = float(self.channel.get_approved_asset(address))
+                peer_approved_balance = float(self.channel.get_approved_asset(peer_address))
+                if 0 == approved_balance or 0 == peer_approved_balance:
+                    return None, None
+
+                return approved_balance >= float(balance), peer_approved_balance >= float(peer_balance)
+            except Exception as error:
+                pass
+        else:
+            return True, True
+
+        return None, None
+
+    def action(self):
+        super(ChannelDepositEvent, self).action()
+        if hasattr(self, EnumEventAction.action_event.name):
+            return self.channel.approve_deposit(*self.action_event.args, **self.action_event.kwargs)
+
+    def terminate(self):
+        super(ChannelDepositEvent, self).terminate()
+        if hasattr(self, EnumEventAction.terminate_event.name):
+            return self.channel.update_channel(**self.terminate_event.kwargs)
+
+
+class ChannelQuickSettleEvent(ChannelEvent):
+    def __init__(self, channel_name):
+        super(ChannelQuickSettleEvent, self).__init__(channel_name, EnumEventType.EVENT_TYPE_QUICK_SETTLE.name)
+
+    def action(self):
+        super(ChannelQuickSettleEvent, self).action()
+        if hasattr(self, EnumEventAction.action_event.name):
+            return self.channel.quick_settle(*self.action_event.args, **self.action_event.kwargs)
+
+    def terminate(self):
+        super(ChannelQuickSettleEvent, self).terminate()
+        if hasattr(self, EnumEventAction.terminate_event.name):
+            return self.channel.update_channel(**self.terminate_event.kwargs)
 
 
 def create_channel(founder, partner, asset_type, depoist: float, partner_deposit = None, cli=True,

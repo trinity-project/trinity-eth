@@ -21,130 +21,22 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
-from websocket import create_connection, WebSocketConnectionClosedException, WebSocketTimeoutException
-import socket
+
+
+from log import LOG
+#from neo.Core.Blockchain import Blockchain
 import time
+from wallet.TransactionManagement.transaction import BlockHightRegister, TxIDRegister
+import os
+from wallet.Interface.gate_way import send_message
+import copy
+from .interface import get_block_count, get_block, send_raw
+from wallet.TransactionManagement import message as ms
 
-from blockchain.interface import get_block_count, get_block
-from log.log import LOG
-
-
-
-WS_SERVER_CONFIG = {'ip': '47.104.81.20', 'port': 9000}
-
-
-def singleton(cls):
-    _instance = {}
-
-    def _singleton(*args, **kargs):
-        if cls not in _instance:
-            _instance[cls] = cls(*args, **kargs)
-        return _instance[cls]
-
-    return _singleton
+BlockHeightRecord = os.path.join('./',"block.data")
 
 
-def ucoro(timeout = 0.1):
-    def handler(callback):
-        def wrapper(*args, **kwargs):
-            # use such mode to modulate blocking-mode to received
-            while True:
-                try:
-                    received = yield
-                    callback(received)
-                except Exception as error:
-                    LOG.exception('Co-routine error: {}'.format(error))
-                finally:
-                    time.sleep(timeout)
-
-        return wrapper
-    return handler
-
-
-def ucoro_event(coro, iter_data):
-    try:
-        coro.send(iter_data)
-    except StopIteration:
-        print('Coroutine has been killed')
-
-
-@singleton
-class WebSocketConnection(object):
-    """
-
-    """
-    def __init__(self, ip, port, timeout=0.2):
-        assert ip, 'Must specified the server ip<{}>.'.format(ip)
-        assert port, 'Must specified the server port<{}>.'.format(port)
-
-        self.__ws_url = 'ws://{}:{}'.format(ip, port)
-        self.timeout = timeout
-        self.create_connection()
-
-        self.event_set = {}
-
-    def set_timeout(self, timeout=0.2):
-        self.timeout = timeout
-
-    def create_connection(self):
-        self._conn = create_connection(self.__ws_url,
-                                       sockopt=((socket.IPPROTO_TCP, socket.TCP_NODELAY, 1),),
-                                       timeout=self.timeout)
-
-    def send(self, payload):
-        try:
-            self._conn.send(payload)
-        except WebSocketConnectionClosedException as error:
-            LOG.error('send: Websocket was closed: {}'.format(error))
-            self.reconnect()
-            # re-send this payload
-            self._conn.send(payload)
-        except Exception as error:
-            LOG.exception('send: Websocket exception: {}'.format(error))
-
-    def receive(self):
-        try:
-            return self._conn.recv()
-        except WebSocketConnectionClosedException as error:
-            LOG.error('receive: Websocket was closed: {}'.format(error))
-            self.reconnect()
-        except WebSocketTimeoutException as error:
-            pass
-        except Exception as error:
-            LOG.exception('receive: Websocket exception: {}'.format(error))
-
-    def close(self):
-        if self._conn:
-            self._conn.close()
-            self._conn = None
-
-    def reconnect(self):
-        self.close()
-        self._conn = create_connection(self.__ws_url)
-
-    def register_event(self, key, event):
-        self.event_set.update({key: event})
-
-    def get_event(self, key):
-        return self.event_set.get(key)
-
-    @ucoro
-    def handle(self, *args):
-        assert args, 'Received Invalid message<{}>.'.format(args)
-        message = args[0]
-        assert message, 'Received void message<{}>.'.format(args)
-
-        message_type = message.get('messageType')
-        LOG.info('Received Message<{}>.'.format(message_type))
-        LOG.debug('Received Message<{}>.'.format(message))
-
-        # start to handle the event
-
-
-ws_instance = WebSocketConnection(WS_SERVER_CONFIG.get('ip'), WS_SERVER_CONFIG.get('port'))
-
-
-class EventMonitor(object):
+class Monitor(object):
     GoOn = True
     Wallet = None
     Wallet_Change = None
@@ -161,12 +53,13 @@ class EventMonitor(object):
         cls.Wallet_Change = True
 
     @classmethod
-    def update_wallet_block_height(cls, height):
+    def update_wallet_block_height(cls, blockheight):
         if cls.Wallet_Change:
             return None
         if cls.Wallet:
-            cls.Wallet.BlockHeight=height
+            cls.Wallet.BlockHeight=blockheight
         else:
+            #LOG.debug("Wallet not opened")
             return None
 
     @classmethod
@@ -176,6 +69,7 @@ class EventMonitor(object):
             cls.Wallet_Change = False
             return block_height if block_height else 1
         else:
+            #LOG.debug("Wallet not opened")
             return 1
 
     @classmethod
@@ -188,32 +82,27 @@ class EventMonitor(object):
 
 
 def monitorblock():
-    event_coro = ws_instance.handle()
-    next(event_coro)
-
-    while EventMonitor.GoOn:
+    while Monitor.GoOn:
         blockheight_onchain = get_block_count()
-        EventMonitor.update_block_height(blockheight_onchain)
+        Monitor.update_block_height(blockheight_onchain)
 
-        blockheight = EventMonitor.get_wallet_block_height()
+        blockheight = Monitor.get_wallet_block_height()
 
         block_delta = int(blockheight_onchain) - int(blockheight)
 
         if 0 < block_delta:
             try:
                 if block_delta < 2000:
-                    result = ws_instance.receive()
-                    if result:
-                        ucoro_event(event_coro, result)
-
-                    if EventMonitor.BlockPause:
+                    block = get_block(int(blockheight))
+                    # handle_message(int(blockheight),block)
+                    if Monitor.BlockPause:
                         pass
                     else:
                         blockheight += 1
                 else:
                     blockheight +=1000
                     pass
-                EventMonitor.update_wallet_block_height(blockheight)
+                Monitor.update_wallet_block_height(blockheight)
             except Exception as e:
                 pass
         else:
