@@ -36,6 +36,7 @@ import json
 from blockchain.ethInterface import Interface as EthInterface
 from blockchain.web3client import Client as EthWebClient
 from lightwallet.Settings import settings
+from blockchain.event import *
 
 
 class Channel(object):
@@ -383,14 +384,17 @@ class ChannelEvent(object):
     """
 
     """
-    def __init__(self, channel_name, event_type):
+    def __init__(self, channel_name, asset_type, event_type):
         self.event_name = channel_name
         self.event_type = event_type
 
+        self.channel_name = channel_name
+        self.asset_type = asset_type.upper().strip()
         self.channel = Channel.channel(channel_name)
 
         self.event_is_ready = False
         self.depend_on_prepare = False
+        self.finish_preparation = False
 
     def register(self, action_type, *args, **kwargs):
         self.is_valid_action(action_type)
@@ -400,8 +404,8 @@ class ChannelEvent(object):
         LOG.debug('Start to register {}-{} event.'.format(self.event_type, action_name))
         self.__dict__.update({action_name: EventArgs(*args, **kwargs)})
 
-    def set_event_ready(self):
-        self.event_is_ready = True
+    def set_event_ready(self, ready=True):
+        self.event_is_ready = ready
 
     def is_valid_action(self, action_type):
         assert EnumEventAction.__contains__(action_type), 'Invalid action_type<{}>.'.format(action_type)
@@ -420,9 +424,10 @@ class ChannelEvent(object):
 
 
 class ChannelDepositEvent(ChannelEvent):
-    def __init__(self, channel_name):
-        super(ChannelDepositEvent, self).__init__(channel_name, EnumEventType.EVENT_TYPE_DEPOSIT.name)
+    def __init__(self, channel_name, asset_type):
+        super(ChannelDepositEvent, self).__init__(channel_name, asset_type, EnumEventType.EVENT_TYPE_DEPOSIT.name)
         self.depend_on_prepare = True
+        self.is_founder = True
 
     def prepare(self):
         super(ChannelDepositEvent, self).prepare()
@@ -450,8 +455,13 @@ class ChannelDepositEvent(ChannelEvent):
 
     def action(self):
         super(ChannelDepositEvent, self).action()
+        self.finish_preparation = True
         if hasattr(self, EnumEventAction.action_event.name):
-            return self.channel.approve_deposit(*self.action_event.args, **self.action_event.kwargs)
+            if self.is_founder:
+                self.channel.approve_deposit(*self.action_event.args, **self.action_event.kwargs)
+
+            # register monitor deposit event
+            event_monitor_deposit(self.channel_name, )
 
     def terminate(self):
         super(ChannelDepositEvent, self).terminate()
@@ -460,8 +470,8 @@ class ChannelDepositEvent(ChannelEvent):
 
 
 class ChannelQuickSettleEvent(ChannelEvent):
-    def __init__(self, channel_name):
-        super(ChannelQuickSettleEvent, self).__init__(channel_name, EnumEventType.EVENT_TYPE_QUICK_SETTLE.name)
+    def __init__(self, channel_name, asset_type):
+        super(ChannelQuickSettleEvent, self).__init__(channel_name, asset_type, EnumEventType.EVENT_TYPE_QUICK_SETTLE.name)
 
     def action(self):
         super(ChannelQuickSettleEvent, self).action()

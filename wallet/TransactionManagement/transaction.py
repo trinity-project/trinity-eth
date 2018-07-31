@@ -33,8 +33,7 @@ from log import LOG
 import json
 from model.transaction_model import APITransaction,TBLTransaction
 from lightwallet.Settings import settings
-BlockHightRegister=[]
-TxIDRegister= []
+
 
 
 

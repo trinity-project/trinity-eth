@@ -81,7 +81,9 @@ class WebSocketConnection(object):
         self.timeout = timeout
         self.create_connection()
 
-        self.event_set = {}
+        self.__event_queue = {}
+        self.__event_ready_queue = {}
+        self.__event_monitor_queue = {}
 
     def set_timeout(self, timeout=0.2):
         self.timeout = timeout
@@ -123,10 +125,10 @@ class WebSocketConnection(object):
         self._conn = create_connection(self.__ws_url)
 
     def register_event(self, key, event):
-        self.event_set.update({key: event})
+        self.__event_queue.update({key: event})
 
     def get_event(self, key):
-        return self.event_set.get(key)
+        return self.__event_queue.get(key)
 
     @ucoro
     def handle(self, *args):
@@ -139,6 +141,31 @@ class WebSocketConnection(object):
         LOG.debug('Received Message<{}>.'.format(message))
 
         # start to handle the event
+
+    def pre_execution(self):
+        for key, event in self.__event_queue.items():
+            if event.event_is_ready:
+                self.__event_ready_queue[key] = self.__event_queue.pop(key)
+
+        try:
+            event = self.__event_ready_queue.popitem()
+        except:
+            return
+        else:
+            event_action = event[1]
+            if not event_action:
+                LOG.error('Why no action is set? action<{}>'.format(event_action))
+                return
+
+            if event_action.depend_on_prepare:
+                if all(event_action.prepare()):
+                    event_action.action()
+
+            if event_action.finish_preparation:
+                self.__event_monitor_queue.update(dict([event]))
+            else:
+                self.__event_ready_queue.update(dict([event]))
+
 
 
 ws_instance = WebSocketConnection(WS_SERVER_CONFIG.get('ip'), WS_SERVER_CONFIG.get('port'))
@@ -199,13 +226,15 @@ def monitorblock():
 
         block_delta = int(blockheight_onchain) - int(blockheight)
 
+        # execute prepare and action
+        ws_instance.pre_execution()
+        result = ws_instance.receive()
+        if result:
+            ucoro_event(event_coro, result)
+
         if 0 < block_delta:
             try:
                 if block_delta < 2000:
-                    result = ws_instance.receive()
-                    if result:
-                        ucoro_event(event_coro, result)
-
                     if EventMonitor.BlockPause:
                         pass
                     else:
@@ -227,70 +256,15 @@ def monitorblock():
             time.sleep(15)
 
 
-def send_message_to_gateway(message):
-    send_message(message)
-
-
-def handle_message(height,jsn):
-    match_list=[]
-    block_txids = [i.get("txid") for i in jsn.get("tx")]
-    blockheight = copy.deepcopy(BlockHeightRecord)
-    #ms.SyncBlockMessage.send_block_sync(Monitor.Wallet,blockheight,block_txids)  TOdo close just for debug
-    for index,value in enumerate(blockheight):
-        if value[0] == height:
-            value[1](*value[1:])
-            match_list.append(value)
-    for i in match_list:
-        BlockHightRegister.remove(i)
-    match_list =[]
-    txids = copy.deepcopy(TxIDRegister)
-    for value in txids:
-        txid = value[0]
-        LOG.info("Handle Txid: {}".format(txid))
-        if txid in block_txids:
-            value[1](value[0],*value[2:])
-            match_list.append(value)
-        else:
-            continue
-    for i in match_list:
-        TxIDRegister.remove(i)
-    return
-
-
-
 def register_monitor(*args):
-    TxIDRegister.append(args)
+    pass
 
 
 def register_block(*args):
-    BlockHightRegister.append(args)
-
-
-def record_block(txid, block_height):
-    with open(BlockHeightRecord, "wb+") as f:
-        info = {}
-        info.setdefault(txid, block_height)
-        crypto_channel(f,**info)
+    pass
 
 
 
-if __name__  == "__main__":
-   blockcount = get_block_count()
-   print(get_block(int(blockcount) - 1))
-
-   raw="d101a00400ca9a3b14f5db0e4427fbf90d1fa21c741545b3fd0a12e68314d31081412" \
-       "47338aa337da861b31ee214ce460fec53c1087472616e73666572675e7fb71d90044445" \
-       "caf77c0c36df0901fda8340cf10400ca9a3b14f5db0e4427fbf90d1fa21c741545b3fd0a" \
-       "12e6831487cc4b925bd8f6f3c4a77a20382af79c7d7c0b0753c1087472616e7366657267" \
-       "5e7fb71d90044445caf77c0c36df0901fda8340cf100000000000000000320d310814124" \
-       "7338aa337da861b31ee214ce460fec2087cc4b925bd8f6f3c4a77a20382af79c7d7c0b07f" \
-       "0045ac2017a000002414038a00c590ebe049874bde93cf78e033054319a09b6d4909ecb44c2" \
-       "e23231bdda0ef462729a1c167e5155344520a97dbd4ba2f45f0d38eaadc9c6c515aef8ff732" \
-       "321034531bfb4a0d5ed522d9d6bcb4243c8e15cb1ad04d76531a204e5e79784aa3719ac4140" \
-       "daa4014f199663f2f3d0f662e042ac9ff4ded09269d7e8b3978a75fdd4d8172508218a2c5a3" \
-       "8072b48716eb8d32cb67c43cdd65750dabab7ea3a4775eee114582321022369f2ed62f20b90a6" \
-       "1053d26b8628cca4d4b267b8ac1f3cbc51e4d308711ae8ac"
-   print(send_raw(raw))
 
 
 

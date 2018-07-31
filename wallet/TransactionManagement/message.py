@@ -36,7 +36,6 @@ from wallet.utils import sign,\
     check_deposit,\
     get_magic
 from blockchain.monior import register_block, \
-    register_monitor, \
     ws_instance
 from blockchain.ethInterface import Interface as EthInterface
 from blockchain.web3client import Client as EthWebClient
@@ -460,8 +459,12 @@ class FounderMessage(TransactionMessage):
             channel_inst.channel(self.channel_name).update_channel(state=EnumChannelState.OPENING.name)
             LOG.info('Channel<{}> in opening state.'.format(self.channel_name))
 
-            channel_event = ch.ChannelDepositEvent(self.channel_name)
+            channel_event = ch.ChannelDepositEvent(self.channel_name, self.asset_type)
+            channel_event.is_founder = False
+            channel_event.depend_on_prepare = False
+            channel_event.register(ch.EnumEventAction.action_event)
             channel_event.register(ch.EnumEventAction.terminate_event, state=EnumChannelState.OPENED.name)
+            channel_event.set_event_ready()
             ws_instance.register_event(self.channel_name, channel_event)
 
         # send response
@@ -530,7 +533,7 @@ class FounderMessage(TransactionMessage):
         else:
             # TODO: currently, register event
             # FounderMessage.sync_timer(FounderMessage.get_approved_asset, '', 60, founder_addr)
-            channel_event = ch.ChannelDepositEvent(channel_name)
+            channel_event = ch.ChannelDepositEvent(channel_name, asset_type)
             channel_event.register(ch.EnumEventAction.prepare_event, founder_addr, founder_deposit, partner_addr, partner_deposit)
             ws_instance.register_event(channel_name, channel_event)
 
@@ -643,6 +646,7 @@ class FounderResponsesMessage(TransactionMessage):
                     LOG.info('Channel<{}> in opening state.'.format(self.channel_name))
 
                     channel_event.register(ch.EnumEventAction.terminate_event, state=EnumChannelState.OPENED.name)
+                    channel_event.set_event_ready()
             else:
                 LOG.error('Error to broadcast Founder to block chain.')
 
