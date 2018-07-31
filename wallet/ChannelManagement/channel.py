@@ -396,6 +396,7 @@ class ChannelEvent(object):
         self.event_is_ready = False
         self.depend_on_prepare = False
         self.finish_preparation = False
+        self.is_founder = True
 
     def register(self, action_type, *args, **kwargs):
         self.is_valid_action(action_type)
@@ -434,7 +435,6 @@ class ChannelDepositEvent(ChannelEvent):
     def __init__(self, channel_name, asset_type):
         super(ChannelDepositEvent, self).__init__(channel_name, asset_type, EnumEventType.EVENT_TYPE_DEPOSIT)
         self.depend_on_prepare = True
-        self.is_founder = True
 
     def prepare(self):
         super(ChannelDepositEvent, self).prepare()
@@ -471,7 +471,7 @@ class ChannelDepositEvent(ChannelEvent):
                 self.channel.approve_deposit(*self.action_event.args, **self.action_event.kwargs)
 
             # register monitor deposit event
-            event_monitor_deposit(self.channel_name, )
+            event_monitor_deposit(self.channel_name, self.asset_type)
 
     def terminate(self):
         super(ChannelDepositEvent, self).terminate()
@@ -486,7 +486,11 @@ class ChannelQuickSettleEvent(ChannelEvent):
     def action(self):
         super(ChannelQuickSettleEvent, self).action()
         if hasattr(self, EnumEventAction.action_event.name):
-            return self.channel.quick_settle(*self.action_event.args, **self.action_event.kwargs)
+            if self.is_founder:
+                self.channel.quick_settle(*self.action_event.args, **self.action_event.kwargs)
+
+            # register monitor quick settle event
+            event_monitor_quick_close_channel(self.channel_name, self.asset_type)
 
     def terminate(self):
         super(ChannelQuickSettleEvent, self).terminate()

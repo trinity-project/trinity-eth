@@ -1667,7 +1667,12 @@ class SettleMessage(TransactionMessage):
             self.channel.update_channel(state=EnumChannelState.SETTLING.name)
 
             # TODO: monitor event to set channel closed state
-            pass
+            channel_event = ch.ChannelQuickSettleEvent(self.channel_name, self.asset_type)
+            channel_event.is_founder = False
+            channel_event.register(ch.EnumEventAction.action_event)
+            channel_event.register(ch.EnumEventAction.terminate_event, state=EnumChannelState.CLOSED.name)
+            channel_event.set_event_ready()
+            ws_instance.register_event(self.channel_name, channel_event)
 
     @staticmethod
     def create(wallet, channel_name, sender, receiver, asset_type):
@@ -1718,7 +1723,6 @@ class SettleMessage(TransactionMessage):
                 "ReceiverBalance": receiver_balance
             }
         }
-        Message.send(message)
 
         # update channel
         channel.update_channel(state=EnumChannelState.SETTLING.name)
@@ -1734,6 +1738,12 @@ class SettleMessage(TransactionMessage):
                              peer_balance = {asset_type: receiver_balance},
                              peer_commitment = None,
                              state = EnumTradeState.confirming.name)
+
+        # register channel event
+        channel_event = ch.ChannelQuickSettleEvent(channel_name, asset_type)
+        ws_instance.register_event(channel_name, channel_event)
+
+        Message.send(message)
 
     def verify(self):
         return True, EnumResponseStatus.RESPONSE_OK
@@ -1787,15 +1797,18 @@ class SettleResponseMessage(TransactionMessage):
                 LOG.error('Transaction with none<0xFFFFFFFF> not found. Error: {}'.format(error))
             else:
                 # call web3 interface to trigger transaction to on-chain
-                # quick_settle(invoker, channel_id, nonce, founder, founder_balance,
-                #              partner, partner_balance, founder_signature, partner_signature, invoker_key)
-                SettleResponseMessage.quick_settle(settle.address.split('@')[0].strip(), self.channel_name, nonce,
-                                                settle.address.split('@')[0].strip(), settle.balance.get(self.asset_type),
-                                                settle.peer.split('@')[0].strip(), settle.peer_balance.get(self.asset_type),
-                                                settle.commitment, self.peer_commitment, self.wallet._key.private_key_string)
-
                 # TODO: register monitor event to set channel closed
-                pass
+                channel_event = ws_instance.get_event(self.channel_name)
+                if channel_event:
+                    channel_event.register(ch.EnumEventAction.action_event,
+                                           settle.address.split('@')[0].strip(), self.channel_name, nonce,
+                                           settle.address.split('@')[0].strip(), settle.balance.get(self.asset_type),
+                                           settle.peer.split('@')[0].strip(), settle.peer_balance.get(self.asset_type),
+                                           settle.commitment, self.peer_commitment, self.wallet._key.private_key_string)
+
+                    channel_event.register(ch.EnumEventAction.terminate_event, state=EnumChannelState.CLOSED.name)
+                    channel_event.set_event_ready()
+                    pass
         else:
             LOG.error('Error<{}> occurred during verified the message<{}>.'.format(status, self.message_type))
 

@@ -25,13 +25,33 @@ from websocket import create_connection, WebSocketConnectionClosedException, Web
 from threading import Lock
 import socket
 import time
+import json
 
 from blockchain.interface import get_block_count, get_block
 from log.log import LOG
 
 
-
 WS_SERVER_CONFIG = {'ip': '47.104.81.20', 'port': 9000}
+EVENT_MESSAGE_TYPE = ['init',
+                      'monitorTx',
+                      'monitorBlockHeight',
+                      'monitorDeposit',
+                      'monitorUpdateDeposit',
+                      'monitorQuickCloseChannel',
+                      'monitorCloseChannel',
+                      'monitorCloseChannel',
+                      'monitorSettle'
+                      ]
+EVENT_RESPONSE_TYPE = ['initResponse',
+                      'monitorTxResponse',
+                      'monitorBlockHeightResponse',
+                      'monitorDepositResponse',
+                      'monitorUpdateDepositResponse',
+                      'monitorQuickCloseChannelResponse',
+                      'monitorCloseChannelResponse',
+                      'monitorCloseChannelResponse',
+                      'monitorSettleResponse'
+                      ]
 
 
 def singleton(cls):
@@ -87,8 +107,13 @@ class WebSocketConnection(object):
         self.__event_ready_queue = {}
         self.__event_monitor_queue = {}
 
+        self.wallet_address = None
+
     def set_timeout(self, timeout=0.2):
         self.timeout = timeout
+
+    def set_wallet(self, wallet_address):
+        self.wallet_address = wallet_address
 
     def create_connection(self):
         self._conn = create_connection(self.__ws_url,
@@ -143,11 +168,34 @@ class WebSocketConnection(object):
         message = args[0]
         assert message, 'Received void message<{}>.'.format(args)
 
+        message = json.loads(message)
         message_type = message.get('messageType')
-        LOG.info('Received Message<{}>.'.format(message_type))
         LOG.debug('Received Message<{}>.'.format(message))
 
         # start to handle the event
+        if message_type in EVENT_RESPONSE_TYPE:
+            LOG.info('Handle message<{}> status <{}>.'.format(message_type, message.get('state')))
+        elif message_type in EVENT_MESSAGE_TYPE:
+            self.handle_message(message)
+        else:
+            LOG.info('Test message or invalid message {}'.format(message))
+
+    def handle_message(self, message):
+        message_type = message.get('messageType')
+        channel_id = message.get('channelId')
+        if not channel_id:
+            LOG.info('Handle message<{}> failed'.format(message_type))
+            return
+
+        channel_event = self.__event_ready_queue.get(channel_id)
+        if not channel_event:
+            LOG.error('No event for channel<{}>.'.format(channel_id))
+            return
+        channel_event.terminate()
+
+        # remove from the queue
+        self.__event_ready_queue.pop(channel_id)
+
 
     def pre_execution(self):
         try:
@@ -198,6 +246,13 @@ class EventMonitor(object):
     def start_monitor(cls, wallet):
         cls.Wallet = wallet
         cls.Wallet_Change = True
+
+        if wallet:
+            try:
+                ws_instance.set_wallet(wallet.address)
+            except Exception as error:
+                print('No wallet is opened')
+                pass
 
     @classmethod
     def update_wallet_block_height(cls, height):

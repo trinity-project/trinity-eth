@@ -32,6 +32,8 @@ def eth_websocket(callback):
     def wrapper(*args, **kwargs):
         try:
             payload = callback(*args, **kwargs)
+            if not payload.get('walletAddress'):
+                payload.update({'walletAddress': ws_instance.wallet_address})
         except Exception as error:
             LOG.exception('Call {} error: {}'.format(callback.__name__, error))
         else:
@@ -94,7 +96,7 @@ def event_monitor_deposit(channel_id, asset_type='TNC', comments={}):
     assert asset_type, 'Invalid asset_type <{}>.'.format(asset_type)
 
     payload = {
-        'messageType':'monitorDeposit',
+        'messageType': 'monitorDeposit',
         'chainType': asset_type.upper(),
         'playload': channel_id,
         'comments': comments
@@ -109,7 +111,7 @@ def event_monitor_update_deposit(channel_id, asset_type='TNC', comments={}):
     assert asset_type, 'Invalid asset_type <{}>.'.format(asset_type)
 
     payload = {
-        'messageType':'monitorUpdateDeposit',
+        'messageType': 'monitorUpdateDeposit',
         'chainType': asset_type.upper(),
         'playload': channel_id,
         'comments': comments
@@ -124,7 +126,7 @@ def event_monitor_quick_close_channel(channel_id, asset_type='TNC', comments={})
     assert asset_type, 'Invalid asset_type <{}>.'.format(asset_type)
 
     payload = {
-        'messageType':'monitorQuickCloseChannel',
+        'messageType': 'monitorQuickCloseChannel',
         'chainType': asset_type.upper(),
         'playload': channel_id,
         'comments': comments
@@ -154,7 +156,7 @@ def event_monitor_close_channel(channel_id, asset_type='TNC', comments={}):
     assert asset_type, 'Invalid asset_type <{}>.'.format(asset_type)
 
     payload = {
-        'messageType':'monitorCloseChannel',
+        'messageType': 'monitorCloseChannel',
         'chainType': asset_type.upper(),
         'playload': channel_id,
         'comments': comments
@@ -185,4 +187,3 @@ def event_test_state():
     }
 
     return payload
-
