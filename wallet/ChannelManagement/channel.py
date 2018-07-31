@@ -485,6 +485,7 @@ class ChannelQuickSettleEvent(ChannelEvent):
 
     def action(self):
         super(ChannelQuickSettleEvent, self).action()
+        self.finish_preparation = True
         if hasattr(self, EnumEventAction.action_event.name):
             if self.is_founder:
                 self.channel.quick_settle(*self.action_event.args, **self.action_event.kwargs)
