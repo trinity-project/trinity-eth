@@ -22,6 +22,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
+import json
+
 from .monior import ws_instance
 from log.log import LOG
 
@@ -34,7 +36,7 @@ def eth_websocket(callback):
             LOG.exception('Call {} error: {}'.format(callback.__name__, error))
         else:
             # to send the data by wwebsocket connection
-            ws_instance.send(payload)
+            ws_instance.send(json.dumps(payload))
     return wrapper
 
 

@@ -633,13 +633,11 @@ class FounderResponsesMessage(TransactionMessage):
             if founder:
                 channel_event = ws_instance.get_event(self.channel_name)
                 if channel_event:
-                    founder_address = founder.address.spit('@')[0].strip() if founder.address.__contains__('@') else founder.address
-                    partner_address = founder.peer.spit('@')[0].strip() if founder.peer.__contains__('@') else founder.peer
                     channel_event.register(ch.EnumEventAction.action_event,
-                                           founder_address, self.channel_name, 0,
-                                           founder_address, founder.balance.get(self.asset_type.upper()),
-                                           partner_address, founder.peer_balance.get(self.asset_type.upper()),
-                                           founder.commitment, founder.peer_commitment,
+                                           self.receiver_address, self.channel_name, 0,
+                                           self.receiver_address, founder.balance.get(self.asset_type.upper()),
+                                           self.sender_address, founder.peer_balance.get(self.asset_type.upper()),
+                                           founder.commitment, self.commitment,
                                            self.wallet._key.private_key_string)
 
                     # ToDo: need monitor event to trigger confirmed transaction
