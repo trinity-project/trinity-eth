@@ -112,10 +112,13 @@ class WebSocketConnection(object):
         except WebSocketConnectionClosedException as error:
             LOG.error('receive: Websocket was closed: {}'.format(error))
             self.reconnect()
+            return self._conn.recv()
         except WebSocketTimeoutException as error:
             pass
         except Exception as error:
             LOG.exception('receive: Websocket exception: {}'.format(error))
+
+        return None
 
     def close(self):
         if self._conn:
@@ -175,7 +178,6 @@ class WebSocketConnection(object):
                 self.__event_monitor_queue.update(dict([event]))
             else:
                 self.__event_ready_queue.update(dict([event]))
-
 
 
 ws_instance = WebSocketConnection(WS_SERVER_CONFIG.get('ip'), WS_SERVER_CONFIG.get('port'))

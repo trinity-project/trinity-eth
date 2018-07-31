@@ -376,8 +376,9 @@ class EnumEventType(Enum):
     # One of Both wallets is online
     EVENT_TYPE_SETTLE = 0x10
 
-    action_event = 'action'
-    terminate_event = 'terminate'
+
+    # test event
+    EVENT_TYPE_TEST_STATE = 0xE0
 
 
 class ChannelEvent(object):
@@ -401,7 +402,7 @@ class ChannelEvent(object):
 
         action_name = action_type.name
 
-        LOG.debug('Start to register {}-{} event.'.format(self.event_type, action_name))
+        LOG.debug('Start to register {}-{} event.'.format(self.event_type.name, action_name))
         self.__dict__.update({action_name: EventArgs(*args, **kwargs)})
 
     def set_event_ready(self, ready=True):
@@ -413,7 +414,7 @@ class ChannelEvent(object):
 
     def prepare(self):
         LOG.debug('Start to execute prepare event')
-        pass
+        return [True]
 
     def action(self):
         LOG.debug('Start to execute action event')
@@ -424,9 +425,14 @@ class ChannelEvent(object):
         pass
 
 
+class ChannelTestEvent(ChannelEvent):
+    def action(self):
+        event_test_state()
+
+
 class ChannelDepositEvent(ChannelEvent):
     def __init__(self, channel_name, asset_type):
-        super(ChannelDepositEvent, self).__init__(channel_name, asset_type, EnumEventType.EVENT_TYPE_DEPOSIT.name)
+        super(ChannelDepositEvent, self).__init__(channel_name, asset_type, EnumEventType.EVENT_TYPE_DEPOSIT)
         self.depend_on_prepare = True
         self.is_founder = True
 
@@ -475,7 +481,7 @@ class ChannelDepositEvent(ChannelEvent):
 
 class ChannelQuickSettleEvent(ChannelEvent):
     def __init__(self, channel_name, asset_type):
-        super(ChannelQuickSettleEvent, self).__init__(channel_name, asset_type, EnumEventType.EVENT_TYPE_QUICK_SETTLE.name)
+        super(ChannelQuickSettleEvent, self).__init__(channel_name, asset_type, EnumEventType.EVENT_TYPE_QUICK_SETTLE)
 
     def action(self):
         super(ChannelQuickSettleEvent, self).action()
@@ -567,6 +573,9 @@ def udpate_channel_when_setup(address):
             if ch.state == EnumChannelState.OPENED.name:
                 sync_channel_info_to_gateway(ch.channel, "UpdateChannel")
 
+
+# test state
+ws_instance.register_event('test_event', ChannelTestEvent('state', 'TNC', EnumEventType.EVENT_TYPE_TEST_STATE))
 
 if __name__ == "__main__":
     result = APIChannel.query_channel(channel="1BE0FCD56A27AD46C22B8EEDC4E835EA")

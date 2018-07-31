@@ -178,3 +178,11 @@ def event_monitor_settle(channel_id, asset_type='TNC', comments={}):
     return payload
 
 
+@eth_websocket
+def event_test_state():
+    payload = {
+        'messageType':'state'
+    }
+
+    return payload
+

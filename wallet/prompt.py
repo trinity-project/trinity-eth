@@ -37,6 +37,7 @@ from model.base_enum import EnumChannelState
 from wallet.Interface import gate_way
 from wallet.configure import Configure
 from blockchain.interface import get_block_count
+from blockchain.event import event_init_wallet
 from functools import reduce
 from blockchain.monior import monitorblock,EventMonitor
 from wallet.TransactionManagement.payment import Payment
@@ -188,6 +189,7 @@ class UserPromptInterface(PromptInterface):
     def do_open(self, arguments):
         super().do_open(arguments)
         if self.Wallet:
+            event_init_wallet(self.Wallet.address)
             CurrentLiveWallet.update_current_wallet(self.Wallet)
             self.Wallet.BlockHeight = self.Wallet.LoadStoredData("BlockHeight")
             EventMonitor.start_monitor(self.Wallet)
