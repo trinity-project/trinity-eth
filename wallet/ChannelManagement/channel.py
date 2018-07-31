@@ -405,6 +405,7 @@ class ChannelEvent(object):
         self.__dict__.update({action_name: EventArgs(*args, **kwargs)})
 
     def set_event_ready(self, ready=True):
+        LOG.debug('set event of channel<{}> ready'.format(self.channel_name))
         self.event_is_ready = ready
 
     def is_valid_action(self, action_type):
@@ -445,6 +446,8 @@ class ChannelDepositEvent(ChannelEvent):
                 if 0 == approved_balance or 0 == peer_approved_balance:
                     return None, None
 
+                LOG.debug('Approved asset: self<{}:{}>, peer<{}:{}>'.format(address, approved_balance,
+                                                                            peer_address, peer_approved_balance))
                 return approved_balance >= float(balance), peer_approved_balance >= float(peer_balance)
             except Exception as error:
                 pass

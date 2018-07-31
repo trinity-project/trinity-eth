@@ -164,9 +164,12 @@ class WebSocketConnection(object):
                 LOG.error('Why no action is set? action<{}>'.format(event_action))
                 return
 
+            prepare_result = event_action.prepare()
             if event_action.depend_on_prepare:
-                if all(event_action.prepare()):
+                if all(prepare_result):
                     event_action.action()
+            else:
+                event_action.action()
 
             if event_action.finish_preparation:
                 self.__event_monitor_queue.update(dict([event]))
