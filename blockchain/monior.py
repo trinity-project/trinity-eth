@@ -149,7 +149,7 @@ class WebSocketConnection(object):
     def pre_execution(self):
         try:
             self.event_queue_lock.acquire()
-            keys_list = list(self.__event_ready_queue.keys())
+            keys_list = list(self.__event_queue.keys())
             for key in keys_list:
                 if self.__event_queue[key].event_is_ready:
                     self.__event_ready_queue[key] = self.__event_queue.pop(key)
