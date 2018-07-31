@@ -468,8 +468,9 @@ class FounderMessage(TransactionMessage):
             ws_instance.register_event(self.channel_name, channel_event)
 
         # send response
-        FounderResponsesMessage.create(self.channel_name, self.sender, self.receiver, self.asset_type,
-                                       self.founder_deposit, self.partner_deposit, self.commitment,
+        FounderResponsesMessage.create(self.channel_name, self.asset_type,
+                                       self.sender, self.founder_deposit, self.commitment,
+                                       self.receiver, self.partner_deposit,
                                        self.network_magic, status, self.wallet)
 
     @staticmethod
@@ -531,19 +532,18 @@ class FounderMessage(TransactionMessage):
         except Exception as e:
             print(e)
         else:
-            # TODO: currently, register event
-            # FounderMessage.sync_timer(FounderMessage.get_approved_asset, '', 60, founder_addr)
-            channel_event = ch.ChannelDepositEvent(channel_name, asset_type)
-            channel_event.register(ch.EnumEventAction.prepare_event, founder_addr, founder_deposit, partner_addr, partner_deposit)
-            ws_instance.register_event(channel_name, channel_event)
-
             # add channel
-            # channel: str, src_addr: str, dest_addr: str, state: str, alive_block: int,
-            # deposit:dict
             ch.Channel(founder, partner).add_channel(channel = channel_name, src_addr = founder, dest_addr = partner,
                                                      state = EnumChannelState.INIT.name,
                                                      deposit = {founder_addr:{asset_type.upper(): founder_deposit},
                                                                 partner_addr: {asset_type.upper(): partner_deposit}})
+
+            # TODO: currently, register event
+            channel_event = ch.ChannelDepositEvent(channel_name, asset_type)
+            channel_event.register(ch.EnumEventAction.prepare_event, founder_addr, founder_deposit,
+                                   partner_addr, partner_deposit)
+
+            ws_instance.register_event(channel_name, channel_event)
             # record this transaction
             ch.Channel.add_trade(channel_name,
                                  nonce = 0,
@@ -661,16 +661,19 @@ class FounderResponsesMessage(TransactionMessage):
         return True, None
 
     @staticmethod
-    def create(channel_name, founder, partner, asset_type, founder_deposit, founder_commitment, partner_deposit,
+    def create(channel_name, asset_type, founder, founder_deposit, founder_commitment, partner,  partner_deposit,
                magic, response_status, wallet=None, comments=None):
         """
 
         :param channel_name:
-        :param founder:
-        :param partner:
         :param asset_type:
+        :param founder:
         :param founder_deposit:
-        :param receiver_deposit:
+        :param founder_commitment:
+        :param partner:
+        :param partner_deposit:
+        :param magic:
+        :param response_status:
         :param wallet:
         :param comments:
         :return:
