@@ -26,6 +26,7 @@ from threading import Lock
 import socket
 import time
 import json
+from .event import event_init_wallet
 
 from blockchain.interface import get_block_count, get_block
 from log.log import LOG
@@ -117,8 +118,11 @@ class WebSocketConnection(object):
 
     def create_connection(self):
         self._conn = create_connection(self.__ws_url,
-                                       sockopt=((socket.IPPROTO_TCP, socket.TCP_NODELAY, 1),),
+                                       sockopt=((socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1),
+                                                (socket.IPPROTO_TCP, socket.TCP_NODELAY, 1),),
                                        timeout=self.timeout)
+        if self.wallet_address:
+            event_init_wallet(self.wallet_address)
 
     def send(self, payload):
         try:
