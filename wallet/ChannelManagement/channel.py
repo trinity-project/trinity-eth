@@ -467,11 +467,14 @@ class ChannelDepositEvent(ChannelEvent):
         super(ChannelDepositEvent, self).action()
         self.finish_preparation = True
         if hasattr(self, EnumEventAction.action_event.name):
-            if self.is_founder:
-                self.channel.approve_deposit(*self.action_event.args, **self.action_event.kwargs)
-
-            # register monitor deposit event
-            event_monitor_deposit(self.channel_name, self.asset_type)
+            try:
+                if self.is_founder:
+                    self.channel.approve_deposit(*self.action_event.args, **self.action_event.kwargs)
+            except Exception as error:
+                pass
+            else:
+                # register monitor deposit event
+                event_monitor_deposit(self.channel_name, self.asset_type)
 
     def terminate(self):
         super(ChannelDepositEvent, self).terminate()
