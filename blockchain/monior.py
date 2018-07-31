@@ -52,9 +52,9 @@ def ucoro(timeout = 0.1):
             while True:
                 try:
                     received = yield
-                    callback(received)
+                    callback(*args, received, **kwargs)
                 except Exception as error:
-                    LOG.exception('Co-routine error: {}'.format(error))
+                    LOG.error('Co-routine received<{}>, error: {}'.format(received, error))
                 finally:
                     time.sleep(timeout)
 
