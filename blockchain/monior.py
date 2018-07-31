@@ -22,6 +22,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 from websocket import create_connection, WebSocketConnectionClosedException, WebSocketTimeoutException
+from threading import Lock
 import socket
 import time
 
@@ -82,6 +83,7 @@ class WebSocketConnection(object):
         self.create_connection()
 
         self.__event_queue = {}
+        self.event_queue_lock = Lock()
         self.__event_ready_queue = {}
         self.__event_monitor_queue = {}
 
@@ -125,7 +127,9 @@ class WebSocketConnection(object):
         self._conn = create_connection(self.__ws_url)
 
     def register_event(self, key, event):
+        self.event_queue_lock.acquire()
         self.__event_queue.update({key: event})
+        self.event_queue_lock.release()
 
     def get_event(self, key):
         return self.__event_queue.get(key)
@@ -143,9 +147,11 @@ class WebSocketConnection(object):
         # start to handle the event
 
     def pre_execution(self):
+        self.event_queue_lock.acquire()
         for key, event in self.__event_queue.items():
             if event.event_is_ready:
                 self.__event_ready_queue[key] = self.__event_queue.pop(key)
+        self.event_queue_lock.release()
 
         try:
             event = self.__event_ready_queue.popitem()
