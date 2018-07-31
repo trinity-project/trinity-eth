@@ -130,7 +130,7 @@ class WebSocketConnection(object):
     def get_event(self, key):
         return self.__event_queue.get(key)
 
-    @ucoro
+    @ucoro(0.1)
     def handle(self, *args):
         assert args, 'Received Invalid message<{}>.'.format(args)
         message = args[0]

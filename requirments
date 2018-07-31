@@ -73,3 +73,4 @@ websockets==4.0.1
 Werkzeug==0.14.1
 yarl==1.2.5
 zope.interface==4.5.0
+websocket-client==0.48.0
