@@ -100,7 +100,6 @@ class WebSocketConnection(object):
 
         self.__ws_url = 'ws://{}:{}'.format(ip, port)
         self.timeout = timeout
-        self.create_connection()
 
         self.__event_queue = {}
         self.event_queue_lock = Lock()
@@ -108,6 +107,9 @@ class WebSocketConnection(object):
         self.__event_monitor_queue = {}
 
         self.wallet_address = None
+
+        # create connection
+        self.create_connection()
 
     def set_timeout(self, timeout=0.2):
         self.timeout = timeout
