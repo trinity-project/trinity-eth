@@ -434,10 +434,10 @@ class ChannelDepositEvent(ChannelEvent):
         super(ChannelDepositEvent, self).prepare()
         if hasattr(self, EnumEventAction.prepare_event.name):
             length_of_args = len(self.prepare_event.args)
-            address = self.prepare_event.args[0] if 1 == length_of_args else self.prepare_event.kwargs.get('address')
-            balance = self.prepare_event.args[1] if 2 == length_of_args else self.prepare_event.kwargs.get('balance')
-            peer_address = self.prepare_event.args[2] if 3 == length_of_args else self.prepare_event.kwargs.get('peer_address')
-            peer_balance = self.prepare_event.args[3] if 4 == length_of_args else self.prepare_event.kwargs.get('peer_balance')
+            address = self.prepare_event.args[0] if 1 <= length_of_args else self.prepare_event.kwargs.get('address')
+            balance = self.prepare_event.args[1] if 2 <= length_of_args else self.prepare_event.kwargs.get('balance')
+            peer_address = self.prepare_event.args[2] if 3 <= length_of_args else self.prepare_event.kwargs.get('peer_address')
+            peer_balance = self.prepare_event.args[3] if 4 <= length_of_args else self.prepare_event.kwargs.get('peer_balance')
 
             try:
                 # approved balance
@@ -450,6 +450,7 @@ class ChannelDepositEvent(ChannelEvent):
                                                                             peer_address, peer_approved_balance))
                 return approved_balance >= float(balance), peer_approved_balance >= float(peer_balance)
             except Exception as error:
+                LOG.error('Action prepare exception: {}'.format(error))
                 pass
         else:
             return True, True
