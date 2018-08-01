@@ -148,7 +148,8 @@ class WebSocketConnection(object):
             LOG.error('send: Websocket was closed: {}'.format(error))
             self.reconnect()
             # re-send this payload
-            self._conn.send(payload)
+            if self._conn:
+                self._conn.send(payload)
         except Exception as error:
             LOG.exception('send: Websocket exception: {}'.format(error))
 
@@ -158,7 +159,8 @@ class WebSocketConnection(object):
         except WebSocketConnectionClosedException as error:
             LOG.error('receive: Websocket was closed: {}'.format(error))
             self.reconnect()
-            return self._conn.recv()
+
+            return self._conn.recv() if self._conn else None
         except WebSocketTimeoutException as error:
             pass
         except Exception as error:
@@ -173,9 +175,17 @@ class WebSocketConnection(object):
             self._conn.close()
             self._conn = None
 
-    def reconnect(self):
+    def reconnect(self, retry = 5):
         self.close()
-        self.create_client()
+
+        count = 0
+        while count < retry:
+            self.create_client()
+            if self._conn:
+                break
+
+            time.sleep(2)
+            count += 1
 
     def register_event(self, key, event):
         self.event_queue_lock.acquire()
