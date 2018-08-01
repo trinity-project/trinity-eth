@@ -151,7 +151,7 @@ class RegisterMessage(Message):
         super().__init__(message)
         self.deposit = self.message_body.get("Deposit")
         self.asset_type = self.message_body.get("AssetType")
-        self.channel_name = self.message.get("ChannelName")
+        self.channel_name = self.message.get("ChannelName", '').lower()
         self.wallet = wallet
 
     def handle_message(self):
