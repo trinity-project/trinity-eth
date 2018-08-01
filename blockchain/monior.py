@@ -112,7 +112,7 @@ class WebSocketConnection(object):
         self.wallet_address = None
 
         # create connection
-        self.create_connection()
+        self.create_client()
 
     def set_timeout(self, timeout=0.2):
         self.timeout = timeout
@@ -128,7 +128,7 @@ class WebSocketConnection(object):
 
         self.send(json.dumps(payload))
 
-    def create_connection(self):
+    def create_client(self):
         try:
             self._conn = create_connection(self.__ws_url,
                                            sockopt=((socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1),
@@ -173,7 +173,7 @@ class WebSocketConnection(object):
 
     def reconnect(self):
         self.close()
-        self._conn = create_connection(self.__ws_url)
+        self.create_client()
 
     def register_event(self, key, event):
         self.event_queue_lock.acquire()
@@ -191,17 +191,19 @@ class WebSocketConnection(object):
         LOG.debug(args)
 
         message = self.receive()
-        message = json.loads(message)
-        message_type = message.get('messageType')
-        LOG.debug('Received Message<{}>.'.format(message))
+        LOG.debug('Received: {}.'.format(message))
+        if not message:
+            message = json.loads(message)
+            message_type = message.get('messageType')
+            LOG.debug('Received Message<{}>.'.format(message))
 
-        # start to handle the event
-        if message_type in EVENT_RESPONSE_TYPE:
-            LOG.info('Handle message<{}> status <{}>.'.format(message_type, message.get('state')))
-        elif message_type in EVENT_MESSAGE_TYPE:
-            self.handle_message(message)
-        else:
-            LOG.info('Test message or invalid message {}'.format(message))
+            # start to handle the event
+            if message_type in EVENT_RESPONSE_TYPE:
+                LOG.info('Handle message<{}> status <{}>.'.format(message_type, message.get('state')))
+            elif message_type in EVENT_MESSAGE_TYPE:
+                self.handle_message(message)
+            else:
+                LOG.info('Test message or invalid message {}'.format(message))
 
     def handle_message(self, message):
         message_type = message.get('messageType')
