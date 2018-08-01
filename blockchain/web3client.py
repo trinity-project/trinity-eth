@@ -156,7 +156,7 @@ class Client(object):
         print('gas price: {}'.format(gas_price))
         tx_dict = contract.functions[method](*args).buildTransaction({
             "gas": gasLimit,
-            'gasPrice': gas_price,
+            'gasPrice': pow(10,10),
             'nonce': self.web3.eth.getTransactionCount(checksum_encode(invoker)),
         })
         signed = self.web3.eth.account.signTransaction(tx_dict, key)
