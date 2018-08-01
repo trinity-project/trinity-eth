@@ -439,7 +439,7 @@ class FounderMessage(TransactionMessage):
             founder_addr = self.sender.strip().split('@')[0]
             partner_addr = self.receiver.strip().split('@')[0]
             try:
-                FounderMessage.approve(self.receiver.strip().split('@')[0], self.partner_deposit,
+                ch.Channel.approve(self.receiver.strip().split('@')[0], self.partner_deposit,
                                        self.wallet._key.private_key_string)
             except Exception as error:
                 LOG.error(type(error), error)
@@ -528,7 +528,7 @@ class FounderMessage(TransactionMessage):
 
         # authourized the deposit to the contract
         try:
-            FounderMessage.approve(founder_addr, founder_deposit, wallet._key.private_key_string)
+            ch.Channel.approve(founder_addr, founder_deposit, wallet._key.private_key_string)
         except Exception as e:
             print(e)
         else:
