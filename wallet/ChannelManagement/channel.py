@@ -317,7 +317,11 @@ class Channel(object):
 
     @staticmethod
     def approve(address, deposit, private_key):
-        Channel._eth_interface().approve(address, Channel.multiply(deposit), private_key)
+        approved_asset = Channel.get_approved_asset(address)
+        if float(approved_asset) < float(deposit):
+            Channel._eth_interface().approve(address, Channel.multiply(deposit), private_key)
+        else:
+            LOG.info('Has been approved asset count: {}'.format(approved_asset))
 
     @staticmethod
     def get_approved_asset(address):

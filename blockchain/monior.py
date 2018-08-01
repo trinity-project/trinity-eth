@@ -117,13 +117,21 @@ class WebSocketConnection(object):
     def set_wallet(self, wallet_address):
         self.wallet_address = wallet_address
 
+    def notify_wallet_info(self):
+        payload = {
+            'messageType': 'init',
+            'walletAddress': self.wallet_address
+        }
+
+        self.send(json.dumps(payload))
+
     def create_connection(self):
         self._conn = create_connection(self.__ws_url,
                                        sockopt=((socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1),
                                                 (socket.IPPROTO_TCP, socket.TCP_NODELAY, 1),),
                                        timeout=self.timeout)
         if self.wallet_address:
-            #event_init_wallet(self.wallet_address)
+            self.notify_wallet_info()
             pass
 
     def send(self, payload):
