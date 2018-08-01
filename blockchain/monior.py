@@ -191,11 +191,10 @@ class WebSocketConnection(object):
         LOG.debug(args)
 
         message = self.receive()
-        LOG.debug('Received: {}.'.format(message))
+        LOG.debug('connection: {} Received: {}.'.format(self._conn, message))
         if message:
             message = json.loads(message)
             message_type = message.get('messageType')
-            LOG.debug('Received Message<{}>.'.format(message))
 
             # start to handle the event
             if message_type in EVENT_RESPONSE_TYPE:
