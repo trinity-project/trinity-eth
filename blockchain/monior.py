@@ -162,6 +162,8 @@ class WebSocketConnection(object):
         except WebSocketTimeoutException as error:
             pass
         except Exception as error:
+            if not self._conn:
+                self.reconnect()
             LOG.exception('receive: Websocket exception: {}'.format(error))
 
         return None
