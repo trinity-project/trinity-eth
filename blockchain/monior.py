@@ -181,10 +181,12 @@ class WebSocketConnection(object):
 
     @ucoro(0.1)
     def handle(self, *args):
-        assert args, 'Received Invalid message<{}>.'.format(args)
-        message = args[0]
-        assert message, 'Received void message<{}>.'.format(args)
+        # assert args, 'Received Invalid message<{}>.'.format(args)
+        # message = args[0]
+        # assert message, 'Received void message<{}>.'.format(args)
+        LOG.debug(args)
 
+        message = self.receive()
         message = json.loads(message)
         message_type = message.get('messageType')
         LOG.debug('Received Message<{}>.'.format(message))
@@ -212,7 +214,6 @@ class WebSocketConnection(object):
 
         # remove from the queue
         self.__event_ready_queue.pop(channel_id)
-
 
     def pre_execution(self):
         try:
@@ -312,9 +313,10 @@ def monitorblock():
 
         # execute prepare and action
         ws_instance.pre_execution()
-        result = ws_instance.receive()
-        if result:
-            ucoro_event(event_coro, result)
+        ucoro_event(event_coro, blockheight)
+        # result = ws_instance.receive()
+        # if result:
+        #     ucoro_event(event_coro, result)
 
         if 0 < block_delta:
             try:
