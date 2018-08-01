@@ -192,7 +192,7 @@ class WebSocketConnection(object):
 
         message = self.receive()
         LOG.debug('Received: {}.'.format(message))
-        if not message:
+        if message:
             message = json.loads(message)
             message_type = message.get('messageType')
             LOG.debug('Received Message<{}>.'.format(message))
