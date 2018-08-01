@@ -72,6 +72,9 @@ def ucoro(timeout = 0.1):
             while True:
                 try:
                     received = yield
+                    if received in ['exit']:
+                        break
+
                     callback(*args, received, **kwargs)
                 except Exception as error:
                     LOG.error('Co-routine received<{}>, error: {}'.format(received, error))
@@ -335,6 +338,9 @@ def monitorblock():
             pass
         else:
             time.sleep(15)
+
+    # stop monitor
+    ucoro_event(event_coro, 'exit')
 
 
 def register_monitor(*args):
