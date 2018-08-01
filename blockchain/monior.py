@@ -211,14 +211,14 @@ class WebSocketConnection(object):
             LOG.info('Handle message<{}> failed'.format(message_type))
             return
 
-        channel_event = self.__event_ready_queue.get(channel_id)
+        channel_event = self.__event_monitor_queue.get(channel_id)
         if not channel_event:
             LOG.error('No event for channel<{}>.'.format(channel_id))
             return
         channel_event.terminate()
 
         # remove from the queue
-        self.__event_ready_queue.pop(channel_id)
+        self.__event_monitor_queue.pop(channel_id)
 
     def pre_execution(self):
         try:
