@@ -129,13 +129,17 @@ class WebSocketConnection(object):
         self.send(json.dumps(payload))
 
     def create_connection(self):
-        self._conn = create_connection(self.__ws_url,
-                                       sockopt=((socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1),
-                                                (socket.IPPROTO_TCP, socket.TCP_NODELAY, 1),),
-                                       timeout=self.timeout)
-        if self.wallet_address:
-            self.notify_wallet_info()
-            pass
+        try:
+            self._conn = create_connection(self.__ws_url,
+                                           sockopt=((socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1),
+                                                    (socket.IPPROTO_TCP, socket.TCP_NODELAY, 1),),
+                                           timeout=self.timeout)
+        except Exception as error:
+            LOG.error('Connect to server error. {}'.format(error))
+        else:
+            if self.wallet_address:
+                self.notify_wallet_info()
+                pass
 
     def send(self, payload):
         try:
