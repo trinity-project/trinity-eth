@@ -275,10 +275,13 @@ class Channel(object):
     def quick_close(wallet, channel_name):
         channel = Channel.channel(channel_name)
 
-        if channel.channel_set:
-            mg.SettleMessage.create(wallet, channel_name, channel.src_addr, channel.dest_addr, 'TNC')
-        else:
-            LOG.error('Could not close channel<{}> since channel not found.'.format(channel_name))
+        try:
+            if channel.channel_set:
+                mg.SettleMessage.create(wallet, channel_name, channel.src_addr, channel.dest_addr, 'TNC')
+            else:
+                LOG.error('Could not close channel<{}> since channel not found.'.format(channel_name))
+        except Exception as error:
+            LOG.error('Could not close channel. error: {}.'.format(error))
 
         return
 
@@ -286,8 +289,8 @@ class Channel(object):
     def _eth_interface():
         if not Channel._interface:
             Channel._interface = EthInterface(settings.NODEURL,
-                                                         settings.Eth_Contract_address, settings.Eth_Contract_abi,
-                                                         settings.TNC, settings.TNC_abi)
+                                             settings.Eth_Contract_address, settings.Eth_Contract_abi,
+                                             settings.TNC, settings.TNC_abi)
 
         return Channel._interface
 
@@ -318,33 +321,47 @@ class Channel(object):
     @staticmethod
     def approve(address, deposit, private_key):
         approved_asset = Channel.get_approved_asset(address)
-        if float(approved_asset) < float(deposit):
-            Channel._eth_interface().approve(address, Channel.multiply(deposit), private_key)
-        else:
-            LOG.info('Has been approved asset count: {}'.format(approved_asset))
+        try:
+            if float(approved_asset) < float(deposit):
+                Channel._eth_interface().approve(address, Channel.multiply(deposit), private_key)
+            else:
+                LOG.info('Has been approved asset count: {}'.format(approved_asset))
+        except Exception as error:
+            LOG.error('approve error: {}'.format(error))
 
     @staticmethod
     def get_approved_asset(address):
-        return Channel._eth_interface().get_approved_asset(settings.TNC,
-                                                                      settings.TNC_abi,
-                                                                      address,
-                                                                      settings.Eth_Contract_address)
+        try:
+            return Channel._eth_interface().get_approved_asset(settings.TNC,
+                                                                          settings.TNC_abi,
+                                                                          address,
+                                                                          settings.Eth_Contract_address)
+        except Exception as error:
+            LOG.error('approve_deposit error: {}'.format(error))
+            return 0
 
     @staticmethod
     def approve_deposit(address, channel_id, nonce, founder, founder_amount, partner, partner_amount,
                 founder_sign, partner_sign, private_key):
-        Channel._eth_interface().deposit(address,channel_id, nonce,
-                                         founder, Channel.multiply(founder_amount),
-                                         partner, Channel.multiply(partner_amount),
-                                         founder_sign, partner_sign, private_key)
+        try:
+            Channel._eth_interface().deposit(address,channel_id, nonce,
+                                             founder, Channel.multiply(founder_amount),
+                                             partner, Channel.multiply(partner_amount),
+                                             founder_sign, partner_sign, private_key)
+        except Exception as error:
+            LOG.error('approve_deposit error: {}'.format(error))
 
     @staticmethod
     def quick_settle(invoker, channel_id, nonce, founder, founder_balance,
                      partner, partner_balance, founder_signature, partner_signature, invoker_key):
-        Channel._eth_interface().quick_close_channel(invoker, channel_id, nonce,
-                                                     founder, Channel.multiply(founder_balance),
-                                                     partner, Channel.multiply(partner_balance),
-                                                     founder_signature, partner_signature, invoker_key)
+
+        try:
+            Channel._eth_interface().quick_close_channel(invoker, channel_id, nonce,
+                                                         founder, Channel.multiply(founder_balance),
+                                                         partner, Channel.multiply(partner_balance),
+                                                         founder_signature, partner_signature, invoker_key)
+        except Exception as error:
+            LOG.error('quick_settle error: {}'.format(error))
 
     @staticmethod
     def multiply(asset_count):
