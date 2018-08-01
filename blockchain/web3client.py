@@ -151,10 +151,10 @@ class Client(object):
         return contract.functions[method](*args).call()
 
 
-    def contruct_Transaction(self, invoker, contract, method, args, key, gasLimit=4600000):
+    def contruct_Transaction(self, invoker, contract, method, args, key, gasLimit=6000000):
         tx_dict = contract.functions[method](*args).buildTransaction({
             "gas": gasLimit,
-            'gasPrice': self.web3.eth.gasPrice*100,
+            'gasPrice': self.web3.eth.gasPrice*10,
             'nonce': self.web3.eth.getTransactionCount(checksum_encode(invoker)),
         })
         signed = self.web3.eth.account.signTransaction(tx_dict, key)
