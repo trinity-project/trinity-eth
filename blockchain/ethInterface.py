@@ -6,7 +6,7 @@ from ethereum.utils import checksum_encode, ecrecover_to_pub,safe_ord
 from eth_hash.backends.pysha3 import keccak256
 import binascii
 from web3 import Web3
-from .web3client import Client
+from web3client import Client
 
 
 class Interface(object):
@@ -46,9 +46,16 @@ class Interface(object):
         :param invoker_key: sender's key
         :return: transaction id
         """
-        tx_id = self.eth_client.contruct_Transaction(invoker, self.asset_contract, "approve", [self.contract_address, asset_amount], invoker_key)
+        try:
+            tx_id = self.eth_client.contruct_Transaction(invoker, self.asset_contract, "approve", [self.contract_address, asset_amount], invoker_key)
+            tx_msg = 'success'
+        except Exception as e:
+            tx_id = 'none'
+            tx_msg = e
+
         return {
-            "txData":tx_id
+            "txData":tx_id,
+            "txMessage":tx_msg
         }
 
     def get_approved_asset(self, contract_address, abi, approver, spender):
@@ -70,9 +77,17 @@ class Interface(object):
         :param invoker_key: sender's key
         :return: transaction id
         """
-        tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "setSettleTimeout", [timeout], invoker_key)
+        try:
+            tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "setSettleTimeout", [timeout], invoker_key)
+            tx_msg = 'success'
+
+        except Exception as e:
+            tx_id = 'none'
+            tx_msg = e
+
         return {
-            "txData":tx_id
+            "txData":tx_id,
+            "txMessage":tx_msg
         }
 
     def set_token(self, invoker, token_address, invoker_key):
@@ -83,9 +98,17 @@ class Interface(object):
         :param invoker_key: sender's key
         :return: transaction id
         """
-        tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "setToken", [token_address], invoker_key)
+        try:
+            tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "setToken", [token_address], invoker_key)
+            tx_msg = 'success'
+
+        except Exception as e:
+            tx_id = 'none'
+            tx_msg = e
+
         return {
-            "txData":tx_id
+            "txData":tx_id,
+            "txMessage":tx_msg
         }     
     
     def deposit(self, invoker, channel_id, nonce, founder, founder_amount,
@@ -106,13 +129,20 @@ class Interface(object):
         """
         founder = checksum_encode(founder)
         partner = checksum_encode(partner)
-        tx_id = self.eth_client.contruct_Transaction(invoker, self.contract,"deposit",
-                                                     [channel_id, nonce,
-                                                      founder, founder_amount,
-                                                      partner, partner_amount,
-                                                      founder_signature, partner_signature], invoker_key)
+        try:
+            tx_id = self.eth_client.contruct_Transaction(invoker, self.contract,"deposit",
+                                                         [channel_id, nonce,
+                                                         founder, founder_amount,
+                                                         partner, partner_amount,
+                                                         founder_signature, partner_signature], invoker_key)
+            tx_msg = 'success'
+        except Exception as e:
+            tx_id = 'none'
+            tx_msg = e
+
         return {
-            "txData":tx_id
+            "txData":tx_id,
+            "txMessage":tx_msg
         }
 
     def update_deposit(self, invoker, channel_id, nonce, founder, founder_amount,
@@ -122,14 +152,21 @@ class Interface(object):
         :param meaning reference "deposit"
         """
         founder = checksum_encode(founder)
-        partner = checksum_encode(partner)    
-        tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "updateDeposit",
-                                                     [channel_id, nonce,
-                                                      founder, founder_amount,
-                                                      partner, partner_amount,
-                                                      founder_signature, partner_signature], invoker_key)
+        partner = checksum_encode(partner)
+        try:
+            tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "updateDeposit",
+                                                         [channel_id, nonce,
+                                                         founder, founder_amount,
+                                                         partner, partner_amount,
+                                                         founder_signature, partner_signature], invoker_key)
+            tx_msg = 'success'
+        except Exception as e:
+            tx_id = 'none'
+            tx_msg = e
+
         return {
-            "txData":tx_id
+            "txData":tx_id,
+            "txMessage":tx_msg
         }
 
     def quick_close_channel(self, invoker, channel_id, nonce, founder, founder_balance,
@@ -150,13 +187,20 @@ class Interface(object):
         """
         founder = checksum_encode(founder)
         partner = checksum_encode(partner)
-        tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "quickCloseChannel",
-                                                     [channel_id, nonce,
-                                                      founder, founder_balance,
-                                                      partner, partner_balance,
-                                                      founder_signature, partner_signature], invoker_key)
+        try:
+            tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "quickCloseChannel",
+                                                         [channel_id, nonce,
+                                                         founder, founder_balance,
+                                                         partner, partner_balance,
+                                                         founder_signature, partner_signature], invoker_key)
+            tx_msg = 'success'
+        except Exception as e:
+            tx_id = 'none'
+            tx_msg = e
+
         return {
-            "txData":tx_id
+            "txData":tx_id,
+            "txMessage":tx_msg
         }
 
     def close_channel(self, invoker, channel_id, nonce, founder, founder_balance,
@@ -167,13 +211,20 @@ class Interface(object):
         """
         founder = checksum_encode(founder)
         partner = checksum_encode(partner)
-        tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "closeChannel",
-                                                     [channel_id, nonce,
-                                                      founder, founder_balance,
-                                                      partner, partner_balance,
-                                                      founder_signature, partner_signature],invoker_key)
+        try:
+            tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "closeChannel",
+                                                         [channel_id, nonce,
+                                                         founder, founder_balance,
+                                                         partner, partner_balance,
+                                                         founder_signature, partner_signature],invoker_key)
+            tx_msg = 'success'
+        except Exception as e:
+            tx_id = 'none'
+            tx_msg = e
+
         return {
-            "txData":tx_id
+            "txData":tx_id,
+            "txMessage":tx_msg
         }
 
     def update_transaction(self, invoker, channel_id, nonce, founder, founder_balance,
@@ -184,13 +235,20 @@ class Interface(object):
         """
         founder = checksum_encode(founder)
         partner = checksum_encode(partner)
-        tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "updateTransaction",
-                                                    [channel_id, nonce,
-                                                     founder, founder_balance,
-                                                     partner, partner_balance,
-                                                     founder_signature, partner_signature],invoker_key)
+        try:
+            tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "updateTransaction",
+                                                        [channel_id, nonce,
+                                                         founder, founder_balance,
+                                                         partner, partner_balance,
+                                                         founder_signature, partner_signature],invoker_key)
+            tx_msg = 'success'
+        except Exception as e:
+            tx_id = 'none'
+            tx_msg = e
+
         return {
-            "txData":tx_id
+            "txData":tx_id,
+            "txMessage":tx_msg
         }
 
     def settle_transaction(self, invoker, channel_id, invoker_key):
@@ -201,10 +259,17 @@ class Interface(object):
         :param invoker_key: shutter's key
         :return: transaction id
         """
-        tx_id = self.eth_client.contruct_Transaction(invoker, self.contract,"settleTransaction",
-                                                     [channel_id], invoker_key)
+        try:
+            tx_id = self.eth_client.contruct_Transaction(invoker, self.contract,"settleTransaction",
+                                                         [channel_id], invoker_key)
+            tx_msg = 'success'
+        except Exception as e:
+            tx_id = 'none'
+            tx_msg = e
+
         return {
-            "txData":tx_id
+            "txData":tx_id,
+            "txMessage":tx_msg
         }
 
     def withdraw(self, invoker, channel_id, nonce, founder, partner, lockPeriod, lock_amount, lock_hash,
@@ -227,12 +292,19 @@ class Interface(object):
         """
         founder = checksum_encode(founder)
         partner = checksum_encode(partner)
-        tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "withdraw",
-                                                     [channel_id, nonce, founder, partner,
-                                                      lockPeriod, lock_amount, lock_hash,
-                                                      founder_signature, partner_signature, secret],invoker_key)
+        try:
+            tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "withdraw",
+                                                          [channel_id, nonce, founder, partner,
+                                                          lockPeriod, lock_amount, lock_hash,
+                                                          founder_signature, partner_signature, secret],invoker_key)
+            tx_msg = 'success'
+        except Exception as e:
+            tx_id = 'none'
+            tx_msg = e
+
         return {
-            "txData":tx_id
+            "txData":tx_id,
+            "txMessage":tx_msg
         }
 
     def withdraw_update(self, invoker, channel_id, nonce, founder, partner, lock_period, lock_amount, lock_hash,
@@ -243,12 +315,19 @@ class Interface(object):
         """
         founder = checksum_encode(founder)
         partner = checksum_encode(partner)
-        tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "withdrawUpdate",
-                                                     [channel_id, nonce, founder, partner,
-                                                      lock_period, lock_amount, lock_hash,
-                                                      founder_signature, partner_signature], invoker_key)
+        try:
+            tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "withdrawUpdate",
+                                                          [channel_id, nonce, founder, partner,
+                                                          lock_period, lock_amount, lock_hash,
+                                                          founder_signature, partner_signature], invoker_key)
+            tx_msg = 'success'
+        except Exception as e:
+            tx_id = 'none'
+            tx_msg = e
+
         return {
-            "txData":tx_id
+            "txData":tx_id,
+            "txMessage":tx_msg
         }
 
     def withdraw_settle(self, invoker, channel_id, nonce, founder, partner, lock_period, lock_amount, lock_hash,
@@ -259,12 +338,19 @@ class Interface(object):
         """
         founder = checksum_encode(founder)
         partner = checksum_encode(partner)
-        tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "withdrawSettle",
-                                                     [channel_id, nonce, founder, partner,
-                                                      lock_period, lock_amount, lock_hash,
-                                                      founder_signature, partner_signature, secret], invoker_key)
+        try:
+            tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "withdrawSettle",
+                                                          [channel_id, nonce, founder, partner,
+                                                          lock_period, lock_amount, lock_hash,
+                                                          founder_signature, partner_signature, secret], invoker_key)
+            tx_msg = 'success'
+        except Exception as e:
+            tx_id = 'none'
+            tx_msg = e
+
         return {
-            "txData":tx_id
+            "txData":tx_id,
+            "txMessage":tx_msg
         }    
 
     def get_channel_total(self):
@@ -287,3 +373,6 @@ class Interface(object):
         return {
             "channelInfo": channel_info
         }
+
+    def sign_args(self,typeList, valueList, privtKey):
+        return self.eth_client.sign_args(typeList, valueList, privtKey)
