@@ -136,21 +136,6 @@ def event_monitor_quick_close_channel(channel_id, asset_type='TNC', comments={})
 
 
 @eth_websocket
-def event_monitor_quick_close_channel(channel_id, asset_type='TNC', comments={}):
-    assert channel_id, 'Invalid tx_id<{}>.'.format(channel_id)
-    assert asset_type, 'Invalid asset_type <{}>.'.format(asset_type)
-
-    payload = {
-        'messageType':'monitorCloseChannel',
-        'chainType': asset_type.upper(),
-        'playload': channel_id,
-        'comments': comments
-    }
-
-    return payload
-
-
-@eth_websocket
 def event_monitor_close_channel(channel_id, asset_type='TNC', comments={}):
     assert channel_id, 'Invalid tx_id<{}>.'.format(channel_id)
     assert asset_type, 'Invalid asset_type <{}>.'.format(asset_type)
