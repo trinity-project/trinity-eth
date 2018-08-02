@@ -6,7 +6,7 @@ from ethereum.utils import checksum_encode, ecrecover_to_pub,safe_ord
 from eth_hash.backends.pysha3 import keccak256
 import binascii
 from web3 import Web3
-from web3client import Client
+from .web3client import Client
 
 
 class Interface(object):
@@ -373,6 +373,3 @@ class Interface(object):
         return {
             "channelInfo": channel_info
         }
-
-    def sign_args(self,typeList, valueList, privtKey):
-        return self.eth_client.sign_args(typeList, valueList, privtKey)
