@@ -92,6 +92,13 @@ def join_gateway(publickey):
     return result.json()
 
 
+def get_gw_bytes_encoding():
+    """
+    get gateway encoding method
+    :return: string
+    """
+    return "utf-8"
+
 def get_router_info(message):
     request = {
         "jsonrpc": "2.0",

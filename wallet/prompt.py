@@ -8,6 +8,7 @@ sys.path.append(pythonpath)
 import argparse
 import json
 import traceback
+import signal
 from prompt_toolkit import prompt
 from prompt_toolkit.shortcuts import print_tokens
 from prompt_toolkit.token import Token
@@ -530,12 +531,25 @@ def main():
     else:
         settings.setup_testnet()
 
-
     UserPrompt = UserPromptInterface()
-    api_server_rpc = RpcInteraceApi("20556")
-    endpoint_rpc = "tcp:port={0}:interface={1}".format("20556", "0.0.0.0")
-    endpoints.serverFromString(reactor, endpoint_rpc).listen(Site(api_server_rpc.app.resource()))
+    port = Configure.get("NetPort")
+    address = Configure.get("RpcListenAddress")
+    port = port if port else "20556"
+    address = address if address else "0.0.0.0"
+    api_server_rpc = RpcInteraceApi(port)
+    endpoint_rpc = "tcp:port={0}:interface={1}".format(port, address)
+    d = endpoints.serverFromString(reactor, endpoint_rpc).listen(Site(api_server_rpc.app.resource()))
 
+    @d.addErrback
+    def sys_exit(f):
+
+        print("Setup jsonRpc server error, please check if the port {} already opend".format(port))
+        os.kill(os.getpgid(), signal.SIGKILL)
+
+    from wallet.Interface.tcp import GatwayClientFactory
+    gateway_ip, gateway_port = Configure.get("GatewayTCP").split(":")
+    f = GatwayClientFactory()
+    reactor.connectTCP(gateway_ip.strip(), int(gateway_port.strip()), f)
 
     reactor.suggestThreadPoolSize(15)
     reactor.callInThread(UserPrompt.run)

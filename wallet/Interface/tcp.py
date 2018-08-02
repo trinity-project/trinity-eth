@@ -24,26 +24,28 @@ SOFTWARE."""
 
 
 from twisted.internet import reactor, protocol
-from wallet.TransactionManagement.message import Message
-from wallet.BlockChain.monior import Monitor
 from wallet.configure import Configure
-from wallet.Interface.gate_way import join_gateway
+from wallet.Interface.gate_way import join_gateway,get_gw_bytes_encoding
 from wallet.Interface.rpc_interface import CurrentLiveWallet
 from log import LOG
 
 
 class GatwayClientProtocol(protocol.Protocol):
-    """Once connected, send a message, then print the result."""
+    """
+    Once connected, send a message
+    """
     printlog = True
 
     def connectionMade(self):
+        """
+        once the connection made send the gateway info
+        """
+
         message = {
                    "MessageType": "RegisterKeepAlive",
-                   "IP":          "{}:{}".format(Configure.get("NetAddress"),Configure.get("NetPort"))
+                   "Ip":          "{}:{}".format(Configure.get("NetAddress"),Configure.get("NetPort"))
                   }
         self.transport.write(encode_bytes(message))
-        Message.Connection = True
-        Monitor.BlockPause = False
         if CurrentLiveWallet.Wallet:
             join_gateway(CurrentLiveWallet.Wallet.pubkey)
         else:
@@ -51,23 +53,37 @@ class GatwayClientProtocol(protocol.Protocol):
         print("Connect the Gateway")
         GatwayClientProtocol.printlog = True
 
-    def senddata(self, message):
+    def datesend(self, message):
+        """
+        sendate
+        :param message:
+        :return:
+        """
         self.transport.write(message.encode())
 
 
 
 class GatwayClientFactory(protocol.ClientFactory):
+    """
+
+    """
+
     protocol = GatwayClientProtocol
 
 
     def _handle_connection_lose(self, connector):
-        Message.Connection = False
-        Monitor.BlockPause = True
         connector.connect()
         GatwayClientProtocol.printlog=False
 
 
     def clientConnectionLost(self, connector, reason):
+        """
+        connection lost
+
+        :param connector:
+        :param reason:
+        :return:
+        """
         if GatwayClientProtocol.printlog:
             print('Lost Gateway')
             LOG.error(reason)
@@ -76,6 +92,13 @@ class GatwayClientFactory(protocol.ClientFactory):
 
 
     def clientConnectionFailed(self, connector, reason):
+        """
+        connection failed
+        :param connector:
+        :param reason:
+        :return:
+        """
+
         if GatwayClientProtocol.printlog:
             print('Can Not connect Gateway, Please Check the gateway')
             LOG.error(reason)
@@ -85,12 +108,14 @@ class GatwayClientFactory(protocol.ClientFactory):
 
 def encode_bytes(data):
     """
-    encode python obj to bytes data\n
-    :return: bytes type
+    encode the data as gateway used
+    :param data:
+    :return:
     """
     import json
     import struct
-    from gateway.config import cg_bytes_encoding
+
+    cg_bytes_encoding = get_gw_bytes_encoding()
     if type(data) != str:
         data = json.dumps(data)
     # data = _add_end_mark(data)
