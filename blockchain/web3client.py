@@ -164,6 +164,10 @@ class Client(object):
 
         return binascii.hexlify(tx_id).decode()
 
+    def get_transaction_receipt(self,hashString):
+        return self.web3.eth.getTransactionReceipt(hashString)
+
+
 '''
 if __name__ == "__main__":
     myclient = Client("https://ropsten.infura.io")

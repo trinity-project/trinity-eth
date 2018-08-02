@@ -373,3 +373,26 @@ class Interface(object):
         return {
             "channelInfo": channel_info
         }
+
+    def get_transaction_receipt(self, hashString):
+        """
+        :param hashString: transaction tx id, the id must is string begin with '0x'
+        :return: None -- if the transaction is pending status
+                 Object - if the transaction have been confirmed.
+                 example:
+                        {
+                        'blockHash': HexBytes('0xxx'),
+                        'blockNumber': 3756035,
+                        'contractAddress': None,
+                        'cumulativeGasUsed': 1901159,
+                        'from': '0xxx',
+                        'gasUsed': 51240,
+                        'logs': [],
+                        'logsBloom': HexBytes('0xxx'),
+                        'status': 0,
+                        'to': '0xxx',
+                        'transactionHash': HexBytes('0xxxx'),
+                        'transactionIndex': 9
+                        }
+        """
+        return self.eth_client.get_transaction_receipt(hashString)
