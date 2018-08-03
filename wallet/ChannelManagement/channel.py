@@ -229,20 +229,20 @@ class Channel(object):
 
     @staticmethod
     def add_trade(channel_name, **kwargs):
-        return APITransaction('trade'+channel_name).add_transaction(**kwargs)
+        return APITransaction('transaction'+channel_name).add_transaction(**kwargs)
 
     @staticmethod
     def update_trade(channel_name, nonce, **kwargs):
-        return APITransaction('trade'+channel_name).update_transaction(nonce, **kwargs)
+        return APITransaction('transaction'+channel_name).update_transaction(nonce, **kwargs)
 
     @staticmethod
     def query_trade(channel_name, nonce, *args, **kwargs):
-        return APITransaction('trade'+channel_name).query_transaction(nonce, *args, **kwargs)
+        return APITransaction('transaction'+channel_name).query_transaction(nonce, *args, **kwargs)
 
     @staticmethod
     def latest_trade(channel_name):
         try:
-            trade = APITransaction('trade' + channel_name).sort(key='nonce')[0]
+            trade = APITransaction('transaction' + channel_name).sort(key='nonce')[0]
         except Exception as error:
             LOG.error('No transaction records were found for channel<{}>. Exception: {}'.format(channel_name, error))
             return None

@@ -849,7 +849,7 @@ class RsmcMessage(TransactionMessage):
 
         channel = ch.Channel.channel(channel_name)
 
-        # get trade history
+        # get transaction history
         transaction = channel.latest_trade(channel_name)
         # get nonce in the offline account book
         if not transaction:
@@ -1109,7 +1109,7 @@ class RsmcResponsesMessage(TransactionMessage):
         """
         channel = ch.Channel.channel(channel_name)
 
-        # get trade history
+        # get transaction history
         transaction = channel.latest_trade(channel_name)
         # get nonce in the offline account book
         if not transaction:
@@ -1865,7 +1865,7 @@ class SettleResponseMessage(TransactionMessage):
         message.update({'Status': status.name})
         Message.send(message)
 
-        # add trade
+        # add transaction
         ch.Channel.add_trade(channel_name,
                              nonce = str(nonce),
                              type = EnumTradeType.TRADE_TYPE_SETTLE.value,
