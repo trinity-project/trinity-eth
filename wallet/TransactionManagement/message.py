@@ -172,8 +172,6 @@ class RegisterMessage(Message):
             
         founder_pubkey, founder_ip = self.sender.split("@")
         partner_pubkey, partner_ip = self.receiver.split("@")
-        founder_address = pubkey_to_address(founder_pubkey)
-        partner_address = pubkey_to_address(partner_pubkey)
         deposit = {}
         subitem = {}
         subitem.setdefault(self.asset_type, self.deposit)
@@ -823,6 +821,8 @@ class RsmcMessage(TransactionMessage):
 
         except Exception as error:
             LOG.error(error)
+            if cli:
+                print(error)
             return
 
     @staticmethod
@@ -1058,13 +1058,13 @@ class RsmcResponsesMessage(TransactionMessage):
         self.channel_name = message.get("ChannelName")
         self.channel = None
 
-        self.asset_type     = self.message_body.get("AssetType", '').upper()
-        self.payment_count  = self.message_body.get("PaymentCount")
+        self.asset_type = self.message_body.get("AssetType", '').upper()
+        self.payment_count = self.message_body.get("PaymentCount")
         self.sender_balance = self.message_body.get("SenderBalance")
         self.receiver_balance = self.message_body.get("ReceiverBalance")
         self.commitment = self.message_body.get('Commitment')
-        self.comments   = self.message.get("Comments")
-        self.status     = self.message.get('Status')
+        self.comments = self.message.get("Comments")
+        self.status = self.message.get('Status')
 
     def handle_message(self):
         self.handle()
@@ -1126,17 +1126,17 @@ class RsmcResponsesMessage(TransactionMessage):
             assert receiver.__contains__('@'), 'Invalid receiver<{}> URL format.'.format(receiver)
             assert balance, 'Void balance<{}> for asset <{}>.'.format(balance, asset_type)
 
-            sender_addr     = sender.strip().split('@')[0]
-            receiver_addr   = receiver.strip().split('@')[0]
-            asset_type      = asset_type.upper()
-            payment         = float(payment)
+            sender_addr = sender.strip().split('@')[0]
+            receiver_addr = receiver.strip().split('@')[0]
+            asset_type = asset_type.upper()
+            payment = float(payment)
 
             this_sender_balance = float(balance.get(sender_addr, {}).get(asset_type, 0))
             this_receiver_balance = float(balance.get(receiver_addr, {}).get(asset_type, 0))
 
             # calculate the balances of both
-            this_sender_balance      = this_sender_balance - payment
-            this_receiver_balance    = this_receiver_balance + payment
+            this_sender_balance = this_sender_balance - payment
+            this_receiver_balance = this_receiver_balance + payment
 
             assert (0 < this_sender_balance == float(sender_balance)), \
                 'Unmatched balance of sender<{}>, balance<{}:{}>, payment<{}>'.format(sender, sender_balance,

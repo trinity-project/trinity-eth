@@ -46,7 +46,7 @@ def get_block(index):
     return EthClient.get_block(index)
 
 
-def get_balance(address, asset_type, asset_alias=None, asset_abi=None):
+def get_balance(address, asset_type, asset_address=None, asset_abi=None):
     """
 
     :param address:
@@ -61,10 +61,7 @@ def get_balance(address, asset_type, asset_alias=None, asset_abi=None):
             return 0
     else:
         try:
-            # contract_address = TokenConfigure.get(asset_type.upper()).get("ContractAddress")
-            # abi = Configure.get(asset_type.upper()).get("ABI")
-            # contract = EthClient.get_contract_instance(contract_address, abi)
-            return EthClient.get_balance_of_erc20(asset_alias, asset_abi, address)
+            return EthClient.get_balance_of_erc20(asset_address, asset_abi, address)
         except Exception as e:
             LOG.error(e)
             return 0
