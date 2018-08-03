@@ -510,8 +510,6 @@ class UserPromptInterface(PromptInterface):
         return m_instance.handle_message()
 
 
-
-
 def main():
     parser = argparse.ArgumentParser()
     # Show the  version
@@ -542,9 +540,8 @@ def main():
 
     @d.addErrback
     def sys_exit(f):
-
-        print("Setup jsonRpc server error, please check if the port {} already opend".format(port))
-        os.kill(os.getpgid(), signal.SIGKILL)
+        print("Setup jsonRpc server error, please check if the port {} already opened".format(port))
+        os.kill(os.getpgid(os.getpid()), signal.SIGKILL)
 
     from wallet.Interface.tcp import GatwayClientFactory
     gateway_ip, gateway_port = Configure.get("GatewayTCP").split(":")
