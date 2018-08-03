@@ -28,9 +28,85 @@ import re
 import hashlib
 from common.log import LOG
 from lightwallet.Settings import settings
+import datetime
+import requests
 
 
-SupportAssetType = ["TNC", "ETH", "GAS"]
+class SupportAssetType(object):
+    """
+
+    """
+    SupportAssetType = ["TNC","ETH"]
+
+    @classmethod
+    def get_asset(cls, asset_type):
+        if asset_type.upper() == "ETH":
+            return "ETH", None
+        elif asset_type.upper() == "TNC":
+            return settings.TNC, settings.TNC_abi
+        else:
+            return None , None # ToDo
+
+
+class DepositAuth(object):
+    """
+    """
+    DefaultDeposit = 5000
+    LastGetTime = None
+    DateSource = "https://api.coinmarketcap.com/v2/ticker/2443/?convert=USD"
+
+    @classmethod
+    def query_depoist(cls):
+        """
+
+        :return:
+        """
+        try:
+            result = requests.get(cls.DateSource)
+            if not result.ok:
+                return None
+            return result.json()["data"]
+        except Exception as e:
+            LOG.error(str(e))
+            return None
+
+    @classmethod
+    def caculate_depoistusd(cls):
+        """
+
+        :return:
+        """
+        return 800*1.03**(abs((datetime.date.today()-datetime.date(2018,1,15)).days)//365)
+
+    @classmethod
+    def caculate_depoist(cls):
+        """
+
+        :return:
+        """
+
+        depoist_info = cls.query_depoist()
+        try:
+            tnc_price_usdt = depoist_info["quotes"]["USD"]["price"]
+            depoist_limit = int(cls.caculate_depoistusd()/tnc_price_usdt)
+            return depoist_limit if depoist_limit >0 else 1
+        except Exception as e:
+            LOG.error(str(e))
+            return cls.DefaultDeposit
+
+
+    @classmethod
+    def deposit_limit(cls):
+        """
+
+        :return:
+        """
+
+        deposit = cls.caculate_depoist()
+        cls.DefaultDeposit = deposit
+        cls.LastGetTime = datetime.date.today()
+
+        return cls.DefaultDeposit
 
 
 def to_aes_key(password):
@@ -44,16 +120,17 @@ def to_aes_key(password):
     return hashlib.sha256(password_hash).digest()
 
 
-def pubkey_to_address(publickey: str):
-    """
 
-    :param publickey:
-    :return:
-    """
-    script = b'21' + publickey.encode() + b'ac'
-    script_hash = Crypto.ToScriptHash(script)
-    address = Crypto.ToAddress(script_hash)
-    return address
+# def pubkey_to_address(publickey: str):
+#     """
+#
+#     :param publickey:
+#     :return:
+#     """
+#     script = b'21' + publickey.encode() + b'ac'
+#     script_hash = Crypto.ToScriptHash(script)
+#     address = Crypto.ToAddress(script_hash)
+#     return address
 
 
 def sign(wallet, context):
@@ -65,6 +142,7 @@ def sign(wallet, context):
     """
     res = wallet.SignContent(context)
     return res
+
 
 def get_arg(arguments, index=0, convert_to_int=False):
     """
@@ -116,7 +194,7 @@ def check_support_asset_type(asset_type):
     :param asset_type:
     :return:
     """
-    if asset_type.upper() in SupportAssetType:
+    if asset_type.upper() in SupportAssetType.SupportAssetType:
         return True
     else:
         return False
@@ -130,7 +208,8 @@ def check_onchain_balance(pubkey, asset_type, depoist):
     :param depoist:
     :return:
     """
-    balance = get_balance(pubkey, asset_type, settings.TNC, settings.TNC_abi)
+    asset_symbol, asset_abi = SupportAssetType.get_asset(asset_type)
+    balance = get_balance(pubkey, asset_type, asset_symbol, asset_abi)
     if float(depoist) <= float(balance):
         return True
     else:
@@ -228,8 +307,69 @@ def convert_float(number, decimals=8):
 
 
 def get_magic():
+    """
+    get the configured magic
+    :return:
+    """
     magic = Configure.get('Magic')
     return magic.get('Block').__str__() + magic.get('Trinity').__str__()
+
+
+def is_valid_deposit(asset_type, deposit, spv_wallet=False):
+    """
+
+    :param asset_type:
+    :param deposit:
+    :param spv_wallet:
+    :return:
+    """
+    if len(asset_type) >10:
+        asset_type = get_asset_type_name(asset_type)
+    else:
+        asset_type = asset_type.upper()
+
+    if not asset_type:
+        LOG.error('Must specified the asset type. Current value is None')
+        return False
+
+    if spv_wallet:
+        try:
+            max_deposit_configure = Configure.get("Channel").get(asset_type).get("CommitMaxDeposit")
+        except Exception as e:
+            LOG.warn(str(e))
+            max_deposit_configure = 0
+        try:
+            min_deposit_configure = Configure.get("Channel").get(asset_type.upper()).get("CommitMinDeposit")
+        except Exception as e:
+            LOG.warn(str(e))
+            min_deposit_configure = 0
+
+        max_deposit = convert_to_float(max_deposit_configure)
+        min_deposit = convert_to_float(min_deposit_configure)
+
+        if min_deposit > 0 and max_deposit > 0:
+            return min_deposit <= deposit <= max_deposit, None
+
+        elif 0 >= min_deposit:
+            LOG.warn('CommitMinDeposit is set as an illegal value<{}>.'.format(str(min_deposit)))
+            return deposit <= max_deposit, None
+        elif 0 >= max_deposit:
+            LOG.warn('CommitMaxDeposit is set as an illegal value<{}>.'.format(str(max_deposit)))
+            return deposit >= min_deposit, None
+    else:
+        if asset_type == "TNC":
+            deposit_l = DepositAuth.deposit_limit()
+            if deposit <= deposit_l:
+                return False, "Node wallet channel deposit should larger than {}, " \
+                              "but now is {}".format(str(deposit_l),str(deposit))
+        return True, None
+
+
+def convert_to_float(deposit):
+    try:
+        return float(deposit)
+    except Exception as error:
+        return 0
 
 
 if __name__ == "__main__":
