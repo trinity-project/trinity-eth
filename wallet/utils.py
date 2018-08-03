@@ -26,7 +26,7 @@ from wallet.configure import Configure
 from blockchain.interface import get_balance
 import re
 import hashlib
-from log.log import LOG
+from common.log import LOG
 from lightwallet.Settings import settings
 
 

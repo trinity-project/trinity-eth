@@ -24,7 +24,7 @@ SOFTWARE."""
 
 import requests
 from wallet.configure import Configure
-from log import LOG
+from common.log import LOG
 import json
 from wallet.utils import get_wallet_info
 

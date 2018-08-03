@@ -27,7 +27,7 @@ from enum import IntEnum
 
 # self modules import
 from wallet.utils import get_magic
-from log.log import LOG
+from common.log import LOG
 
 
 class EnumTransactionType(IntEnum):

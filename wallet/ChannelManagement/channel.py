@@ -30,7 +30,7 @@ from model.transaction_model import APITransaction
 from wallet.TransactionManagement import message as mg
 from wallet.utils import convert_number_auto
 from wallet.Interface.gate_way import sync_channel
-from log import LOG
+from common.log import LOG
 import json
 
 from blockchain.ethInterface import Interface as EthInterface
@@ -152,10 +152,11 @@ class Channel(object):
         return APIChannel.add_channel(**kwargs)
 
     def __new_channel(self):
+        timestamp = time.time().__str__().encode()
         md5_part1 = hashlib.md5(self.founder.encode())
-        md5_part1.update(str(time.time()).encode())
+        md5_part1.update(timestamp)
         md5_part2 = hashlib.md5(self.partner.encode())
-        md5_part2.update(str(time.time()).encode())
+        md5_part2.update(timestamp)
 
         return '0x' + md5_part1.hexdigest().lower() + md5_part2.hexdigest().lower()
 

@@ -27,7 +27,7 @@ from twisted.internet import reactor, protocol
 from wallet.configure import Configure
 from wallet.Interface.gate_way import join_gateway,get_gw_bytes_encoding
 from wallet.Interface.rpc_interface import CurrentLiveWallet
-from log import LOG
+from common.log import LOG
 
 
 class GatwayClientProtocol(protocol.Protocol):

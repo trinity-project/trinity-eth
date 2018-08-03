@@ -13,7 +13,7 @@ from prompt_toolkit import prompt
 from prompt_toolkit.shortcuts import print_tokens
 from prompt_toolkit.token import Token
 from twisted.internet import reactor, endpoints
-from log import LOG
+from common.log import LOG
 from lightwallet.Settings import settings
 from wallet.utils import get_arg, \
     get_asset_type_name,\

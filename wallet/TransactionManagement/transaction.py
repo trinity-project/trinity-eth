@@ -29,7 +29,7 @@ SOFTWARE."""
 import os
 import pickle
 from wallet.utils import sign
-from log import LOG
+from common.log import LOG
 import json
 from model.transaction_model import APITransaction,TBLTransaction
 from lightwallet.Settings import settings

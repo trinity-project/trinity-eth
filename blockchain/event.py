@@ -25,7 +25,7 @@ SOFTWARE."""
 import json
 
 from .monior import ws_instance
-from log.log import LOG
+from common.log import LOG
 
 
 def eth_websocket(callback):

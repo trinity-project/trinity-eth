@@ -23,7 +23,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 from .web3client import Client
 from wallet.configure import Configure
-from log import LOG
+from common.log import LOG
 from tokenconf import TokenConfigure
 
 

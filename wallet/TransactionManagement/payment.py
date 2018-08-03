@@ -23,7 +23,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 import base58
 from wallet.configure import Configure
-from log import LOG
+from common.log import LOG
 import json
 import binascii
 import hashlib

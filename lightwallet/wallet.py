@@ -34,7 +34,7 @@ from lightwallet.Settings import settings
 from ethereum.utils import checksum_encode
 from model.history_model import APIHistory
 import time
-from log import LOG
+from common.log import LOG
 
 
 class Wallet(object):

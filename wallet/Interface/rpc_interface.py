@@ -28,7 +28,7 @@ from klein import Klein
 from wallet.Interface.rpc_utils import json_response, cors_header
 from wallet.ChannelManagement.channel import get_channel_via_name, close_channel, udpate_channel_when_setup
 from wallet.TransactionManagement import transaction, message
-from log import LOG
+from common.log import LOG
 from wallet.configure import Configure
 from blockchain.interface import get_balance
 

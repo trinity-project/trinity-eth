@@ -40,7 +40,7 @@ from blockchain.monior import register_block, \
 from blockchain.ethInterface import Interface as EthInterface
 from blockchain.web3client import Client as EthWebClient
 from model import APIChannel
-from log import LOG
+from common.log import LOG
 import json
 from wallet.TransactionManagement.payment import Payment
 from enum import IntEnum
@@ -566,20 +566,18 @@ class FounderMessage(TransactionMessage):
 
 class FounderResponsesMessage(TransactionMessage):
     """
-    { "MessageType":"FounderSign",
-      "Sender": self.receiver,
-      "Receiver":self.sender,
-      "TxNonce": 0,
-      "ChannelName":"090A8E08E0358305035709403",
-      "MessageBody": {"founder": self.founder,
-                   "Commitment":self.commitment,
-                   "RevocableDelivery":self.revocabledelivery,
-                   "AssetType": self.asset_type.upper(),
-                    "Deposit": self.deposit,
-                    "RoleIndex": role_index,
-                    "Comments"："retry"
-
+    {
+        "MessageType": "FounderSign",
+        "Sender": partner,
+        "Receiver": founder,
+        "TxNonce": 0,
+        "ChannelName": channel_name,
+        "NetMagic": magic
+        "MessageBody": {
+                        "Commitment": commitment,
+                        "AssetType": asset_type
                     }
+        "Status": status
     }
     """
     def __init__(self, message, wallet):
@@ -753,20 +751,21 @@ class FounderResponsesMessage(TransactionMessage):
 
 class RsmcMessage(TransactionMessage):
     """
-    { "MessageType":"Rsmc",
-    "Sender": "9090909090909090909090909@127.0.0.1:20553",
-    "Receiver":"101010101001001010100101@127.0.0.1:20552",
-    "TxNonce": 1,
-    "ChannelName":"902ae9090232048575",
-    "MessageBody": {
-            "Commitment":"",
-            "RevocableDelivery":"",
-            "BreachRemedy":"",
-            "Value":"",
-            "AssetType":"TNC",
-            "RoleIndex":0,
-            "Comments":None
+    {
+        "MessageType":"Rsmc",
+        "Sender": sender,
+        "Receiver": receiver,
+        "TxNonce": nonce,
+        "ChannelName":channel_name,
+        "NetMagic": RsmcMessage.get_magic(),
+        "MessageBody": {
+            "AssetType":asset_type.upper(),
+            "PaymentCount": payment,
+            "SenderBalance": sender_balance,
+            "ReceiverBalance": receiver_balance,
+            "Commitment": commitment,
         }
+        "comments": {}
     }
     """
 
@@ -1036,16 +1035,22 @@ class RsmcMessage(TransactionMessage):
 
 class RsmcResponsesMessage(TransactionMessage):
     """
-    { "MessageType":"RsmcSign",
-      "Sender": self.receiver,
-      "Receiver":self.sender,
-      "TxNonce": 0,
-      "ChannelName":"090A8E08E0358305035709403",
-      "MessageBody": {
-                   "Commitment":{}
-                   "RevocableDelivery":"
-                   "BreachRemedy":""
-                    }
+    message = {
+        "MessageType":"RsmcSign",
+        "Sender": receiver,
+        "Receiver": sender,
+        "TxNonce": nonce,
+        "ChannelName":channel_name,
+        "NetMagic": RsmcMessage.get_magic(),
+        "MessageBody": {
+            "AssetType":asset_type.upper(),
+            "PaymentCount": payment,
+            "SenderBalance": this_receiver_balance,
+            "ReceiverBalance": this_sender_balance,
+            "Commitment": commitment,
+        }
+        "Comments": {},
+        "Status":
     }
     """
     def __init__(self, message, wallet):

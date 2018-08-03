@@ -24,7 +24,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 from .manager import DBManager, rpc_response, connection_singleton
 from .base_enum import EnumAssetType, EnumChannelState
-from log import LOG
+from common.log import LOG
 
 
 class TBLChannel(DBManager):

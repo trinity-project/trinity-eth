@@ -27,8 +27,8 @@ import socket
 import time
 import json
 
-from blockchain.interface import get_block_count, get_block
-from log.log import LOG
+from blockchain.interface import get_block_count
+from common.log import LOG
 
 
 WS_SERVER_CONFIG = {'ip': '47.104.81.20', 'port': 9000}
