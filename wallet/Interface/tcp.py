@@ -53,7 +53,7 @@ class GatwayClientProtocol(protocol.Protocol):
         print("Connect the Gateway")
         GatwayClientProtocol.printlog = True
 
-    def datesend(self, message):
+    def datasend(self, message):
         """
         sendate
         :param message:
