@@ -49,10 +49,10 @@ class CurrentLiveWallet(object):
             return None
         balance = {}
         for i in Configure["AssetType"].keys():
-            b = get_balance(cls.Wallet.pubkey, i.upper())
+            b = get_balance(cls.Wallet.address, i.upper())
             balance[i] = b
         return {
-                   "Publickey":cls.Wallet.pubkey,
+                   "Publickey":cls.Wallet.address,
                    "CommitMinDeposit":Configure["CommitMinDeposit"],
                    "Fee":Configure["Fee"],
                    "alias":Configure["alias"],
