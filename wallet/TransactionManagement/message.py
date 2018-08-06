@@ -25,7 +25,7 @@ SOFTWARE."""
 #coding=utf-8
 
 from wallet.TransactionManagement.transaction import TrinityTransaction
-from wallet.utils import pubkey_to_address, get_asset_type_id
+from wallet.utils import get_asset_type_id
 from wallet.ChannelManagement import channel as ch
 from model.base_enum import EnumChannelState
 from wallet.Interface.gate_way import send_message
