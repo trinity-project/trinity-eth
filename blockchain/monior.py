@@ -325,34 +325,39 @@ def monitorblock():
     while EventMonitor.GoOn:
         blockheight_onchain = get_block_count()
         EventMonitor.update_block_height(blockheight_onchain)
-
         blockheight = EventMonitor.get_wallet_block_height()
-
         block_delta = int(blockheight_onchain) - int(blockheight)
 
         # execute prepare and action
         ws_instance.pre_execution()
         ucoro_event(event_coro, blockheight)
 
-        try:
-            if 0 < block_delta < 2010:
-                if EventMonitor.BlockPause:
-                    pass
+        end_time = time.time() + 15 # sleep 15 second according to the chain update block time
+        need_update = False
+        while True:
+            try:
+                if 0 < block_delta < 2010:
+                    if EventMonitor.BlockPause:
+                        pass
+                    else:
+                        blockheight += 1
+                        need_update = True
+                elif 2010 <= block_delta:
+                    # use magic number
+                    blockheight = int(blockheight_onchain) - 2000
+                    need_update = True
                 else:
-                    blockheight += 1
-            elif 0 < block_delta:
-                # use magic number
-                blockheight = int(blockheight_onchain) - 2000
-            else:
-                time.sleep(15)
-                continue
+                    need_update = False
 
-            # update
-            EventMonitor.update_wallet_block_height(blockheight)
-        except Exception as error:
-            pass
+                # update
+                if need_update:
+                    EventMonitor.update_wallet_block_height(blockheight)
+            except Exception as error:
+                pass
 
-        time.sleep(15)
+            time.sleep(0.5)
+            if time.time() - end_time <= 0.15:  # 150 ms
+                break
 
     # stop monitor
     ucoro_event(event_coro, 'exit')
