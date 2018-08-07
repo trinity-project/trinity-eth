@@ -398,7 +398,7 @@ class EnumEventAction(Enum):
     terminate_event = 'terminate'
 
 
-class EnumEventType(Enum):
+class EnumEventType(IntEnum):
     # both wallet are online
     EVENT_TYPE_DEPOSIT = 0x0
     EVENT_TYPE_RSMC = 0x04
@@ -411,6 +411,12 @@ class EnumEventType(Enum):
 
     # test event
     EVENT_TYPE_TEST_STATE = 0xE0
+
+
+class EnumEventStage(Enum):
+    EVENT_STAGE_PREPARE = 'prepare'
+    EVENT_STAGE_ACTION = 'action'
+    EVENT_STAGE_TERMINATE = 'terminate'
 
 
 class ChannelEvent(object):
@@ -426,6 +432,7 @@ class ChannelEvent(object):
         self.channel = Channel.channel(channel_name)
 
         self.event_is_ready = False
+        self.event_stage = EnumEventStage.EVENT_STAGE_PREPARE
         self.depend_on_prepare = False
         self.finish_preparation = False
         self.is_founder = True
@@ -456,6 +463,9 @@ class ChannelEvent(object):
     def terminate(self):
         LOG.debug('Start to execute terminate event')
         pass
+
+    def set_event_stage(self, stage = EnumEventStage.EVENT_STAGE_PREPARE):
+        self.event_stage = stage
 
 
 class ChannelTestEvent(ChannelEvent):
