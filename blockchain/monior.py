@@ -269,7 +269,7 @@ ws_instance = WebSocketConnection(WS_SERVER_CONFIG.get('ip'), WS_SERVER_CONFIG.g
 class EventMonitor(object):
     GoOn = True
     Wallet = None
-    Wallet_Change = None
+    Wallet_Change = False
     BlockHeight = None
     BlockPause = False
 
@@ -292,7 +292,9 @@ class EventMonitor(object):
     @classmethod
     def update_wallet_block_height(cls, height):
         if cls.Wallet_Change:
+            cls.Wallet_Change = False
             return None
+
         if cls.Wallet:
             cls.Wallet.BlockHeight=height
         else:
@@ -331,32 +333,26 @@ def monitorblock():
         # execute prepare and action
         ws_instance.pre_execution()
         ucoro_event(event_coro, blockheight)
-        # result = ws_instance.receive()
-        # if result:
-        #     ucoro_event(event_coro, result)
 
-        if 0 < block_delta:
-            try:
-                if block_delta < 2000:
-                    if EventMonitor.BlockPause:
-                        pass
-                    else:
-                        blockheight += 1
-                else:
-                    blockheight +=1000
+        try:
+            if 0 < block_delta < 2010:
+                if EventMonitor.BlockPause:
                     pass
-                EventMonitor.update_wallet_block_height(blockheight)
-            except Exception as e:
-                pass
-        else:
-            #LOG.debug("Not get the blockheight")
+                else:
+                    blockheight += 1
+            elif 0 < block_delta:
+                # use magic number
+                blockheight = int(blockheight_onchain) - 2000
+            else:
+                time.sleep(15)
+                continue
+
+            # update
+            EventMonitor.update_wallet_block_height(blockheight)
+        except Exception as error:
             pass
 
-        if blockheight < blockheight_onchain:
-            #time.sleep(0.1)
-            pass
-        else:
-            time.sleep(15)
+        time.sleep(15)
 
     # stop monitor
     ucoro_event(event_coro, 'exit')
