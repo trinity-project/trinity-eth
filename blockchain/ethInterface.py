@@ -396,3 +396,13 @@ class Interface(object):
                         }
         """
         return self.eth_client.get_transaction_receipt(hashString)
+
+    def get_channel_total_balance(self,channel_id):
+        """
+        Description: get specified channel total balance
+        :return: channel total balance
+        """
+        total_balance = self.eth_client.call_contract(self.contract,"getChannelBalance",[channel_id])
+        return {
+            "totalChannelBalance": total_balance
+        }
