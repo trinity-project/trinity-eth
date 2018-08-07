@@ -355,7 +355,7 @@ def monitorblock():
             except Exception as error:
                 pass
 
-            time.sleep(0.5)
+            time.sleep(0.1)
             if time.time() - end_time <= 0.15:  # 150 ms
                 break
 

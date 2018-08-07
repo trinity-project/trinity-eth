@@ -38,7 +38,7 @@ class Interface(object):
             self.contract=self.eth_client.get_contract_instance(contract_address,contract_abi)
             self.asset_contract=self.eth_client.get_contract_instance(asset_address,asset_abi)
 
-    def approve(self, invoker, asset_amount, invoker_key):
+    def approve(self, invoker, asset_amount, invoker_key, gwei_coef=1):
         """
         Description: the sender authorizes eth contract to spend the specified amount of assets on behalf of sender
         :param invoker: sender that trigger the transaction
@@ -47,7 +47,9 @@ class Interface(object):
         :return: transaction id
         """
         try:
-            tx_id = self.eth_client.contruct_Transaction(invoker, self.asset_contract, "approve", [self.contract_address, asset_amount], invoker_key)
+            tx_id = self.eth_client.contruct_Transaction(invoker, self.asset_contract, "approve",
+                                                         [self.contract_address, asset_amount],
+                                                         invoker_key, gwei_coef=gwei_coef)
             tx_msg = 'success'
         except Exception as e:
             tx_id = 'none'
@@ -112,7 +114,7 @@ class Interface(object):
         }     
     
     def deposit(self, invoker, channel_id, nonce, founder, founder_amount,
-                partner, partner_amount, founder_signature, partner_signature, invoker_key):
+                partner, partner_amount, founder_signature, partner_signature, invoker_key, gwei_coef=1):
         """
         Description: channel partners all transfer assets to eth contracts, the asset will be used as a credit endorsement.
         :param invoker: sender that trigger the transaction
@@ -134,7 +136,8 @@ class Interface(object):
                                                          [channel_id, nonce,
                                                          founder, founder_amount,
                                                          partner, partner_amount,
-                                                         founder_signature, partner_signature], invoker_key)
+                                                         founder_signature, partner_signature], invoker_key,
+                                                         gwei_coef=gwei_coef)
             tx_msg = 'success'
         except Exception as e:
             tx_id = 'none'
@@ -170,7 +173,7 @@ class Interface(object):
         }
 
     def quick_close_channel(self, invoker, channel_id, nonce, founder, founder_balance,
-                            partner, partner_balance, founder_signature, partner_signature, invoker_key):
+                            partner, partner_balance, founder_signature, partner_signature, invoker_key, gwei_coef=1):
         """
         Description: channel partners have agreed to dismantle the channel
         :param invoker: sender that trigger the transaction
@@ -192,7 +195,8 @@ class Interface(object):
                                                          [channel_id, nonce,
                                                          founder, founder_balance,
                                                          partner, partner_balance,
-                                                         founder_signature, partner_signature], invoker_key)
+                                                         founder_signature, partner_signature], invoker_key,
+                                                         gwei_coef=gwei_coef)
             tx_msg = 'success'
         except Exception as e:
             tx_id = 'none'
