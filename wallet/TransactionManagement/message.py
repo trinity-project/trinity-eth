@@ -25,7 +25,7 @@ SOFTWARE."""
 #coding=utf-8
 
 from wallet.TransactionManagement.transaction import TrinityTransaction
-from wallet.utils import pubkey_to_address, get_asset_type_id
+from wallet.utils import get_asset_type_id
 from wallet.ChannelManagement import channel as ch
 from model.base_enum import EnumChannelState
 from wallet.Interface.gate_way import send_message
@@ -40,7 +40,7 @@ from blockchain.monior import register_block, \
 from blockchain.ethInterface import Interface as EthInterface
 from blockchain.web3client import Client as EthWebClient
 from model import APIChannel
-from log import LOG
+from common.log import LOG
 import json
 from wallet.TransactionManagement.payment import Payment
 from enum import IntEnum
@@ -172,8 +172,6 @@ class RegisterMessage(Message):
             
         founder_pubkey, founder_ip = self.sender.split("@")
         partner_pubkey, partner_ip = self.receiver.split("@")
-        founder_address = pubkey_to_address(founder_pubkey)
-        partner_address = pubkey_to_address(partner_pubkey)
         deposit = {}
         subitem = {}
         subitem.setdefault(self.asset_type, self.deposit)
@@ -566,20 +564,18 @@ class FounderMessage(TransactionMessage):
 
 class FounderResponsesMessage(TransactionMessage):
     """
-    { "MessageType":"FounderSign",
-      "Sender": self.receiver,
-      "Receiver":self.sender,
-      "TxNonce": 0,
-      "ChannelName":"090A8E08E0358305035709403",
-      "MessageBody": {"founder": self.founder,
-                   "Commitment":self.commitment,
-                   "RevocableDelivery":self.revocabledelivery,
-                   "AssetType": self.asset_type.upper(),
-                    "Deposit": self.deposit,
-                    "RoleIndex": role_index,
-                    "Comments"："retry"
-
+    {
+        "MessageType": "FounderSign",
+        "Sender": partner,
+        "Receiver": founder,
+        "TxNonce": 0,
+        "ChannelName": channel_name,
+        "NetMagic": magic
+        "MessageBody": {
+                        "Commitment": commitment,
+                        "AssetType": asset_type
                     }
+        "Status": status
     }
     """
     def __init__(self, message, wallet):
@@ -753,20 +749,21 @@ class FounderResponsesMessage(TransactionMessage):
 
 class RsmcMessage(TransactionMessage):
     """
-    { "MessageType":"Rsmc",
-    "Sender": "9090909090909090909090909@127.0.0.1:20553",
-    "Receiver":"101010101001001010100101@127.0.0.1:20552",
-    "TxNonce": 1,
-    "ChannelName":"902ae9090232048575",
-    "MessageBody": {
-            "Commitment":"",
-            "RevocableDelivery":"",
-            "BreachRemedy":"",
-            "Value":"",
-            "AssetType":"TNC",
-            "RoleIndex":0,
-            "Comments":None
+    {
+        "MessageType":"Rsmc",
+        "Sender": sender,
+        "Receiver": receiver,
+        "TxNonce": nonce,
+        "ChannelName":channel_name,
+        "NetMagic": RsmcMessage.get_magic(),
+        "MessageBody": {
+            "AssetType":asset_type.upper(),
+            "PaymentCount": payment,
+            "SenderBalance": sender_balance,
+            "ReceiverBalance": receiver_balance,
+            "Commitment": commitment,
         }
+        "comments": {}
     }
     """
 
@@ -824,6 +821,8 @@ class RsmcMessage(TransactionMessage):
 
         except Exception as error:
             LOG.error(error)
+            if cli:
+                print(error)
             return
 
     @staticmethod
@@ -850,7 +849,7 @@ class RsmcMessage(TransactionMessage):
 
         channel = ch.Channel.channel(channel_name)
 
-        # get trade history
+        # get transaction history
         transaction = channel.latest_trade(channel_name)
         # get nonce in the offline account book
         if not transaction:
@@ -1036,16 +1035,22 @@ class RsmcMessage(TransactionMessage):
 
 class RsmcResponsesMessage(TransactionMessage):
     """
-    { "MessageType":"RsmcSign",
-      "Sender": self.receiver,
-      "Receiver":self.sender,
-      "TxNonce": 0,
-      "ChannelName":"090A8E08E0358305035709403",
-      "MessageBody": {
-                   "Commitment":{}
-                   "RevocableDelivery":"
-                   "BreachRemedy":""
-                    }
+    message = {
+        "MessageType":"RsmcSign",
+        "Sender": receiver,
+        "Receiver": sender,
+        "TxNonce": nonce,
+        "ChannelName":channel_name,
+        "NetMagic": RsmcMessage.get_magic(),
+        "MessageBody": {
+            "AssetType":asset_type.upper(),
+            "PaymentCount": payment,
+            "SenderBalance": this_receiver_balance,
+            "ReceiverBalance": this_sender_balance,
+            "Commitment": commitment,
+        }
+        "Comments": {},
+        "Status":
     }
     """
     def __init__(self, message, wallet):
@@ -1053,13 +1058,13 @@ class RsmcResponsesMessage(TransactionMessage):
         self.channel_name = message.get("ChannelName")
         self.channel = None
 
-        self.asset_type     = self.message_body.get("AssetType", '').upper()
-        self.payment_count  = self.message_body.get("PaymentCount")
+        self.asset_type = self.message_body.get("AssetType", '').upper()
+        self.payment_count = self.message_body.get("PaymentCount")
         self.sender_balance = self.message_body.get("SenderBalance")
         self.receiver_balance = self.message_body.get("ReceiverBalance")
         self.commitment = self.message_body.get('Commitment')
-        self.comments   = self.message.get("Comments")
-        self.status     = self.message.get('Status')
+        self.comments = self.message.get("Comments")
+        self.status = self.message.get('Status')
 
     def handle_message(self):
         self.handle()
@@ -1104,7 +1109,7 @@ class RsmcResponsesMessage(TransactionMessage):
         """
         channel = ch.Channel.channel(channel_name)
 
-        # get trade history
+        # get transaction history
         transaction = channel.latest_trade(channel_name)
         # get nonce in the offline account book
         if not transaction:
@@ -1121,17 +1126,17 @@ class RsmcResponsesMessage(TransactionMessage):
             assert receiver.__contains__('@'), 'Invalid receiver<{}> URL format.'.format(receiver)
             assert balance, 'Void balance<{}> for asset <{}>.'.format(balance, asset_type)
 
-            sender_addr     = sender.strip().split('@')[0]
-            receiver_addr   = receiver.strip().split('@')[0]
-            asset_type      = asset_type.upper()
-            payment         = float(payment)
+            sender_addr = sender.strip().split('@')[0]
+            receiver_addr = receiver.strip().split('@')[0]
+            asset_type = asset_type.upper()
+            payment = float(payment)
 
             this_sender_balance = float(balance.get(sender_addr, {}).get(asset_type, 0))
             this_receiver_balance = float(balance.get(receiver_addr, {}).get(asset_type, 0))
 
             # calculate the balances of both
-            this_sender_balance      = this_sender_balance - payment
-            this_receiver_balance    = this_receiver_balance + payment
+            this_sender_balance = this_sender_balance - payment
+            this_receiver_balance = this_receiver_balance + payment
 
             assert (0 < this_sender_balance == float(sender_balance)), \
                 'Unmatched balance of sender<{}>, balance<{}:{}>, payment<{}>'.format(sender, sender_balance,
@@ -1860,7 +1865,7 @@ class SettleResponseMessage(TransactionMessage):
         message.update({'Status': status.name})
         Message.send(message)
 
-        # add trade
+        # add transaction
         ch.Channel.add_trade(channel_name,
                              nonce = str(nonce),
                              type = EnumTradeType.TRADE_TYPE_SETTLE.value,

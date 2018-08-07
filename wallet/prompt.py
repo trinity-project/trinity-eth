@@ -8,17 +8,19 @@ sys.path.append(pythonpath)
 import argparse
 import json
 import traceback
+import signal
 from prompt_toolkit import prompt
 from prompt_toolkit.shortcuts import print_tokens
 from prompt_toolkit.token import Token
-from twisted.internet import reactor, endpoints
-from log import LOG
+from twisted.internet import reactor, endpoints, protocol
+from common.log import LOG
 from lightwallet.Settings import settings
 from wallet.utils import get_arg, \
     get_asset_type_name,\
-    check_support_asset_type,\
     check_onchain_balance,\
-    check_partner
+    check_support_asset_type,\
+    check_partner, \
+    is_valid_deposit
 from wallet.Interface.rpc_interface import RpcInteraceApi,CurrentLiveWallet
 from twisted.web.server import Site
 from lightwallet.prompt import PromptInterface
@@ -57,14 +59,15 @@ class UserPromptInterface(PromptInterface):
         super().__init__()
         self.user_commands = ["channel enable",
                               "channel create {partner} {asset_type} {deposit}",
-                              "channel tx {receiver} {asset_type} {count}",
+                              "channel tx {payment_link}/{receiver} {asset_type} {count}",
                               "channel close {channel}",
                               "channel peer",
                               "channel payment {asset}, {count}, [{comments}]",
                               "channel qrcode {on/off}",
                               "channel trans",
                               "channel show uri",
-
+							  "channel show trans_history {channel}",
+                              "channel depoist_limit",
                               "contract approve {count}",
                               "contract check-approved"
                               ]
@@ -213,6 +216,10 @@ class UserPromptInterface(PromptInterface):
     def do_close_wallet(self):
         if self.Wallet:
             self.Wallet.SaveStoredData("BlockHeight", self.Wallet.BlockHeight)
+            try:
+                gate_way.close_wallet()
+            except Exception as e:
+                LOG.error(e)
         super().do_close_wallet()
 
     def quit(self):
@@ -228,6 +235,13 @@ class UserPromptInterface(PromptInterface):
             result = gate_way.join_gateway(self.Wallet.address).get("result")
             if result:
                 self.Wallet.url = json.loads(result).get("MessageBody").get("Url")
+
+                try:
+                    spv = json.loads(result).get("MessageBody").get("Spv")
+                    spv_port = spv.strip().split(":")[1]
+                except:
+                    spv_port = "8766"
+                gate_way.GatewayInfo.update_spv_port(spv_port)
                 self.Channel = True
                 print("Channel Function Enabled")
                 return True
@@ -286,13 +300,12 @@ class UserPromptInterface(PromptInterface):
                 raise Exception("Please Open The Wallet First")
             partner = get_arg(arguments, 1)
             asset_type = get_arg(arguments, 2)
-            if asset_type:
-                asset_type = asset_type.upper()
+            asset_type =asset_type.upper() if check_support_asset_type(asset_type) else None
+            if not asset_type:
+                print("No support asset type %s" %asset_type)
+                return None
             deposit = float(get_arg(arguments, 3).strip())
             partner_deposit = float(get_arg(arguments, 4).strip()) if get_arg(arguments, 4) else deposit
-            if not check_support_asset_type(asset_type):
-                print("Now we just support TNC, mulit-asset will coming soon")
-                return None
 
             if not check_onchain_balance(self.Wallet.address, asset_type, deposit):
                 print("Now the balance on-chain is less than the deposit.")
@@ -316,6 +329,9 @@ class UserPromptInterface(PromptInterface):
             if not self.Channel:
                 self._channel_noopen()
             argument1 = get_arg(arguments,1)
+            if argument1 is None:
+                self.help()
+                return None
             if len(argument1) > 88:
                 # payment code
                 result, info = Payment.decode_payment_code(argument1)
@@ -335,10 +351,14 @@ class UserPromptInterface(PromptInterface):
                 asset_type = get_arg(arguments, 2)
                 count = get_arg(arguments, 3)
                 hr = None
+                if not receiver or not asset_type or not count:
+                    self.help()
+                    return None
 
-            if asset_type:
-                asset_type = asset_type.upper()
-
+                asset_type = asset_type.upper() if check_support_asset_type(asset_type) else None
+                if not asset_type:
+                    print("No support asset type %s" % asset_type)
+                    return None
             ch.Channel(self.Wallet.url, receiver).transfer(self.Wallet.url, receiver, asset_type, count, hr, self.Wallet)
 
             # receiverpubkey, receiverip= receiver.split("@")
@@ -406,6 +426,9 @@ class UserPromptInterface(PromptInterface):
 
         elif command == "qrcode":
             enable = get_arg(arguments,1)
+            if enable is None:
+                self.help()
+                return None
             if enable.upper() not in ["ON","OFF"]:
                 print("should be on or off")
             self.qrcode = True if enable.upper() == "ON" else False
@@ -414,6 +437,9 @@ class UserPromptInterface(PromptInterface):
             if not self.Channel:
                 self._channel_noopen()
             channel_name = get_arg(arguments, 1)
+            if channel_name is None:
+                self.help()
+                return None
             print("Closing channel {}".format(channel_name))
             if channel_name:
                 ch.Channel.quick_close(self.Wallet, channel_name)
@@ -423,35 +449,56 @@ class UserPromptInterface(PromptInterface):
         elif command == "peer":
             if not self.Channel:
                 self._channel_noopen()
-            get_channel_via_address(self.Wallet.url)
+            state = get_arg(arguments,1)
+            get_channel_via_address(self.Wallet.url, state)
             return
         elif command == "payment":
             asset_type = get_arg(arguments, 1)
             if not asset_type:
                 print("command not give the asset type")
+                return None
             value = get_arg(arguments, 2)
             if not value:
                 print("command not give the count")
+                return None
             comments = " ".join(arguments[3:])
             comments = comments if comments else "None"
-            paycode = Payment(self.Wallet).generate_payment_code(asset_type, value, comments)
+            try:
+                paycode = Payment(self.Wallet).generate_payment_code(asset_type, value, comments)
+            except Exception as e:
+                LOG.error(e)
+                print("Get payment link error, please check the log")
+                return None
             if self.qrcode:
                 qrcode_terminal.draw(paycode, version=4)
             print(paycode)
             return None
-        elif command == "trans":
-            channel_name = get_arg(arguments, 1)
-            tx= trinitytx.TrinityTransaction(channel_name,self.Wallet)
-            result = tx.read_transaction()
-            print(json.dumps(result,indent=4))
-            return None
+
         elif command == "show":
             subcommand  = get_arg(arguments,1)
+            if not subcommand:
+                self.help()
+                return None
             if subcommand.upper() == "URI":
                 print(self.Wallet.url)
+            elif subcommand.upper() == "TRANS_HISTORY":
+                channel_name = get_arg(arguments, 2)
+                if channel_name is None:
+                    print("Please provide channel")
+                    return None
+                tx = trinitytx.TrinityTransaction(channel_name, self.Wallet)
+                result = tx.read_transaction()
+                print(json.dumps(result, indent=4))
+                return None
             else:
                 self.help()
             return None
+        elif command == "depoist_limit":
+            from wallet.utils import DepositAuth
+            deposit =  DepositAuth.deposit_limit()
+            print("Current Deposit limit is %s TNC" %deposit)
+            return None
+
 
     def _channel_noopen(self):
         print("Channel Function Can Not be Opened at Present, You can try again via channel enable")
@@ -509,8 +556,6 @@ class UserPromptInterface(PromptInterface):
         return m_instance.handle_message()
 
 
-
-
 def main():
     parser = argparse.ArgumentParser()
     # Show the  version
@@ -530,12 +575,24 @@ def main():
     else:
         settings.setup_testnet()
 
-
     UserPrompt = UserPromptInterface()
-    api_server_rpc = RpcInteraceApi("20556")
-    endpoint_rpc = "tcp:port={0}:interface={1}".format("20556", "0.0.0.0")
-    endpoints.serverFromString(reactor, endpoint_rpc).listen(Site(api_server_rpc.app.resource()))
+    port = Configure.get("NetPort")
+    address = Configure.get("RpcListenAddress")
+    port = port if port else "20556"
+    address = address if address else "0.0.0.0"
+    api_server_rpc = RpcInteraceApi(port)
+    endpoint_rpc = "tcp:port={0}:interface={1}".format(port, address)
+    d = endpoints.serverFromString(reactor, endpoint_rpc).listen(Site(api_server_rpc.app.resource()))
 
+    @d.addErrback
+    def sys_exit(f):
+        print("Setup jsonRpc server error, please check if the port {} already opened".format(port))
+        os.kill(os.getpgid(os.getpid()), signal.SIGKILL)
+
+    from wallet.Interface.tcp import GatwayClientFactory
+    gateway_ip, gateway_port = Configure.get("GatewayTCP").split(":")
+    f = GatwayClientFactory()
+    reactor.connectTCP(gateway_ip.strip(), int(gateway_port.strip()), f)
 
     reactor.suggestThreadPoolSize(15)
     reactor.callInThread(UserPrompt.run)

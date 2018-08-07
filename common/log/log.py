@@ -25,13 +25,13 @@ SOFTWARE."""
 import os
 import logging.config
 from trinity import __os_platform__, __running_mode__, Console_log
-LogDataDir = os.path.join(os.path.dirname(__file__),"log")
+LogDataDir = os.path.join(os.path.dirname(__file__),"common.log")
 if not os.path.exists(LogDataDir):
     os.makedirs(LogDataDir)
 LOG = logging.getLogger('logger')
-# log configuration parts
+# common.log configuration parts
 if __os_platform__ in ['LINUX', 'DARWIN']:
-    TRINITY_LOG_PATH = os.path.join(LogDataDir,"trinity.log")
+    TRINITY_LOG_PATH = os.path.join(LogDataDir,"trinity.common.log")
 else:
     TRINITY_LOG_PATH = os.getcwd().split(os.sep)[0]+os.sep+'temp'
 
@@ -55,7 +55,7 @@ log_settings = {
         'file': {
             'level': 'DEBUG',
             'class': 'logging.handlers.RotatingFileHandler',
-            'filename': '{}{}{}'.format(TRINITY_LOG_PATH, os.sep, 'trinity.log'),
+            'filename': '{}{}{}'.format(TRINITY_LOG_PATH, os.sep, 'trinity.common.log'),
             'formatter': 'release',
             'maxBytes': 5 * 1024 * 1024,
             'backupCount': 10
@@ -72,9 +72,9 @@ log_settings = {
 
 def init_logger(log_path = None, file_name=None):
     init_log_path = log_path if log_path else TRINITY_LOG_PATH
-    init_filename = file_name if file_name else 'trinity.log'
+    init_filename = file_name if file_name else 'trinity.common.log'
 
-    # create the log path
+    # create the common.log path
     if not os.path.exists(init_log_path):
         os.mkdir(init_log_path)
 

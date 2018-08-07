@@ -23,7 +23,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 
 
-from log import LOG
+from common.log import LOG
 #from neo.Core.Blockchain import Blockchain
 import time
 from wallet.TransactionManagement.transaction import BlockHightRegister, TxIDRegister

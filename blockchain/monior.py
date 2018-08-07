@@ -27,8 +27,8 @@ import socket
 import time
 import json
 
-from blockchain.interface import get_block_count, get_block
-from log.log import LOG
+from blockchain.interface import get_block_count
+from common.log import LOG
 
 
 WS_SERVER_CONFIG = {'ip': '47.104.81.20', 'port': 9000}
@@ -269,7 +269,7 @@ ws_instance = WebSocketConnection(WS_SERVER_CONFIG.get('ip'), WS_SERVER_CONFIG.g
 class EventMonitor(object):
     GoOn = True
     Wallet = None
-    Wallet_Change = None
+    Wallet_Change = False
     BlockHeight = None
     BlockPause = False
 
@@ -292,7 +292,9 @@ class EventMonitor(object):
     @classmethod
     def update_wallet_block_height(cls, height):
         if cls.Wallet_Change:
+            cls.Wallet_Change = False
             return None
+
         if cls.Wallet:
             cls.Wallet.BlockHeight=height
         else:
@@ -323,40 +325,39 @@ def monitorblock():
     while EventMonitor.GoOn:
         blockheight_onchain = get_block_count()
         EventMonitor.update_block_height(blockheight_onchain)
-
         blockheight = EventMonitor.get_wallet_block_height()
-
         block_delta = int(blockheight_onchain) - int(blockheight)
 
         # execute prepare and action
         ws_instance.pre_execution()
         ucoro_event(event_coro, blockheight)
-        # result = ws_instance.receive()
-        # if result:
-        #     ucoro_event(event_coro, result)
 
-        if 0 < block_delta:
+        end_time = time.time() + 15 # sleep 15 second according to the chain update block time
+        need_update = False
+        while True:
             try:
-                if block_delta < 2000:
+                if 0 < block_delta < 2010:
                     if EventMonitor.BlockPause:
                         pass
                     else:
                         blockheight += 1
+                        need_update = True
+                elif 2010 <= block_delta:
+                    # use magic number
+                    blockheight = int(blockheight_onchain) - 2000
+                    need_update = True
                 else:
-                    blockheight +=1000
-                    pass
-                EventMonitor.update_wallet_block_height(blockheight)
-            except Exception as e:
-                pass
-        else:
-            #LOG.debug("Not get the blockheight")
-            pass
+                    need_update = False
 
-        if blockheight < blockheight_onchain:
-            #time.sleep(0.1)
-            pass
-        else:
-            time.sleep(15)
+                # update
+                if need_update:
+                    EventMonitor.update_wallet_block_height(blockheight)
+            except Exception as error:
+                pass
+
+            time.sleep(0.5)
+            if time.time() - end_time <= 0.15:  # 150 ms
+                break
 
     # stop monitor
     ucoro_event(event_coro, 'exit')

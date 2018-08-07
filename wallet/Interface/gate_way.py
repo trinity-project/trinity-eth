@@ -24,7 +24,7 @@ SOFTWARE."""
 
 import requests
 from wallet.configure import Configure
-from log import LOG
+from common.log import LOG
 import json
 from wallet.utils import get_wallet_info
 
@@ -91,6 +91,13 @@ def join_gateway(publickey):
     result = requests.post(Configure["GatewayURL"], json=request)
     return result.json()
 
+
+def get_gw_bytes_encoding():
+    """
+    get gateway encoding method
+    :return: string
+    """
+    return "utf-8"
 
 def get_router_info(message):
     request = {

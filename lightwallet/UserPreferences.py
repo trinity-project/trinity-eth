@@ -8,7 +8,7 @@ look at `Settings.py`. Use it like this example:
 
 """
 import json
-from log import LOG
+from common.log import LOG
 import os
 import sys
 

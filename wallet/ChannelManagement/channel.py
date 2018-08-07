@@ -30,8 +30,9 @@ from model.transaction_model import APITransaction
 from wallet.TransactionManagement import message as mg
 from wallet.utils import convert_number_auto
 from wallet.Interface.gate_way import sync_channel
-from log import LOG
+from common.log import LOG
 import json
+
 
 from blockchain.ethInterface import Interface as EthInterface
 from blockchain.web3client import Client as EthWebClient
@@ -46,6 +47,7 @@ class Channel(object):
     _interface = None
     _web3_client = None
     _trinity_coef = pow(10, 8)
+
 
     def __init__(self, founder, partner):
         self.founder = founder
@@ -74,17 +76,25 @@ class Channel(object):
         return channels
 
     @staticmethod
-    def query_channel(address):
-        print("Get Channels with Address %s" % address)
-        channels = APIChannel.batch_query_channel(filters={"src_addr": address})
+    def query_channel(address, state=None):
+        if state:
+            print("Get Channels with Address %s State %s" % (address, state))
+            filter_src = {"src_addr":address, "state": state}
+            filter_dest = {"dest_addr":address, "state": state}
+        else:
+            print("Get Channels with Address %s" % address)
+            filter_src = {"src_addr": address}
+            filter_dest = {"dest_addr": address}
+
+        channels = APIChannel.batch_query_channel(filters=filter_src)
         if channels.get("content"):
             for ch in channels["content"]:
-                print("==" * 10, "\nChannelName:", ch.channel, "\nState:", ch.state, "\nPeer:", ch.dest_addr,
+                print("=="*10,"\nChannelName:", ch.channel, "\nState:", ch.state, "\nPeer:", ch.dest_addr,
                       "\nBalance:", json.dumps(ch.balance, indent=1))
-        channeld = APIChannel.batch_query_channel(filters={"dest_addr": address})
+        channeld = APIChannel.batch_query_channel(filters=filter_dest)
         if channeld.get("content"):
             for ch in channeld["content"]:
-                print("==" * 10, "\nChannelName:", ch.channel, "\nState:", ch.state, "\nPeer:", ch.src_addr,
+                print("=="*10,"\nChannelName:", ch.channel, "\nState:", ch.state, "\nPeer:", ch.src_addr,
                       "\nBalance:", json.dumps(ch.balance, indent=1))
 
     @classmethod
@@ -152,10 +162,11 @@ class Channel(object):
         return APIChannel.add_channel(**kwargs)
 
     def __new_channel(self):
+        timestamp = time.time().__str__().encode()
         md5_part1 = hashlib.md5(self.founder.encode())
-        md5_part1.update(str(time.time()).encode())
+        md5_part1.update(timestamp)
         md5_part2 = hashlib.md5(self.partner.encode())
-        md5_part2.update(str(time.time()).encode())
+        md5_part2.update(timestamp)
 
         return '0x' + md5_part1.hexdigest().lower() + md5_part2.hexdigest().lower()
 
@@ -228,20 +239,20 @@ class Channel(object):
 
     @staticmethod
     def add_trade(channel_name, **kwargs):
-        return APITransaction('trade'+channel_name).add_transaction(**kwargs)
+        return APITransaction('transaction'+channel_name).add_transaction(**kwargs)
 
     @staticmethod
     def update_trade(channel_name, nonce, **kwargs):
-        return APITransaction('trade'+channel_name).update_transaction(nonce, **kwargs)
+        return APITransaction('transaction'+channel_name).update_transaction(nonce, **kwargs)
 
     @staticmethod
     def query_trade(channel_name, nonce, *args, **kwargs):
-        return APITransaction('trade'+channel_name).query_transaction(nonce, *args, **kwargs)
+        return APITransaction('transaction'+channel_name).query_transaction(nonce, *args, **kwargs)
 
     @staticmethod
     def latest_trade(channel_name):
         try:
-            trade = APITransaction('trade' + channel_name).sort(key='nonce')[0]
+            trade = APITransaction('transaction' + channel_name).sort(key='nonce')[0]
         except Exception as error:
             LOG.error('No transaction records were found for channel<{}>. Exception: {}'.format(channel_name, error))
             return None
@@ -533,8 +544,8 @@ def filter_channel_via_address(address1, address2, state=None):
     return channel
 
 
-def get_channel_via_address(address):
-    Channel.query_channel(address)
+def get_channel_via_address(address, state=None):
+    Channel.query_channel(address, state)
     return
 
 

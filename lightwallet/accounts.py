@@ -14,7 +14,7 @@ import binascii
 
 
 
-#log = get_logger('accounts')
+#common.log = get_logger('accounts')
 
 DEFAULT_COINBASE = decode_hex('de0b295669a9fd93d5f28d9ec85e40f4cb697bae')
 

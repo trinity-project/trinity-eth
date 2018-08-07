@@ -31,7 +31,7 @@ import json
 
 from model.base_enum import EnumStatusCode
 from trinity import DATABASE_CONFIG as cfg
-from log import LOG
+from common.log import LOG
 
 
 def connection_singleton(callback):

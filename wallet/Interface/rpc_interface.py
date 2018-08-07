@@ -28,7 +28,7 @@ from klein import Klein
 from wallet.Interface.rpc_utils import json_response, cors_header
 from wallet.ChannelManagement.channel import get_channel_via_name, close_channel, udpate_channel_when_setup
 from wallet.TransactionManagement import transaction, message
-from log import LOG
+from common.log import LOG
 from wallet.configure import Configure
 from blockchain.interface import get_balance
 
@@ -49,10 +49,10 @@ class CurrentLiveWallet(object):
             return None
         balance = {}
         for i in Configure["AssetType"].keys():
-            b = get_balance(cls.Wallet.pubkey, i.upper())
+            b = get_balance(cls.Wallet.address, i.upper())
             balance[i] = b
         return {
-                   "Publickey":cls.Wallet.pubkey,
+                   "Publickey":cls.Wallet.address,
                    "CommitMinDeposit":Configure["CommitMinDeposit"],
                    "Fee":Configure["Fee"],
                    "alias":Configure["alias"],

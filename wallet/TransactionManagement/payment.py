@@ -23,12 +23,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 import base58
 from wallet.configure import Configure
-from log import LOG
+from common.log import LOG
 import json
 import binascii
 import hashlib
 from Crypto import Random
-
+from eth_hash.backends.pysha3 import keccak256
 
 
 class Payment(object):
@@ -110,7 +110,7 @@ class Payment(object):
 
 
 def hash_r(r):
-    return hashlib.sha1(r.encode()).hexdigest()
+    return '0x' + keccak256(bytes.fromhex(r)).hex()
 
 if __name__ == "__main__":
     result = Payment.decode_payment_code("TN2BfTsKzBqXChJcPrRLod7FwBy5PmwKvsiBuWuxpFGk7BSHS5Eh5HQGMoFSAAordz"
