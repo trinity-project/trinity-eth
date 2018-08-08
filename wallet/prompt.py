@@ -32,7 +32,8 @@ from wallet.ChannelManagement.channel import create_channel, \
     get_channel_via_address,\
     chose_channel,\
     close_channel,\
-    udpate_channel_when_setup
+    udpate_channel_when_setup, \
+    get_trans_history
 from wallet.ChannelManagement import channel as ch
 from wallet.TransactionManagement import message as mg
 from wallet.TransactionManagement import transaction as trinitytx
@@ -566,9 +567,9 @@ class UserPromptInterface(PromptInterface):
             if channel_name is None:
                 console_log.error("No provide channel")
                 return None
-            tx = trinitytx.TrinityTransaction(channel_name, self.Wallet)
-            result = tx.read_transaction()
-            console_log.info(json.dumps(result, indent=4))
+            tx_his = get_trans_history(channel_name)
+            for tx in tx_his:
+                console_log.info(tx)
             return None
         else:
             self.help()
@@ -631,7 +632,6 @@ class UserPromptInterface(PromptInterface):
             self.channel_depoistlimit(arguments)
         else:
             return None
-
 
     def _channel_noopen(self):
         print("Channel Function Can Not be Opened at Present, You can try again via channel enable")

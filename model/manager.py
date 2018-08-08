@@ -252,9 +252,9 @@ class DBManager(object):
 
     def sort(self, key, descending=True):
         if descending:
-            result = self.db_table.find().sort([(key, pymongo.DESCENDING)]).limit(1)
+            result = self.db_table.find().sort([(key, pymongo.DESCENDING)])
         else:
-            result = self.db_table.find().sort([(key, pymongo.ASCENDING)]).limit(1)
+            result = self.db_table.find().sort([(key, pymongo.ASCENDING)])
 
         result = [ModelSet(**res) for res in result]
         return result

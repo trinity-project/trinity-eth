@@ -26,11 +26,6 @@ SOFTWARE."""
 #from neo.Wallets.Wallet import Wallet
 
 
-import os
-import pickle
-from wallet.utils import sign
-from common.log import LOG
-import json
 from model.transaction_model import APITransaction,TBLTransaction
 from lightwallet.Settings import settings
 
@@ -112,7 +107,7 @@ if __name__== "__main__":
     tx.update_transaction("0",test2=2)
     print(tx.read_transaction())
     tx.update_transaction("1",H=1,x="tt")
-    print(tx.read_transaction())
+    print(dir(tx.read_transaction()))
 
 
 
