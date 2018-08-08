@@ -138,8 +138,8 @@ class UserPromptInterface(PromptInterface):
                         self.do_channel(arguments)
                     elif command == "faucet":
                         self.do_faucet()
-                    elif command == 'contract':
-                        self.do_contract(arguments)
+                    # elif command == 'contract':
+                    #     self.do_contract(arguments)
                     else:
                         print("command %s not found" % command)
 
@@ -249,41 +249,36 @@ class UserPromptInterface(PromptInterface):
             pass
         return False
 
-    def do_contract(self, arguments):
-        if not self.Wallet:
-            print("Please open a wallet")
-            return
-
-        command = get_arg(arguments)
-        # asset_command = [i.split()[1] for i in self.user_commands]
-        # if command not in asset_command:
-        #     print("no support command, please check the help")
-        #     self.help()
-        #     return
-
-        # if command == 'approve':
-        #     deposit = get_arg(arguments, 1)
-        #     try:
-        #         ch.Channel.approve(self.Wallet.address, deposit, self.Wallet._key.private_key_string)
-        #     except Exception as error:
-        #         print('Error to approved asset to contract. {}'.format(error))
-        #
-        # elif command == "check-approved":
-        if command == "check-approved":
-            try:
-                result = ch.Channel.get_approved_asset(self.Wallet.address)
-            except Exception as error:
-                result = 0
-            else:
-                if not result:
-                    result = 0
-                print('Has approved {}'.format(result))
-        else:
-            print("no support command, please check the help")
-            self.help()
-            return
-
-        return
+    # def do_contract(self, arguments):
+    #     if not self.Wallet:
+    #         print("Please open a wallet")
+    #         return
+    #
+    #     command = get_arg(arguments)
+    #     asset_command = [i.split()[1] for i in self.user_commands]
+    #     if command not in asset_command:
+    #         print("no support command, please check the help")
+    #         self.help()
+    #         return
+    #
+    #     if command == 'approve':
+    #         deposit = get_arg(arguments, 1)
+    #         try:
+    #             ch.Channel.approve(self.Wallet.address, deposit, self.Wallet._key.private_key_string)
+    #         except Exception as error:
+    #             print('Error to approved asset to contract. {}'.format(error))
+    #
+    #     elif command == "check-approved":
+    #         try:
+    #             result = ch.Channel.get_approved_asset(self.Wallet.address)
+    #         except Exception as error:
+    #             result = 0
+    #         else:
+    #             if not result:
+    #                 result = 0
+    #             print('Has approved {}'.format(result))
+    #
+    #     return
 
     def do_channel(self,arguments):
         if not self.Wallet:
