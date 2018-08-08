@@ -634,7 +634,7 @@ class UserPromptInterface(PromptInterface):
             return None
 
     def _channel_noopen(self):
-        print("Channel Function Can Not be Opened at Present, You can try again via channel enable")
+        console_log.warn("Channel Function Can Not be Opened at Present, You can try again via channel enable")
         return False
 
     def handlemaessage(self):
@@ -733,7 +733,7 @@ def main():
 
     @d.addErrback
     def sys_exit(f):
-        print("Setup jsonRpc server error, please check if the port {} already opened".format(port))
+        console_log.warn("Setup jsonRpc server error, please check if the port {} already opened".format(port))
         os.kill(os.getpgid(os.getpid()), signal.SIGKILL)
 
     from wallet.Interface.tcp import GatwayClientFactory
