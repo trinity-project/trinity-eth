@@ -259,6 +259,15 @@ class Channel(object):
         else:
             return trade
 
+    @staticmethod
+    def query_all_trade(channel_name):
+        """
+        get the transhistory
+        :param channel_name:
+        :return:
+        """
+        return APITransaction('transaction'+channel_name).sort(key='nonce')
+
     # transaction related
     def transfer(self, sender, receiver, asset_type, count, hash_random=None, wallet=None):
         """
@@ -624,17 +633,31 @@ def udpate_channel_when_setup(address):
                 sync_channel_info_to_gateway(ch.channel, "UpdateChannel")
 
 
+def get_trans_history(channel_name):
+    """
+
+    :param channel_name:
+    :return:
+    """
+    return Channel.query_all_trade(channel_name)
+
 # test state
 ws_instance.register_event('test_event', ChannelTestEvent('state', 'TNC', EnumEventType.EVENT_TYPE_TEST_STATE))
 
 if __name__ == "__main__":
-    result = APIChannel.query_channel(channel="1BE0FCD56A27AD46C22B8EEDC4E835EA")
-    print(result)
-    print(dir(result["content"][0]))
-    print(result["content"][0].dest_addr)
-    print(result["content"][0].src_addr)
+    # result = APIChannel.query_channel(channel="1BE0FCD56A27AD46C22B8EEDC4E835EA")
+    # print(result)
+    # print(dir(result["content"][0]))
+    # print(result["content"][0].dest_addr)
+    # print(result["content"][0].src_addr)
+    #
+    # result = APIChannel.batch_query_channel(
+    #     filters={"dest_addr": "022a38720c1e4537332cd6e89548eedb0afbb93c1fdbade42c1299601eaec897f4",
+    #              "src_addr": "02cebf1fbde4786f031d6aa0eaca2f5acd9627f54ff1c0510a18839946397d3633"})
+    # print(result)
+    t = Channel("A","B")
+    t.channel_name ="AB"
+    s = Channel.get_trade_his("ab")
+    for i in s:
+        print(i)
 
-    result = APIChannel.batch_query_channel(
-        filters={"dest_addr": "022a38720c1e4537332cd6e89548eedb0afbb93c1fdbade42c1299601eaec897f4",
-                 "src_addr": "02cebf1fbde4786f031d6aa0eaca2f5acd9627f54ff1c0510a18839946397d3633"})
-    print(result)

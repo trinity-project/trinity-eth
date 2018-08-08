@@ -9,18 +9,21 @@ import argparse
 import json
 import traceback
 import signal
+from functools import wraps
 from prompt_toolkit import prompt
 from prompt_toolkit.shortcuts import print_tokens
 from prompt_toolkit.token import Token
 from twisted.internet import reactor, endpoints, protocol
 from common.log import LOG
+from common.console import console_log
 from lightwallet.Settings import settings
 from wallet.utils import get_arg, \
     get_asset_type_name,\
     check_onchain_balance,\
     check_support_asset_type,\
     check_partner, \
-    is_valid_deposit
+    is_valid_deposit,\
+    is_correct_uri
 from wallet.Interface.rpc_interface import RpcInteraceApi,CurrentLiveWallet
 from twisted.web.server import Site
 from lightwallet.prompt import PromptInterface
@@ -29,7 +32,8 @@ from wallet.ChannelManagement.channel import create_channel, \
     get_channel_via_address,\
     chose_channel,\
     close_channel,\
-    udpate_channel_when_setup
+    udpate_channel_when_setup, \
+    get_trans_history
 from wallet.ChannelManagement import channel as ch
 from wallet.TransactionManagement import message as mg
 from wallet.TransactionManagement import transaction as trinitytx
@@ -50,6 +54,59 @@ from wallet.configure import Configure
 
 GateWayIP = Configure.get("GatewayIP")
 Version = Configure.get("Version")
+
+
+def wallet_opened(func):
+    """
+
+    :param func:
+    :return:
+    """
+    @wraps(func)
+    def wapper(self, *args, **kwargs):
+        if not self.Wallet:
+            console_log.error("No opened wallet, please open wallet first")
+            return None
+        else:
+            return func(self, *args, **kwargs)
+
+    return wapper
+
+
+def channel_opened(func):
+    """
+
+    :param func:
+    :return:
+    """
+    @wraps(func)
+    def wapper(self, *args, **kwargs):
+        if not self.Channel:
+            self._channel_noopen()
+            return
+        else:
+            return func(self,*args, **kwargs)
+    return wapper
+
+
+def arguments_length(length):
+    """
+
+    :param length:
+    :param func:
+    :return:
+    """
+    def wapper(func):
+        def _wapper(self,arguments):
+            ar_len = length if isinstance(length,list) else [length]
+            if len(arguments) in ar_len:
+                return func(self,arguments)
+            else:
+                console_log.error("Arguments length should be {}".format(ar_len))
+                self.help()
+                return
+        return _wapper
+    return wapper
 
 
 class UserPromptInterface(PromptInterface):
@@ -145,7 +202,7 @@ class UserPromptInterface(PromptInterface):
 
             except Exception as e:
 
-                print("could not execute command: %s " % e)
+                console_log.error("could not execute command: %s " % e)
                 traceback.print_stack()
                 traceback.print_exc()
 
@@ -162,12 +219,11 @@ class UserPromptInterface(PromptInterface):
             pass
         return out
 
+
     #faucet for test tnc
+    @wallet_opened
     def do_faucet(self):
-        if not self.Wallet:
-            print("Please Open The Wallet First")
-            return
-        print(self.Wallet.address)
+        console_log.info(self.Wallet.address)
         request = {
                 "jsonrpc": "2.0",
                 "method": "transferTnc",
@@ -213,6 +269,7 @@ class UserPromptInterface(PromptInterface):
             EventMonitor.start_monitor(self.Wallet)
             self.retry_channel_enable()
 
+    @wallet_opened
     def do_close_wallet(self):
         if self.Wallet:
             self.Wallet.SaveStoredData("BlockHeight", self.Wallet.BlockHeight)
@@ -223,7 +280,7 @@ class UserPromptInterface(PromptInterface):
         super().do_close_wallet()
 
     def quit(self):
-        print('Shutting down. This may take about 15 sec to sync the block info')
+        console_log.info('Shutting down. This may take about 15 sec to sync the block info')
         self.go_on = False
         EventMonitor.stop_monitor()
         self.do_close_wallet()
@@ -279,229 +336,305 @@ class UserPromptInterface(PromptInterface):
     #             print('Has approved {}'.format(result))
     #
     #     return
+    @channel_opened
+    @arguments_length([4, 5])
+    def do_channel_create(self, arguments):
+        """
 
+        :return:
+        """
+
+        partner = get_arg(arguments, 1)
+        if not is_correct_uri(partner):
+            console_log.error("No correct uri format")
+            return None
+
+        asset_type = get_arg(arguments, 2)
+        asset_type = asset_type.upper() if check_support_asset_type(asset_type) else None
+        if not asset_type:
+            console_log.error("No support asset type %s" % asset_type)
+            return None
+
+        try:
+            deposit = float(get_arg(arguments, 3).strip())
+            partner_deposit = float(get_arg(arguments, 4).strip()) if get_arg(arguments, 4) else deposit
+        except ValueError:
+            console_log.error("No correct depoist value")
+            return None
+
+        if not check_onchain_balance(self.Wallet.address, asset_type, deposit):
+            console_log.error("Now the balance on-chain is less than the deposit.")
+            return None
+
+        if not check_partner(self.Wallet, partner):
+            console_log.error("Partner URI is not correct, Please check the partner uri")
+            return None
+
+        if not check_onchain_balance(partner.strip().split("@")[0], asset_type, deposit):
+            console_log.error("Partner balance on chain is less than the deposit")
+            return None
+
+        create_channel(self.Wallet.url, partner, asset_type, deposit, partner_deposit, wallet=self.Wallet)
+
+    @channel_opened
+    @arguments_length([2,4])
+    def channel_trans(self, arguments):
+        """
+
+        :param arguments:
+        :return:
+        """
+
+        argument1 = get_arg(arguments, 1)
+        if len(argument1) > 88:
+            # payment code
+            result, info = Payment.decode_payment_code(argument1)
+            if result:
+                info = json.loads(info)
+                receiver = info.get("uri")
+                hr = info.get("hr")
+                asset_type = info.get("asset_type")
+                asset_type = get_asset_type_name(asset_type)
+                count = info.get("count")
+                comments = info.get("comments")
+            else:
+                print("The payment code is not correct")
+                return
+        else:
+            receiver = get_arg(arguments, 1)
+            asset_type = get_arg(arguments, 2)
+            count = get_arg(arguments, 3)
+            hr = None
+            if not receiver or not asset_type or not count:
+                self.help()
+                return None
+
+            asset_type = asset_type.upper() if check_support_asset_type(asset_type) else None
+            if not asset_type:
+                print("No support asset type %s" % asset_type)
+                return None
+        ch.Channel(self.Wallet.url, receiver).transfer(self.Wallet.url, receiver, asset_type, count, hr, self.Wallet)
+
+        # receiverpubkey, receiverip= receiver.split("@")
+        channels = filter_channel_via_address(self.Wallet.url, receiver, EnumChannelState.OPENED.name)
+        # LOG.debug("Channels {}".format(str(channels)))
+        # ch = chose_channel(channels,self.Wallet.url.split("@")[0].strip(), count, asset_type)
+        # if ch:
+        #     channel_name = ch.channel
+        # else:
+        #     channel_name =None
+        # gate_way_ip = self.Wallet.url.split("@")[1].strip()
+        #
+        # if channel_name:
+        #     tx_nonce = trinitytx.TrinityTransaction(channel_name, self.Wallet).get_latest_nonceid()
+        #     mg.RsmcMessage.create(channel_name,self.Wallet,self.Wallet.pubkey,
+        #                           receiverpubkey, float(count), receiverip, gate_way_ip, str(tx_nonce+1),
+        #                           asset_type=asset_type, comments=hr)
+        # else:
+        #     message = {"MessageType":"GetRouterInfo",
+        #                "Sender":self.Wallet.url,
+        #                 "Receiver": receiver,
+        #                "MessageBody":{
+        #                    "AssetType":asset_type,
+        #                    "Value":count
+        #                    }
+        #                }
+        #     result = gate_way.get_router_info(message)
+        #     routerinfo = json.loads(result.get("result"))
+        #     router=routerinfo.get("RouterInfo")
+        #     if router:
+        #         if not hr:
+        #             print("No hr in payments")
+        #             return
+        #         r = router.get("FullPath")
+        #         LOG.info("Get Router {}".format(str(r)))
+        #         n = router.get("Next")
+        #         LOG.info("Get Next {}".format(str(n)))
+        #         fee_router = [i for i in r if i[0] not in (self.Wallet.url, receiver)]
+        #         if fee_router:
+        #             fee = reduce(lambda x, y:x+y,[float(i[1]) for i in fee_router])
+        #         else:
+        #             fee = 0
+        #         LOG.info("Get Fee {}".format(str(fee)))
+        #         answer = prompt("will use fee %s , Do you still want tx? [Yes/No]> " %(str(fee)))
+        #         if answer.upper() in["YES","Y"]:
+        #             count = float(count) + float(fee)
+        #             next = r[1][0]
+        #             channels = filter_channel_via_address(self.Wallet.url, next, EnumChannelState.OPENED.name)
+        #             LOG.debug("Channels {}".format(str(channels)))
+        #             ch = chose_channel(channels, self.Wallet.url.split("@")[0].strip(), count, asset_type)
+        #             if ch:
+        #                 channel_name = ch.channel
+        #             else:
+        #                 print("Error, can not find the channel with next router")
+        #                 return None
+        #             tx_nonce = trinitytx.TrinityTransaction(channel_name, self.Wallet).get_latest_nonceid()
+        #             tx_nonce = int(tx_nonce)+1
+        #             mg.HtlcMessage.create(channel_name, self.Wallet,self.Wallet.url, next,
+        #                                  count, hr,tx_nonce, role_index=0,asset_type=asset_type,
+        #                                   router=r, next_router=r[2][0], comments=comments)
+        #         else:
+        #             return None
+        #     else:
+        #         return
+
+    @channel_opened
+    @arguments_length(2)
+    def channel_qrcode(self, arguments):
+        """
+
+        :param arguments:
+        :return:
+        """
+        enable = get_arg(arguments, 1)
+        if enable.upper() not in ["ON", "OFF"]:
+            console_log.error("should be on or off")
+        self.qrcode = True if enable.upper() == "ON" else False
+        console_log.info("Qrcode opened") if self.qrcode else console_log.info("Qrcode closed")
+        return None
+
+    @channel_opened
+    @arguments_length(2)
+    def channel_close(self, arguments):
+        """
+
+        :param arguments:
+        :return:
+        """
+        channel_name = get_arg(arguments, 1)
+
+        console_log.info("Closing channel {}".format(channel_name))
+        if channel_name:
+            ch.Channel.quick_close(self.Wallet, channel_name)
+        else:
+            console_log.warn("No Channel Create")
+
+    @channel_opened
+    @arguments_length([1,2])
+    def channel_peer(self, arguments):
+        """
+
+        :param arguments:
+        :return:
+        """
+        state = get_arg(arguments, 1)
+        get_channel_via_address(self.Wallet.url, state)
+        return
+
+    @channel_opened
+    def channel_payment(self, arguments):
+        """
+
+        :param arguments:
+        :return:
+        """
+        asset_type = get_arg(arguments, 1)
+        if not asset_type:
+            console_log.error("command not give the asset type")
+            return None
+        value = get_arg(arguments, 2)
+        if not value:
+            console_log.error("command not give the count")
+            return None
+        comments = " ".join(arguments[3:])
+        comments = comments if comments else "None"
+        try:
+            paycode = Payment(self.Wallet).generate_payment_code(asset_type, value, comments)
+        except Exception as e:
+            LOG.error(e)
+            console_log.error("Get payment link error, please check the log")
+            return None
+        if self.qrcode:
+            qrcode_terminal.draw(paycode, version=4)
+        console_log.info(paycode)
+        return None
+
+    @channel_opened
+    def channel_show(self, arguments):
+        """
+
+        :param arguments:
+        :return:
+        """
+        subcommand = get_arg(arguments, 1)
+        if not subcommand:
+            self.help()
+            return None
+        if subcommand.upper() == "URI":
+            console_log.info(self.Wallet.url)
+        elif subcommand.upper() == "TRANS_HISTORY":
+            channel_name = get_arg(arguments, 2)
+            if channel_name is None:
+                console_log.error("No provide channel")
+                return None
+            tx_his = get_trans_history(channel_name)
+            for tx in tx_his:
+                console_log.info(tx)
+            return None
+        else:
+            self.help()
+        return None
+
+    @channel_opened
+    @arguments_length(1)
+    def channel_depoistlimit(self, arguments):
+        """
+
+        :param arguments:
+        :return:
+        """
+        from wallet.utils import DepositAuth
+        deposit = DepositAuth.deposit_limit()
+        console_log.info("Current Deposit limit is %s TNC" % deposit)
+        return None
+
+
+    @wallet_opened
     def do_channel(self,arguments):
-        if not self.Wallet:
-            print("Please open a wallet")
-            return
+        """
 
+        :param arguments:
+        :return:
+        """
         command = get_arg(arguments)
         channel_command = [i.split()[1] for i in self.user_commands]
         if command not in channel_command:
-            print("no support command, please check the help")
+            console_log.error("no support command, please check the help")
             self.help()
             return
 
         if command == 'create':
-            if not self.Channel:
-                self._channel_noopen()
-            assert 5 >= len(arguments) >= 4, 'Length of arguments should be 4 or 5'
-            if not self.Wallet:
-                raise Exception("Please Open The Wallet First")
-            partner = get_arg(arguments, 1)
-            asset_type = get_arg(arguments, 2)
-            asset_type =asset_type.upper() if check_support_asset_type(asset_type) else None
-            if not asset_type:
-                print("No support asset type %s" %asset_type)
-                return None
-            deposit = float(get_arg(arguments, 3).strip())
-            partner_deposit = float(get_arg(arguments, 4).strip()) if get_arg(arguments, 4) else deposit
-
-            if not check_onchain_balance(self.Wallet.address, asset_type, deposit):
-                print("Now the balance on-chain is less than the deposit.")
-                return None
-
-            if not check_partner(self.Wallet, partner):
-                print("Partner URI is not correct, Please check the partner uri")
-                return None
-
-            if not check_onchain_balance(partner.strip().split("@")[0], asset_type, deposit):
-                print("Partner balance on chain is less than the deposit")
-                return None
-
-            create_channel(self.Wallet.url, partner, asset_type, deposit, partner_deposit, wallet=self.Wallet)
+            self.do_channel_create(arguments)
 
         elif command == "enable":
             if not self.enable_channel():
                 self._channel_noopen()
 
         elif command == "tx":
-            if not self.Channel:
-                self._channel_noopen()
-            argument1 = get_arg(arguments,1)
-            if argument1 is None:
-                self.help()
-                return None
-            if len(argument1) > 88:
-                # payment code
-                result, info = Payment.decode_payment_code(argument1)
-                if result:
-                    info = json.loads(info)
-                    receiver = info.get("uri")
-                    hr = info.get("hr")
-                    asset_type = info.get("asset_type")
-                    asset_type = get_asset_type_name(asset_type)
-                    count = info.get("count")
-                    comments = info.get("comments")
-                else:
-                    print("The payment code is not correct")
-                    return
-            else:
-                receiver = get_arg(arguments, 1)
-                asset_type = get_arg(arguments, 2)
-                count = get_arg(arguments, 3)
-                hr = None
-                if not receiver or not asset_type or not count:
-                    self.help()
-                    return None
-
-                asset_type = asset_type.upper() if check_support_asset_type(asset_type) else None
-                if not asset_type:
-                    print("No support asset type %s" % asset_type)
-                    return None
-            ch.Channel(self.Wallet.url, receiver).transfer(self.Wallet.url, receiver, asset_type, count, hr, self.Wallet)
-
-            # receiverpubkey, receiverip= receiver.split("@")
-            channels = filter_channel_via_address(self.Wallet.url,receiver, EnumChannelState.OPENED.name)
-            # LOG.debug("Channels {}".format(str(channels)))
-            # ch = chose_channel(channels,self.Wallet.url.split("@")[0].strip(), count, asset_type)
-            # if ch:
-            #     channel_name = ch.channel
-            # else:
-            #     channel_name =None
-            # gate_way_ip = self.Wallet.url.split("@")[1].strip()
-            #
-            # if channel_name:
-            #     tx_nonce = trinitytx.TrinityTransaction(channel_name, self.Wallet).get_latest_nonceid()
-            #     mg.RsmcMessage.create(channel_name,self.Wallet,self.Wallet.pubkey,
-            #                           receiverpubkey, float(count), receiverip, gate_way_ip, str(tx_nonce+1),
-            #                           asset_type=asset_type, comments=hr)
-            # else:
-            #     message = {"MessageType":"GetRouterInfo",
-            #                "Sender":self.Wallet.url,
-            #                 "Receiver": receiver,
-            #                "MessageBody":{
-            #                    "AssetType":asset_type,
-            #                    "Value":count
-            #                    }
-            #                }
-            #     result = gate_way.get_router_info(message)
-            #     routerinfo = json.loads(result.get("result"))
-            #     router=routerinfo.get("RouterInfo")
-            #     if router:
-            #         if not hr:
-            #             print("No hr in payments")
-            #             return
-            #         r = router.get("FullPath")
-            #         LOG.info("Get Router {}".format(str(r)))
-            #         n = router.get("Next")
-            #         LOG.info("Get Next {}".format(str(n)))
-            #         fee_router = [i for i in r if i[0] not in (self.Wallet.url, receiver)]
-            #         if fee_router:
-            #             fee = reduce(lambda x, y:x+y,[float(i[1]) for i in fee_router])
-            #         else:
-            #             fee = 0
-            #         LOG.info("Get Fee {}".format(str(fee)))
-            #         answer = prompt("will use fee %s , Do you still want tx? [Yes/No]> " %(str(fee)))
-            #         if answer.upper() in["YES","Y"]:
-            #             count = float(count) + float(fee)
-            #             next = r[1][0]
-            #             channels = filter_channel_via_address(self.Wallet.url, next, EnumChannelState.OPENED.name)
-            #             LOG.debug("Channels {}".format(str(channels)))
-            #             ch = chose_channel(channels, self.Wallet.url.split("@")[0].strip(), count, asset_type)
-            #             if ch:
-            #                 channel_name = ch.channel
-            #             else:
-            #                 print("Error, can not find the channel with next router")
-            #                 return None
-            #             tx_nonce = trinitytx.TrinityTransaction(channel_name, self.Wallet).get_latest_nonceid()
-            #             tx_nonce = int(tx_nonce)+1
-            #             mg.HtlcMessage.create(channel_name, self.Wallet,self.Wallet.url, next,
-            #                                  count, hr,tx_nonce, role_index=0,asset_type=asset_type,
-            #                                   router=r, next_router=r[2][0], comments=comments)
-            #         else:
-            #             return None
-            #     else:
-            #         return
+            self.channel_trans(arguments)
 
         elif command == "qrcode":
-            enable = get_arg(arguments,1)
-            if enable is None:
-                self.help()
-                return None
-            if enable.upper() not in ["ON","OFF"]:
-                print("should be on or off")
-            self.qrcode = True if enable.upper() == "ON" else False
+            self.channel_qrcode(arguments)
 
         elif command == "close":
-            if not self.Channel:
-                self._channel_noopen()
-            channel_name = get_arg(arguments, 1)
-            if channel_name is None:
-                self.help()
-                return None
-            print("Closing channel {}".format(channel_name))
-            if channel_name:
-                ch.Channel.quick_close(self.Wallet, channel_name)
-            else:
-                print("No Channel Create")
+            self.channel_close(arguments)
 
         elif command == "peer":
-            if not self.Channel:
-                self._channel_noopen()
-            state = get_arg(arguments,1)
-            get_channel_via_address(self.Wallet.url, state)
-            return
+            self.channel_peer(arguments)
+
         elif command == "payment":
-            asset_type = get_arg(arguments, 1)
-            if not asset_type:
-                print("command not give the asset type")
-                return None
-            value = get_arg(arguments, 2)
-            if not value:
-                print("command not give the count")
-                return None
-            comments = " ".join(arguments[3:])
-            comments = comments if comments else "None"
-            try:
-                paycode = Payment(self.Wallet).generate_payment_code(asset_type, value, comments)
-            except Exception as e:
-                LOG.error(e)
-                print("Get payment link error, please check the log")
-                return None
-            if self.qrcode:
-                qrcode_terminal.draw(paycode, version=4)
-            print(paycode)
-            return None
+            self.channel_payment(arguments)
 
         elif command == "show":
-            subcommand  = get_arg(arguments,1)
-            if not subcommand:
-                self.help()
-                return None
-            if subcommand.upper() == "URI":
-                print(self.Wallet.url)
-            elif subcommand.upper() == "TRANS_HISTORY":
-                channel_name = get_arg(arguments, 2)
-                if channel_name is None:
-                    print("Please provide channel")
-                    return None
-                tx = trinitytx.TrinityTransaction(channel_name, self.Wallet)
-                result = tx.read_transaction()
-                print(json.dumps(result, indent=4))
-                return None
-            else:
-                self.help()
-            return None
-        elif command == "depoist_limit":
-            from wallet.utils import DepositAuth
-            deposit =  DepositAuth.deposit_limit()
-            print("Current Deposit limit is %s TNC" %deposit)
-            return None
+            self.channel_show(arguments)
 
+        elif command == "depoist_limit":
+            self.channel_depoistlimit(arguments)
+        else:
+            return None
 
     def _channel_noopen(self):
-        print("Channel Function Can Not be Opened at Present, You can try again via channel enable")
+        console_log.warn("Channel Function Can Not be Opened at Present, You can try again via channel enable")
         return False
 
     def handlemaessage(self):
@@ -524,32 +657,46 @@ class UserPromptInterface(PromptInterface):
             return "Error Message"
         if message_type  == "Founder":
             m_instance = mg.FounderMessage(message, self.Wallet)
+
         elif message_type in [ "FounderSign" ,"FounderFail"]:
             m_instance = mg.FounderResponsesMessage(message, self.Wallet)
+
         elif message_type == "Htlc":
             m_instance = mg.HtlcMessage(message, self.Wallet)
+
         elif message_type in ["HtlcSign", "HtlcFail"]:
             m_instance = mg.HtlcResponsesMessage(message, self.Wallet)
+
         elif message_type == "Rsmc":
             m_instance = mg.RsmcMessage(message, self.Wallet)
+
         elif message_type in ["RsmcSign", "RsmcFail"]:
             m_instance = mg.RsmcResponsesMessage(message, self.Wallet)
+
         elif message_type == "Settle":
             m_instance = mg.SettleMessage(message, self.Wallet)
+
         elif message_type in ["SettleSign","SettleFail"]:
             m_instance = mg.SettleResponseMessage(message, self.Wallet)
+
         elif message_type == "RResponseAck":
             m_instance = mg.RResponseAck(message,self.Wallet)
+
         elif message_type  == "RResponse":
             m_instance = mg.RResponse(message, self.Wallet)
+
         elif message_type == "RegisterChannel":
             m_instance = mg.RegisterMessage(message, self.Wallet)
+
         elif message_type == "CreateTranscation":
             m_instance = mg.CreateTranscation(message, self.Wallet)
+
         elif message_type == "TestMessage":
             m_instance = mg.TestMessage(message, self.Wallet)
+
         elif message_type == "PaymentLink":
             m_instance = mg.PaymentLink(message, self.Wallet)
+
         else:
             return "No Support Message Type "
 
@@ -586,7 +733,7 @@ def main():
 
     @d.addErrback
     def sys_exit(f):
-        print("Setup jsonRpc server error, please check if the port {} already opened".format(port))
+        console_log.warn("Setup jsonRpc server error, please check if the port {} already opened".format(port))
         os.kill(os.getpgid(os.getpid()), signal.SIGKILL)
 
     from wallet.Interface.tcp import GatwayClientFactory

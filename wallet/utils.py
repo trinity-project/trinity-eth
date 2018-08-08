@@ -248,6 +248,17 @@ def check_deposit(deposit):
         return False, str(e)
     return de > 0, de
 
+
+def is_correct_uri(uri):
+    """
+
+    :param uri:
+    :return:
+    """
+    uri = uri if not uri.startswith('0x') else uri.replace('0x', '')
+    return re.match(r"[0-9|a-f|A-F]{40}@\d+\.\d+\.\d+\.\d+:\d+", uri.strip()) is not None
+
+
 def check_partner(wallet, partner):
     """
 
@@ -255,11 +266,8 @@ def check_partner(wallet, partner):
     :param partner:
     :return:
     """
-    temp_partner = partner
-    if partner.startswith('0x'):
-        temp_partner = partner.replace('0x', '')
-    p = re.match(r"[0-9|a-f|A-F]{40}@\d+\.\d+\.\d+\.\d+:\d+", temp_partner.strip())
-    if p:
+
+    if is_correct_uri(partner):
         par_pubkey, ip = partner.strip().split("@")
         if par_pubkey == wallet.address:
             return False
