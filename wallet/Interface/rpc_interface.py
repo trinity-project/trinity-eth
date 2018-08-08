@@ -49,7 +49,7 @@ class CurrentLiveWallet(object):
             return None
         balance = {}
         for i in Configure["AssetType"].keys():
-            b = get_balance(cls.Wallet.address, i.upper())
+            b = cls.Wallet.tnc_balance if i.upper() =="TNC" else get_balance(cls.Wallet.address, i.upper())
             balance[i] = b
         return {
                    "Publickey":cls.Wallet.address,
