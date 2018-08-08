@@ -68,8 +68,8 @@ class UserPromptInterface(PromptInterface):
                               "channel show uri",
 							  "channel show trans_history {channel}",
                               "channel depoist_limit",
-                              "contract approve {count}",
-                              "contract check-approved"
+                              # "contract approve {count}",
+                              # "contract check-approved"
                               ]
         self.commands.extend(self.user_commands)
         self.qrcode = False
@@ -255,20 +255,21 @@ class UserPromptInterface(PromptInterface):
             return
 
         command = get_arg(arguments)
-        asset_command = [i.split()[1] for i in self.user_commands]
-        if command not in asset_command:
-            print("no support command, please check the help")
-            self.help()
-            return
+        # asset_command = [i.split()[1] for i in self.user_commands]
+        # if command not in asset_command:
+        #     print("no support command, please check the help")
+        #     self.help()
+        #     return
 
-        if command == 'approve':
-            deposit = get_arg(arguments, 1)
-            try:
-                ch.Channel.approve(self.Wallet.address, deposit, self.Wallet._key.private_key_string)
-            except Exception as error:
-                print('Error to approved asset to contract. {}'.format(error))
-
-        elif command == "check-approved":
+        # if command == 'approve':
+        #     deposit = get_arg(arguments, 1)
+        #     try:
+        #         ch.Channel.approve(self.Wallet.address, deposit, self.Wallet._key.private_key_string)
+        #     except Exception as error:
+        #         print('Error to approved asset to contract. {}'.format(error))
+        #
+        # elif command == "check-approved":
+        if command == "check-approved":
             try:
                 result = ch.Channel.get_approved_asset(self.Wallet.address)
             except Exception as error:
@@ -277,6 +278,10 @@ class UserPromptInterface(PromptInterface):
                 if not result:
                     result = 0
                 print('Has approved {}'.format(result))
+        else:
+            print("no support command, please check the help")
+            self.help()
+            return
 
         return
 
