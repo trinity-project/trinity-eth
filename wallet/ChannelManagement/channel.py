@@ -372,6 +372,11 @@ class Channel(object):
             LOG.error('approve_deposit error: {}'.format(error))
 
     @staticmethod
+    def get_channel_total_balance(channel_id):
+        total_balance = Channel._eth_interface().get_channel_total_balance(channel_id).get('totalChannelBalance', 0)
+        return 0 != total_balance
+
+    @staticmethod
     def quick_settle(invoker, channel_id, nonce, founder, founder_balance,
                      partner, partner_balance, founder_signature, partner_signature, invoker_key):
 
@@ -525,12 +530,15 @@ class ChannelDepositEvent(ChannelEvent):
                 pass
             else:
                 # register monitor deposit event
-                event_monitor_deposit(self.channel_name, self.asset_type)
+                # event_monitor_deposit(self.channel_name, self.asset_type)
+                pass
 
     def terminate(self):
         super(ChannelDepositEvent, self).terminate()
         if hasattr(self, EnumEventAction.terminate_event.name):
-            return self.channel.update_channel(**self.terminate_event.kwargs)
+            # check the deposit of the contract address
+            if self.channel.get_channel_total_balance(self.channel_name):
+                return self.channel.update_channel(**self.terminate_event.kwargs)
 
 
 class ChannelQuickSettleEvent(ChannelEvent):
@@ -550,7 +558,8 @@ class ChannelQuickSettleEvent(ChannelEvent):
     def terminate(self):
         super(ChannelQuickSettleEvent, self).terminate()
         if hasattr(self, EnumEventAction.terminate_event.name):
-            return self.channel.update_channel(**self.terminate_event.kwargs)
+            if not self.channel.get_channel_total_balance(self.channel_name):
+                return self.channel.update_channel(**self.terminate_event.kwargs)
 
 
 def create_channel(founder, partner, asset_type, depoist: float, partner_deposit = None, cli=True,
