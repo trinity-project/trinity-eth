@@ -451,6 +451,7 @@ class ChannelEvent(object):
         self.finish_preparation = False
         self.is_founder = True
         self.need_websocket = False
+        self.is_event_completed = False
 
     def register(self, action_type, *args, **kwargs):
         self.is_valid_action(action_type)
@@ -539,6 +540,7 @@ class ChannelDepositEvent(ChannelEvent):
         if hasattr(self, EnumEventAction.terminate_event.name):
             # check the deposit of the contract address
             if self.channel.get_channel_total_balance(self.channel_name):
+                self.is_event_completed = True
                 return self.channel.update_channel(**self.terminate_event.kwargs)
 
 
@@ -560,6 +562,7 @@ class ChannelQuickSettleEvent(ChannelEvent):
         super(ChannelQuickSettleEvent, self).terminate()
         if hasattr(self, EnumEventAction.terminate_event.name):
             if not self.channel.get_channel_total_balance(self.channel_name):
+                self.is_event_completed = True
                 return self.channel.update_channel(**self.terminate_event.kwargs)
 
 
