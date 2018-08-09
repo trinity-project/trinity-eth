@@ -201,20 +201,24 @@ class WebSocketConnection(object):
         # message = args[0]
         # assert message, 'Received void message<{}>.'.format(args)
         LOG.debug(args)
+        event = args[0]
+        if event is not None:
+            if event[1].need_websocket:
+                message = self.receive()
+                LOG.debug('connection: {} Received: {}.'.format(self._conn, message))
+                if message:
+                    message = json.loads(message)
+                    message_type = message.get('messageType')
 
-        message = self.receive()
-        LOG.debug('connection: {} Received: {}.'.format(self._conn, message))
-        if message:
-            message = json.loads(message)
-            message_type = message.get('messageType')
-
-            # start to handle the event
-            if message_type in EVENT_RESPONSE_TYPE:
-                LOG.info('Handle message<{}> status <{}>.'.format(message_type, message.get('state')))
-            elif message_type in EVENT_MESSAGE_TYPE:
-                self.handle_message(message)
+                    # start to handle the event
+                    if message_type in EVENT_RESPONSE_TYPE:
+                        LOG.info('Handle message<{}> status <{}>.'.format(message_type, message.get('state')))
+                    elif message_type in EVENT_MESSAGE_TYPE:
+                        self.handle_message(message)
+                    else:
+                        LOG.info('Test message or invalid message {}'.format(message))
             else:
-                LOG.info('Test message or invalid message {}'.format(message))
+                self.handle_message({'messageType': 'LocalChecking', 'channelId': event[0]})
 
     def handle_message(self, message):
         message_type = message.get('messageType')
@@ -243,7 +247,7 @@ class WebSocketConnection(object):
 
             event = self.__event_ready_queue.popitem()
         except:
-            return
+            return None
         else:
             event_action = event[1]
             if not event_action:
@@ -261,6 +265,8 @@ class WebSocketConnection(object):
                 self.__event_monitor_queue.update(dict([event]))
             else:
                 self.__event_ready_queue.update(dict([event]))
+
+            return event
 
 
 ws_instance = WebSocketConnection(WS_SERVER_CONFIG.get('ip'), WS_SERVER_CONFIG.get('port'))
@@ -329,8 +335,8 @@ def monitorblock():
         block_delta = int(blockheight_onchain) - int(blockheight)
 
         # execute prepare and action
-        ws_instance.pre_execution()
-        ucoro_event(event_coro, blockheight)
+        channel_event = ws_instance.pre_execution()
+        ucoro_event(event_coro, channel_event)
 
         end_time = time.time() + 15 # sleep 15 second according to the chain update block time
         need_update = False

@@ -450,6 +450,7 @@ class ChannelEvent(object):
         self.depend_on_prepare = False
         self.finish_preparation = False
         self.is_founder = True
+        self.need_websocket = False
 
     def register(self, action_type, *args, **kwargs):
         self.is_valid_action(action_type)
