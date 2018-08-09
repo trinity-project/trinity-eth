@@ -1,4 +1,5 @@
-"""Author: Trinity Core Team 
+# --*-- coding : utf-8 --*--
+"""Author: Trinity Core Team
 
 MIT License
 
@@ -47,6 +48,7 @@ class Channel(object):
     _interface = None
     _web3_client = None
     _trinity_coef = pow(10, 8)
+
 
     def __init__(self, founder, partner):
         self.founder = founder
@@ -137,7 +139,7 @@ class Channel(object):
 
             try:
                 mg.FounderMessage.create(self.channel_name, self.founder, self.partner, asset_type,
-                                     deposit, partner_deposit, mg.Message.get_magic(), wallet=wallet)
+                                         deposit, partner_deposit, mg.Message.get_magic(), wallet=wallet)
             except Exception as error:
                 LOG.info('Create channel<{}> failed'.format(self.channel_name))
                 return False
@@ -258,15 +260,6 @@ class Channel(object):
         else:
             return trade
 
-    @staticmethod
-    def query_all_trade(channel_name):
-        """
-        get the transhistory
-        :param channel_name:
-        :return:
-        """
-        return APITransaction('transaction'+channel_name).sort(key='nonce')
-
     # transaction related
     def transfer(self, sender, receiver, asset_type, count, hash_random=None, wallet=None):
         """
@@ -308,8 +301,8 @@ class Channel(object):
     def _eth_interface():
         if not Channel._interface:
             Channel._interface = EthInterface(settings.NODEURL,
-                                             settings.Eth_Contract_address, settings.Eth_Contract_abi,
-                                             settings.TNC, settings.TNC_abi)
+                                              settings.Eth_Contract_address, settings.Eth_Contract_abi,
+                                              settings.TNC, settings.TNC_abi)
 
         return Channel._interface
 
@@ -352,16 +345,16 @@ class Channel(object):
     def get_approved_asset(address):
         try:
             return Channel._eth_interface().get_approved_asset(settings.TNC,
-                                                                          settings.TNC_abi,
-                                                                          address,
-                                                                          settings.Eth_Contract_address)
+                                                               settings.TNC_abi,
+                                                               address,
+                                                               settings.Eth_Contract_address)
         except Exception as error:
             LOG.error('approve_deposit error: {}'.format(error))
             return 0
 
     @staticmethod
     def approve_deposit(address, channel_id, nonce, founder, founder_amount, partner, partner_amount,
-                founder_sign, partner_sign, private_key):
+                        founder_sign, partner_sign, private_key):
         try:
             Channel._eth_interface().deposit(address,channel_id, nonce,
                                              founder, Channel.multiply(founder_amount),
@@ -369,11 +362,6 @@ class Channel(object):
                                              founder_sign, partner_sign, private_key)
         except Exception as error:
             LOG.error('approve_deposit error: {}'.format(error))
-
-    @staticmethod
-    def get_channel_total_balance(channel_id):
-        total_balance = Channel._eth_interface().get_channel_total_balance(channel_id).get('totalChannelBalance', 0)
-        return 0 != total_balance
 
     @staticmethod
     def quick_settle(invoker, channel_id, nonce, founder, founder_balance,
@@ -449,8 +437,6 @@ class ChannelEvent(object):
         self.depend_on_prepare = False
         self.finish_preparation = False
         self.is_founder = True
-        self.need_websocket = False
-        self.is_event_completed = False
 
     def register(self, action_type, *args, **kwargs):
         self.is_valid_action(action_type)
@@ -531,16 +517,12 @@ class ChannelDepositEvent(ChannelEvent):
                 pass
             else:
                 # register monitor deposit event
-                # event_monitor_deposit(self.channel_name, self.asset_type)
-                pass
+                event_monitor_deposit(self.channel_name, self.asset_type)
 
     def terminate(self):
         super(ChannelDepositEvent, self).terminate()
         if hasattr(self, EnumEventAction.terminate_event.name):
-            # check the deposit of the contract address
-            if self.channel.get_channel_total_balance(self.channel_name):
-                self.is_event_completed = True
-                return self.channel.update_channel(**self.terminate_event.kwargs)
+            return self.channel.update_channel(**self.terminate_event.kwargs)
 
 
 class ChannelQuickSettleEvent(ChannelEvent):
@@ -560,9 +542,7 @@ class ChannelQuickSettleEvent(ChannelEvent):
     def terminate(self):
         super(ChannelQuickSettleEvent, self).terminate()
         if hasattr(self, EnumEventAction.terminate_event.name):
-            if not self.channel.get_channel_total_balance(self.channel_name):
-                self.is_event_completed = True
-                return self.channel.update_channel(**self.terminate_event.kwargs)
+            return self.channel.update_channel(**self.terminate_event.kwargs)
 
 
 def create_channel(founder, partner, asset_type, depoist: float, partner_deposit = None, cli=True,
@@ -645,31 +625,17 @@ def udpate_channel_when_setup(address):
                 sync_channel_info_to_gateway(ch.channel, "UpdateChannel")
 
 
-def get_trans_history(channel_name):
-    """
-
-    :param channel_name:
-    :return:
-    """
-    return Channel.query_all_trade(channel_name)
-
 # test state
 ws_instance.register_event('test_event', ChannelTestEvent('state', 'TNC', EnumEventType.EVENT_TYPE_TEST_STATE))
 
 if __name__ == "__main__":
-    # result = APIChannel.query_channel(channel="1BE0FCD56A27AD46C22B8EEDC4E835EA")
-    # print(result)
-    # print(dir(result["content"][0]))
-    # print(result["content"][0].dest_addr)
-    # print(result["content"][0].src_addr)
-    #
-    # result = APIChannel.batch_query_channel(
-    #     filters={"dest_addr": "022a38720c1e4537332cd6e89548eedb0afbb93c1fdbade42c1299601eaec897f4",
-    #              "src_addr": "02cebf1fbde4786f031d6aa0eaca2f5acd9627f54ff1c0510a18839946397d3633"})
-    # print(result)
-    t = Channel("A","B")
-    t.channel_name ="AB"
-    s = Channel.get_trade_his("ab")
-    for i in s:
-        print(i)
+    result = APIChannel.query_channel(channel="1BE0FCD56A27AD46C22B8EEDC4E835EA")
+    print(result)
+    print(dir(result["content"][0]))
+    print(result["content"][0].dest_addr)
+    print(result["content"][0].src_addr)
 
+    result = APIChannel.batch_query_channel(
+        filters={"dest_addr": "022a38720c1e4537332cd6e89548eedb0afbb93c1fdbade42c1299601eaec897f4",
+                 "src_addr": "02cebf1fbde4786f031d6aa0eaca2f5acd9627f54ff1c0510a18839946397d3633"})
+    print(result)

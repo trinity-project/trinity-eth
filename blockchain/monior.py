@@ -219,11 +219,15 @@ class WebSocketConnection(object):
                         LOG.info('Test message or invalid message {}'.format(message))
         else:
             # enter action or terminate stage
-            event = self.__event_monitor_queue.popitem()
+            if self.__event_monitor_queue:
+                event = self.__event_monitor_queue.popitem()
+            else:
+                return
+
             if event:
                 event[1].terminate()
                 if not event[1].is_event_completed:
-                    self.__event_monitor_queue.update(dict[event])
+                    self.__event_monitor_queue.update({event[0]: event[1]})
 
     def handle_message(self, message):
         message_type = message.get('messageType')
