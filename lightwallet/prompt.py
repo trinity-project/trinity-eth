@@ -64,7 +64,7 @@ class PromptInterface(object):
         out = []
         try:
             out = [
-                (Token.Command, '[%s]' % (settings.NET_NAME if not self.locked else settings.NET_NAME + " (Locked) ")),
+                (Token.Command, '[%s]' % (settings.NET_NAME if not PromptInterface.locked else settings.NET_NAME + " (Locked) ")),
 
             ]
         except Exception as e:
@@ -291,12 +291,12 @@ class PromptInterface(object):
 
         item = get_arg(args)
         if item == "cli":
-            if self.locked:
+            if PromptInterface.locked:
                 passwd = prompt("[Wallet Password]> ", is_password=True)
                 if not self.Wallet.ValidatePassword(passwd):
                     print("Incorrect password")
                     return None
-                self.locked = False
+                PromptInterface.locked = False
                 print("cli unlocked")
             else:
                 print("cli not in locked mode")
@@ -314,11 +314,11 @@ class PromptInterface(object):
         """
         item = get_arg(args)
         if item == "cli":
-            if self.locked:
+            if PromptInterface.locked:
                 print("cli now is in locked mode")
             else:
                 if self.Wallet:
-                    self.locked = True
+                    PromptInterface.locked = True
                     print("lock cli with wallet %s" %self.Wallet.name)
                 else:
                     print("No opened wallet")

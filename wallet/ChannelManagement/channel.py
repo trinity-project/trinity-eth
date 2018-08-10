@@ -90,18 +90,18 @@ class Channel(object):
             filter_src["channel"] = channel
             filter_dest["channel"] = channel
 
-        console_log.info("Get Channels with Address %s State %s Peer %s Channel %s" % (address, state if state else " ",
+        print("Get Channels with Address %s State %s Peer %s Channel %s" % (address, state if state else " ",
                                                                             peer if peer else " ",
                                                                             channel if channel else " "))
         channels = APIChannel.batch_query_channel(filters=filter_src)
         if channels.get("content"):
             for ch in channels["content"]:
-                console_log.info("=="*10,"\nChannelName:", ch.channel, "\nState:", ch.state, "\nPeer:", ch.dest_addr,
+                print("=="*10,"\nChannelName:", ch.channel, "\nState:", ch.state, "\nPeer:", ch.dest_addr,
                       "\nBalance:", json.dumps(ch.balance, indent=1))
         channeld = APIChannel.batch_query_channel(filters=filter_dest)
         if channeld.get("content"):
             for ch in channeld["content"]:
-                console_log.info("=="*10,"\nChannelName:", ch.channel, "\nState:", ch.state, "\nPeer:", ch.src_addr,
+                print("=="*10,"\nChannelName:", ch.channel, "\nState:", ch.state, "\nPeer:", ch.src_addr,
                       "\nBalance:", json.dumps(ch.balance, indent=1))
 
     @classmethod
