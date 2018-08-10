@@ -159,7 +159,7 @@ class UserPromptInterface(PromptInterface):
         out = []
         try:
             out = [
-                (Token.Command, "[%s]" % settings.NET_NAME),
+                (Token.Command, "[%s]" % (settings.NET_NAME if not PromptInterface.locked else settings.NET_NAME + "(Locked)")),
                 (Token.Default, str(EventMonitor.get_wallet_block_height())),
                 (Token.Command, '/'),
                 (Token.Default, str(EventMonitor.get_block_height()))]
