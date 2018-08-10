@@ -530,7 +530,7 @@ class UserPromptInterface(PromptInterface):
                 continue
             k, v = arg.strip().split("=")
             if k in arg_dic.keys():
-                arg_dic.setdefault(k,v)
+                arg_dic[k]=v
             else:
                 continue
 

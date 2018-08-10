@@ -90,9 +90,9 @@ class Channel(object):
             filter_src["channel"] = channel
             filter_dest["channel"] = channel
 
-        print("Get Channels with Address %s State %s Peer %s Channel %s" % (address, state if state else " ",
-                                                                            peer if peer else " ",
-                                                                            channel if channel else " "))
+        print("Get Channels with Address %s State %s Peer %s Channel %s" % (address, state if state else "All",
+                                                                            peer if peer else "All",
+                                                                            channel if channel else "All"))
         channels = APIChannel.batch_query_channel(filters=filter_src)
         if channels.get("content"):
             for ch in channels["content"]:
