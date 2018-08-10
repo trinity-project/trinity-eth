@@ -35,8 +35,6 @@ class PromptInterface(object):
                 'close',
                 'wallet',
                 'send {asset} {address} {amount}',
-                'export wif {address}',
-                'export nep2 {address}',
                 'history',
                 'lock cli',
                 'unlock cli'
