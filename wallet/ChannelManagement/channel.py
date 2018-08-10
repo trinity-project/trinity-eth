@@ -31,6 +31,7 @@ from wallet.TransactionManagement import message as mg
 from wallet.utils import convert_number_auto
 from wallet.Interface.gate_way import sync_channel
 from common.log import LOG
+from common.console import console_log
 import json
 
 
@@ -75,25 +76,32 @@ class Channel(object):
         return channels
 
     @staticmethod
-    def query_channel(address, state=None):
-        if state:
-            print("Get Channels with Address %s State %s" % (address, state))
-            filter_src = {"src_addr":address, "state": state}
-            filter_dest = {"dest_addr":address, "state": state}
-        else:
-            print("Get Channels with Address %s" % address)
-            filter_src = {"src_addr": address}
-            filter_dest = {"dest_addr": address}
+    def query_channel(address, state=None, peer=None, channel=None):
+        filter_src = {"src_addr": address}
+        filter_dest = {"dest_addr": address}
 
+        if state:
+            filter_src["state"] = state
+            filter_dest["state"] = state
+        if peer:
+            filter_src["dest_addr"] = peer
+            filter_dest["src_addr"] = peer
+        if channel:
+            filter_src["channel"] = channel
+            filter_dest["channel"] = channel
+
+        console_log.info("Get Channels with Address %s State %s Peer %s Channel %s" % (address, state if state else " ",
+                                                                            peer if peer else " ",
+                                                                            channel if channel else " "))
         channels = APIChannel.batch_query_channel(filters=filter_src)
         if channels.get("content"):
             for ch in channels["content"]:
-                print("=="*10,"\nChannelName:", ch.channel, "\nState:", ch.state, "\nPeer:", ch.dest_addr,
+                console_log.info("=="*10,"\nChannelName:", ch.channel, "\nState:", ch.state, "\nPeer:", ch.dest_addr,
                       "\nBalance:", json.dumps(ch.balance, indent=1))
         channeld = APIChannel.batch_query_channel(filters=filter_dest)
         if channeld.get("content"):
             for ch in channeld["content"]:
-                print("=="*10,"\nChannelName:", ch.channel, "\nState:", ch.state, "\nPeer:", ch.src_addr,
+                console_log.info("=="*10,"\nChannelName:", ch.channel, "\nState:", ch.state, "\nPeer:", ch.src_addr,
                       "\nBalance:", json.dumps(ch.balance, indent=1))
 
     @classmethod
@@ -575,8 +583,8 @@ def filter_channel_via_address(address1, address2, state=None):
     return channel
 
 
-def get_channel_via_address(address, state=None):
-    Channel.query_channel(address, state)
+def get_channel_via_address(address, state=None, peer=None, channel=None):
+    Channel.query_channel(address, state, peer, channel)
     return
 
 

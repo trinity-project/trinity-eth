@@ -118,7 +118,7 @@ class UserPromptInterface(PromptInterface):
                               "channel create {partner} {asset_type} {deposit}",
                               "channel tx {payment_link}/{receiver} {asset_type} {count}",
                               "channel close {channel}",
-                              "channel peer",
+                              "channel peer [state=]|[peer=]|[channel=]",
                               "channel payment {asset}, {count}, [{comments}]",
                               "channel qrcode {on/off}",
                               "channel trans",
@@ -510,15 +510,23 @@ class UserPromptInterface(PromptInterface):
             console_log.warn("No Channel Create")
 
     @channel_opened
-    @arguments_length([1,2])
+    @arguments_length([1,2,3,4])
     def channel_peer(self, arguments):
         """
 
         :param arguments:
         :return:
         """
-        state = get_arg(arguments, 1)
-        get_channel_via_address(self.Wallet.url, state)
+        arg_dic={"state":None,"peer":None,"channel":None}
+        for i in range(1,4):
+            arg = get_arg(arguments,i)
+            k, v = arg.strip().split("=")
+            if k in arg_dic.keys():
+                arg_dic.setdefault(k,v)
+            else:
+                continue
+
+        get_channel_via_address(self.Wallet.url, **arg_dic)
         return
 
     @channel_opened
