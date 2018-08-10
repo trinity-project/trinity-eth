@@ -385,10 +385,11 @@ class UserPromptInterface(PromptInterface):
         :return:
         """
 
-        argument1 = get_arg(arguments, 1)
-        if len(argument1) > 88:
+
+        if len(arguments) ==2:
             # payment code
-            result, info = Payment.decode_payment_code(argument1)
+            pay_code = get_arg(arguments, 1)
+            result, info = Payment.decode_payment_code(pay_code)
             if result:
                 info = json.loads(info)
                 receiver = info.get("uri")
@@ -409,11 +410,11 @@ class UserPromptInterface(PromptInterface):
                 self.help()
                 return None
 
-            asset_type = asset_type.upper() if check_support_asset_type(asset_type) else None
-            if not asset_type:
-                print("No support asset type %s" % asset_type)
+            asset_t = asset_type.upper() if check_support_asset_type(asset_type) else None
+            if not asset_t:
+                console_log.error("No support asset type %s" % asset_type)
                 return None
-        ch.Channel(self.Wallet.url, receiver).transfer(self.Wallet.url, receiver, asset_type, count, hr, self.Wallet)
+        ch.Channel(self.Wallet.url, receiver).transfer(self.Wallet.url, receiver, asset_t, count, hr, self.Wallet)
 
         # receiverpubkey, receiverip= receiver.split("@")
         channels = filter_channel_via_address(self.Wallet.url, receiver, EnumChannelState.OPENED.name)
