@@ -147,40 +147,12 @@ class UserPromptInterface(PromptInterface):
         """
         if command is not None and len(command) > 0:
             command = command.lower()
-
-            if command == 'quit' or command == 'exit':
-                self.quit()
-            elif command == 'help':
-                self.help()
-            elif command == 'wallet':
-                self.show_wallet(arguments)
-            elif command is None:
-                print('please specify a command')
-            elif command == 'create':
-                self.do_create(arguments)
-            elif command == 'close':
-                self.do_close_wallet()
-            elif command == 'open':
-                self.do_open(arguments)
-            elif command == 'export':
-                self.do_export(arguments)
-            elif command == 'send':
-                self.do_send(arguments)
-            elif command == 'tx':
-                self.show_tx(arguments)
-            elif command == 'channel':
+            if command == 'channel':
                 self.do_channel(arguments)
             elif command == "faucet":
                 self.do_faucet()
-            # elif command == 'contract':
-            #     self.do_contract(arguments)
-            elif command == "lock":
-                self.do_lock(arguments)
-            elif command == "unlock":
-                self.unlock(arguments)
-
             else:
-                print("command %s not found" % command)
+                super().handle_commands(command,arguments)
 
 
     def get_bottom_toolbar(self, cli=None):
