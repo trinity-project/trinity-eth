@@ -448,7 +448,7 @@ class PromptInterface(object):
             if command is not None and len(command) > 0:
                 command = command.lower()
 
-                if self.locked:
+                if PromptInterface.locked:
                     self.handle_locked_command(command, arguments)
                     continue
 

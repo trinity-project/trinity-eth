@@ -138,78 +138,50 @@ class UserPromptInterface(PromptInterface):
         """
         return self.Wallet.address
 
-
-    def run(self):
+    def handle_commands(self,command, arguments):
         """
+
+        :param command:
+        :param arguments:
         :return:
         """
+        if command is not None and len(command) > 0:
+            command = command.lower()
 
-        tokens = [(Token.Neo, 'TRINITY'), (Token.Default, ' cli. Type '),
-                  (Token.Command, "'help' "), (Token.Default, 'to get started')]
-
-        print_tokens(tokens,self.token_style)
-        print("\n")
-
-
-        while self.go_on:
-            try:
-                result = prompt("trinity>",
-                                history=self.history,
-                                get_bottom_toolbar_tokens=self.get_bottom_toolbar,
-                                style=self.token_style,
-                                refresh_interval=3
-                                )
-            except EOFError:
-                return self.quit()
-            except KeyboardInterrupt:
+            if command == 'quit' or command == 'exit':
                 self.quit()
-                continue
+            elif command == 'help':
+                self.help()
+            elif command == 'wallet':
+                self.show_wallet(arguments)
+            elif command is None:
+                print('please specify a command')
+            elif command == 'create':
+                self.do_create(arguments)
+            elif command == 'close':
+                self.do_close_wallet()
+            elif command == 'open':
+                self.do_open(arguments)
+            elif command == 'export':
+                self.do_export(arguments)
+            elif command == 'send':
+                self.do_send(arguments)
+            elif command == 'tx':
+                self.show_tx(arguments)
+            elif command == 'channel':
+                self.do_channel(arguments)
+            elif command == "faucet":
+                self.do_faucet()
+            # elif command == 'contract':
+            #     self.do_contract(arguments)
+            elif command == "lock":
+                self.do_lock(arguments)
+            elif command == "unlock":
+                self.unlock(arguments)
 
-            try:
-                command, arguments = self.parse_result(result)
+            else:
+                print("command %s not found" % command)
 
-                if command is not None and len(command) > 0:
-                    command = command.lower()
-
-                    if command == 'quit' or command == 'exit':
-                        self.quit()
-                    elif command == 'help':
-                        self.help()
-                    elif command == 'wallet':
-                        self.show_wallet(arguments)
-                    elif command is None:
-                        print('please specify a command')
-                    elif command == 'create':
-                        self.do_create(arguments)
-                    elif command == 'close':
-                        self.do_close_wallet()
-                    elif command == 'open':
-                        self.do_open(arguments)
-                    elif command == 'export':
-                        self.do_export(arguments)
-                    elif command == 'send':
-                        self.do_send(arguments)
-                    elif command == 'tx':
-                        self.show_tx(arguments)
-                    elif command == 'channel':
-                        self.do_channel(arguments)
-                    elif command == "faucet":
-                        self.do_faucet()
-                    # elif command == 'contract':
-                    #     self.do_contract(arguments)
-                    elif command == "lock":
-                        self.do_lock(arguments)
-                    elif command == "unlock":
-                        self.unlock(arguments)
-
-                    else:
-                        print("command %s not found" % command)
-
-            except Exception as e:
-
-                console_log.error("could not execute command: %s " % e)
-                traceback.print_stack()
-                traceback.print_exc()
 
     def get_bottom_toolbar(self, cli=None):
         out = []
