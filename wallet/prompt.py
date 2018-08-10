@@ -500,9 +500,12 @@ class UserPromptInterface(PromptInterface):
             arg = get_arg(arguments,i)
             if arg is None:
                 continue
-            k, v = arg.strip().split("=")
-            if k in arg_dic.keys():
-                arg_dic[k]=v
+            try:
+                k_v=arg.strip().split("=")
+                if k_v[0] in arg_dic.keys():
+                    arg_dic[k_v[0]]=k_v[1]
+            except IndexError:
+                continue
             else:
                 continue
 
