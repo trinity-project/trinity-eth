@@ -197,6 +197,11 @@ class UserPromptInterface(PromptInterface):
                         self.do_faucet()
                     # elif command == 'contract':
                     #     self.do_contract(arguments)
+                    elif command == "lock":
+                        self.do_lock(arguments)
+                    elif command == "unlock":
+                        self.unlock(arguments)
+
                     else:
                         print("command %s not found" % command)
 
@@ -521,6 +526,8 @@ class UserPromptInterface(PromptInterface):
         arg_dic={"state":None,"peer":None,"channel":None}
         for i in range(1,4):
             arg = get_arg(arguments,i)
+            if arg is None:
+                continue
             k, v = arg.strip().split("=")
             if k in arg_dic.keys():
                 arg_dic.setdefault(k,v)
