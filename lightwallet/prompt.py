@@ -292,7 +292,7 @@ class PromptInterface(object):
         elif item == "wallet":
             pass
         else:
-            print("please spacify unlock item [cli/wallet]")
+            print("please spacify unlock item [cli]")
         return None
 
     def do_lock(self, args):
@@ -314,7 +314,7 @@ class PromptInterface(object):
         elif item == "wallet":
             pass
         else:
-            print("please spacify lock item [cli/wallet]")
+            print("please spacify lock item [cli]")
         return None
 
     def show_tx(self, args):
