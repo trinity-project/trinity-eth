@@ -134,30 +134,19 @@ class PromptInterface(object):
 
         if self.Wallet:
             self.do_close_wallet()
-
         item = get_arg(arguments)
-
         if item and item == 'wallet':
-
             path = get_arg(arguments, 1)
-
             if path:
-
                 if not os.path.exists(path):
                     print("wallet file not found")
                     return
-
                 passwd = prompt("[Password]> ", is_password=True)
-                self.Wallet = Wallet.Open(path, passwd)
-
                 try:
                     self.Wallet = Wallet.Open(path, passwd)
-
-
                     print("Opened wallet at %s" % path)
                 except Exception as e:
                     print("could not open wallet: %s " % e)
-
             else:
                 print("Please specify a path")
         else:
