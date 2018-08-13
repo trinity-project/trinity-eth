@@ -221,8 +221,8 @@ class Wallet(object):
         contract_instance = settings.EthClient.get_contract_instance(conract_address,
                                                        abi)
         address_to = checksum_encode(address_to)
-        tx = settings.EthClient.construct_erc20_tx(contract_instance, self._key.address,
-                                                   int(value*10*decimals), gasLimit, gasprice)
+        tx = settings.EthClient.construct_erc20_tx(contract_instance, self._key.address, address_to,
+                                                   int(value*10**decimals), gasLimit, gasprice)
         rawdata = self.SignTX(tx)
 
         asset = "{}({})".format(asset, conract_address)
