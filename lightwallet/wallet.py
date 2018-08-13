@@ -132,6 +132,15 @@ class Wallet(object):
         """
         return self._key.sign_hash(message_hash)
 
+    def recoverHash(self,message_hash, signature):
+        """
+
+        :param message_hash:
+        :param signature:
+        :return:
+        """
+        return self._key.recoverHash(message_hash, signature=signature)
+
     def SignTX(self,tx_data: dict):
         """
 

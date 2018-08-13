@@ -27,7 +27,7 @@ SOFTWARE."""
 from wallet.TransactionManagement.transaction import TrinityTransaction
 from wallet.utils import get_asset_type_id
 from wallet.ChannelManagement import channel as ch
-from model.base_enum import EnumChannelState
+from model.base_enum import EnumChannelState, EnumStatusCode
 from wallet.Interface.gate_way import send_message
 from wallet.utils import sign,\
     check_onchain_balance, \
@@ -335,6 +335,27 @@ class TransactionMessage(Message):
 
         content = TransactionMessage._eth_client().sign_args(typeList, valueList, privtKey).decode()
         return '0x' + content
+
+    @staticmethod
+    def verify_signature(wallet,start=3, *args, **kwargs):
+        """
+
+        :param start:
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        typeList = args[0] if 0 < len(args) else kwargs.get('typeList')
+        valueList = args[1] if 1 < len(args) else kwargs.get('valueList')
+        signature = args[2] if 2 < len(args) else kwargs.get("signature")
+
+
+        for idx in range(start, len(typeList)):
+            if typeList[idx] in ['uint256']:
+                valueList[idx] = TransactionMessage.multiply(valueList[idx])
+        solity_hash = TransactionMessage._eth_client().solidity_hash(typeList, valueList)
+        return wallet.address == wallet.recoverHash(solity_hash, signature=signature)
+
 
     @staticmethod
     def approve(address, deposit, private_key):
@@ -776,7 +797,6 @@ class RsmcMessage(TransactionMessage):
         self.payment_count = self.message_body.get("PaymentCount")
         self.sender_balance = self.message_body.get("SenderBalance")
         self.receiver_balance = self.message_body.get("ReceiverBalance")
-        self.commitment         = self.message_body.get('Commitment')
         self.comments = self.message.get("Comments")
 
     def handle_message(self):
@@ -786,11 +806,32 @@ class RsmcMessage(TransactionMessage):
         super(RsmcMessage, self).handle()
         verified, error = self.verify()
         if verified:
-            RsmcResponsesMessage.create(self.channel_name, self.wallet, self.sender, self.receiver,
+            trade_state = EnumTradeState.confirming
+            try:
+                RsmcResponsesMessage.create(self.channel_name, self.wallet, self.sender, self.receiver,
                                         self.sender_balance, self.receiver_balance, self.payment_count,
-                                        self.tx_nonce, self.commitment)
-
-            pass
+                                        self.tx_nonce)
+            except Exception as error:
+                trade_state = EnumTradeState.failed
+                LOG.exception(error)
+                status = EnumResponseStatus.RESPONSE_EXCEPTION_HAPPENED
+            commitment = RsmcMessage.sign_content(
+                typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
+                valueList=[self.channel_name, self.tx_nonce, self.sender_address,
+                           self.sender_balance, self.receiver_address, self.receiver_balance],
+                privtKey=self.wallet._key.private_key_string)
+            ch.Channel.add_trade(self.channel_name,
+                                 nonce=self.tx_nonce,
+                                 type=EnumTradeType.TRADE_TYPE_RSMC.value,
+                                 role=EnumTradeRole.TRADE_ROLE_PARTNER,
+                                 payment=self.payment_count,
+                                 address=self.receiver,
+                                 balance={self.asset_type.upper(): self.receiver_balance},
+                                 commitment=commitment,
+                                 peer=self.sender_address,
+                                 peer_balance={self.asset_type.upper(): self.sender_balance},
+                                 peer_commitment=None,
+                                 state=trade_state.name)
         else:
             LOG.error('Handle RsmcMessage error: {}'.format(error))
         pass
@@ -905,7 +946,6 @@ class RsmcMessage(TransactionMessage):
                 "PaymentCount": payment,
                 "SenderBalance": sender_balance,
                 "ReceiverBalance": receiver_balance,
-                "Commitment": commitment,
             }
         }
 
@@ -1056,7 +1096,7 @@ class RsmcResponsesMessage(TransactionMessage):
     def __init__(self, message, wallet):
         super().__init__(message,wallet)
         self.channel_name = message.get("ChannelName")
-        self.channel = None
+        self.channel = ch.Channel.channel(self.channel_name)
 
         self.asset_type = self.message_body.get("AssetType", '').upper()
         self.payment_count = self.message_body.get("PaymentCount")
@@ -1075,12 +1115,33 @@ class RsmcResponsesMessage(TransactionMessage):
         verified, error = self.verify()
         if verified:
             if EnumResponseStatus.RESPONSE_OK.name == self.status:
+                trade_state = EnumTradeState.confirmed
                 # update channel balance
                 sender_addr = self.sender.strip().split('@')[0]
                 receiver_addr = self.receiver.strip().split('@')[0]
                 self.channel = ch.Channel(self.sender, self.receiver).channel(self.channel_name)
                 self.channel.update_channel(balance={sender_addr: {self.asset_type: self.sender_balance},
+
                                                      receiver_addr: {self.asset_type: self.receiver_balance}})
+                transaction = self.channel.query_trade(self.channel_name, self.tx_nonce)
+                if transaction == EnumStatusCode.DBQueryWithoutMatchedItems:
+                    raise EnumStatusCode.DBQueryWithoutMatchedItems
+                if transaction.role is EnumTradeRole.TRADE_ROLE_FOUNDER:
+                    try:
+                        RsmcResponsesMessage.create(self.channel_name,self.wallet,
+                                                self.receiver, self.sender, self.receiver_balance,
+                                                self.sender_balance,self.payment_count,self.tx_nonce,
+                                                transaction.commitment, self.asset_type)
+                    except Exception as error:
+                        trade_state = EnumTradeState.failed
+                        LOG.exception(error)
+                        status = EnumResponseStatus.RESPONSE_EXCEPTION_HAPPENED
+
+                ch.Channel.update_trade(self.channel_name,
+                                        nonce=self.tx_nonce,
+                                        peer_commitment=self.commitment,
+                                        state=trade_state.name)
+
 
             # TODO: update transaction information
             LOG.info('update transaction')
@@ -1088,8 +1149,8 @@ class RsmcResponsesMessage(TransactionMessage):
             LOG.error('Handle RsmcRespnose error: {}'.format(error))
 
     @staticmethod
-    def create(channel_name, wallet, sender, receiver, sender_balance, receiver_balance, payment, tx_nonce,
-               sender_commitment, asset_type="TNC", cli=False, router = None, next_router=None, comments=None):
+    def create(channel_name, wallet, sender, receiver, sender_balance, receiver_balance, payment, nonce,
+               sender_commitment=None, asset_type="TNC", comments=None):
         """
 
         :param channel_name:
@@ -1110,11 +1171,11 @@ class RsmcResponsesMessage(TransactionMessage):
         channel = ch.Channel.channel(channel_name)
 
         # get transaction history
-        transaction = channel.latest_trade(channel_name)
-        # get nonce in the offline account book
-        if not transaction:
-            return
-        nonce = transaction.nonce + 1
+        # transaction = channel.latest_trade(channel_name)
+        # # get nonce in the offline account book
+        # if not transaction:
+        #     return
+        #nonce = transaction.nonce + 1
         trade_state = EnumTradeState.confirmed
         balance = channel.get_balance()
 
@@ -1162,18 +1223,6 @@ class RsmcResponsesMessage(TransactionMessage):
 
         # TODO: MUST record this commitment and balance info
         # add the transaction history
-        ch.Channel.add_trade(channel_name,
-                             nonce = nonce,
-                             type = EnumTradeType.TRADE_TYPE_RSMC.value,
-                             role = EnumTradeRole.TRADE_ROLE_PARTNER,
-                             payment = payment,
-                             address = receiver,
-                             balance = {asset_type.upper(): this_receiver_balance},
-                             commitment = commitment,
-                             peer = sender,
-                             peer_balance = {asset_type.upper(): this_sender_balance},
-                             peer_commitment = sender_commitment,
-                             state = trade_state.name)
 
         message = {
             "MessageType":"RsmcSign",
@@ -1200,7 +1249,17 @@ class RsmcResponsesMessage(TransactionMessage):
 
         return status
 
+    def _verify_signature(self):
+        pass
+
+
     def verify(self):
+        """
+
+        :return:
+        """
+
+
         return True, None
 
 

@@ -87,10 +87,21 @@ class Client(object):
         :param privtKey: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
         :return:
         '''
-        data_hash = Web3.soliditySha3(typeList, valueList)
+        data_hash = self.solidity_hash(typeList, valueList)
         v, r, s = ecsign(data_hash, normalize_key(privtKey))
         signature = binascii.hexlify(int_to_big_endian(r) + int_to_big_endian(s) + bytes(chr(v - 27).encode()))
         return signature
+
+    def solidity_hash(self, typeList, valueList):
+        """
+
+        :param typeList:
+        :param valueList:
+        :param privtkey:
+        :return:
+        """
+        return Web3.soliditySha3(typeList, valueList)
+
 
     def get_balance_of_eth(self,address):
         """
