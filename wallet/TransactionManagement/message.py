@@ -1,4 +1,4 @@
-"""Author: Trinity Core Team 
+"""Author: Trinity Core Team
 
 MIT License
 
@@ -1890,10 +1890,9 @@ class PaymentLink(TransactionMessage):
         "Sender": "03dc2841ddfb8c2afef94296693315a234026fa8f058c3e4259a04f8be6d540049@106.15.91.150:8089",
         "MessageBody": {
             "Parameter": {
-                "Amount": 0,
-                "Assets": "TNC",
-                "Description": "Description"
+                "PaymentCount": 0,
             }
+        "Comments": "Description"
         }
     }"""
 
@@ -1901,12 +1900,12 @@ class PaymentLink(TransactionMessage):
         super().__init__(message, wallet)
 
         parameter = self.message_body.get("Parameter")
-        self.amount = parameter.get("Amount") if parameter else None
-        self.asset = parameter.get("Assets") if parameter else None
-        self.comments = parameter.get("Description") if parameter else None
+        self.amount = self.message_body.get("PaymentCount")
+        self.asset_type = message.get('AssetType')
+        self.comments = message.get('Comments')
 
     def handle_message(self):
-        pycode = Payment(self.wallet,self.sender).generate_payment_code(get_asset_type_id(self.asset),
+        pycode = Payment(self.wallet,self.sender).generate_payment_code(get_asset_type_id(self.asset_type),
                          self.amount, self.comments)
         message = {"MessageType":"PaymentLinkAck",
                    "Receiver":self.sender,
@@ -1926,7 +1925,7 @@ class PaymentAck(TransactionMessage):
         "Receiver": "03dc2841ddfb8c2afef94296693315a234026fa8f058c3e4259a04f8be6d540049@106.15.91.150:8089",
         "MessageBody": {
             "State": "Success",
-            "Hr": "Hr"
+            "HashR": "Hr"
         }
     }
     """
@@ -1940,7 +1939,7 @@ class PaymentAck(TransactionMessage):
         "Receiver": receiver,
         "MessageBody": {
                          "State": state,
-                         "Hr": hr
+                         "HashR": hr
                          }
                 }
         Message.send(message)
