@@ -566,8 +566,8 @@ class FounderMessage(TransactionMessage):
             # record this transaction
             ch.Channel.add_trade(channel_name,
                                  nonce = 0,
-                                 type = EnumTradeType.TRADE_TYPE_FOUNDER.value,
-                                 role = EnumTradeRole.TRADE_ROLE_FOUNDER,
+                                 type = EnumTradeType.TRADE_TYPE_FOUNDER.name,
+                                 role = EnumTradeRole.TRADE_ROLE_FOUNDER.name,
                                  address = founder,
                                  balance = {asset_type.upper(): founder_deposit},
                                  commitment = commitment,
@@ -751,8 +751,8 @@ class FounderResponsesMessage(TransactionMessage):
         # record transaction
         ch.Channel.add_trade(channel_name,
                              nonce = 0,
-                             type = EnumTradeType.TRADE_TYPE_FOUNDER.value,
-                             role = EnumTradeRole.TRADE_ROLE_PARTNER,
+                             type = EnumTradeType.TRADE_TYPE_FOUNDER.name,
+                             role = EnumTradeRole.TRADE_ROLE_PARTNER.name,
                              address = partner,
                              balance = {asset_type: partner_deposit},
                              commitment = commitment,
@@ -822,8 +822,8 @@ class RsmcMessage(TransactionMessage):
                 privtKey=self.wallet._key.private_key_string)
             ch.Channel.add_trade(self.channel_name,
                                  nonce=self.tx_nonce,
-                                 type=EnumTradeType.TRADE_TYPE_RSMC.value,
-                                 role=EnumTradeRole.TRADE_ROLE_PARTNER,
+                                 type=EnumTradeType.TRADE_TYPE_RSMC.name,
+                                 role=EnumTradeRole.TRADE_ROLE_PARTNER.name,
                                  payment=self.payment_count,
                                  address=self.receiver,
                                  balance={self.asset_type.upper(): self.receiver_balance},
@@ -923,8 +923,8 @@ class RsmcMessage(TransactionMessage):
         # add the transaction history
         ch.Channel.add_trade(channel_name,
                              nonce = nonce,
-                             type = EnumTradeType.TRADE_TYPE_RSMC.value,
-                             role = EnumTradeRole.TRADE_ROLE_FOUNDER,
+                             type = EnumTradeType.TRADE_TYPE_RSMC.name,
+                             role = EnumTradeRole.TRADE_ROLE_FOUNDER.name,
                              payment = payment,
                              address = sender,
                              balance = {asset_type.upper(): sender_balance},
@@ -1125,8 +1125,9 @@ class RsmcResponsesMessage(TransactionMessage):
                                                      receiver_addr: {self.asset_type: self.receiver_balance}})
                 transaction = self.channel.query_trade(self.channel_name, self.tx_nonce)
                 if transaction == EnumStatusCode.DBQueryWithoutMatchedItems:
-                    raise EnumStatusCode.DBQueryWithoutMatchedItems
-                if transaction.role is EnumTradeRole.TRADE_ROLE_FOUNDER:
+                    LOG.error(EnumStatusCode.DBQueryWithoutMatchedItems.name)
+                    raise Exception(EnumStatusCode.DBQueryWithoutMatchedItems.name)
+                if transaction.role == EnumTradeRole.TRADE_ROLE_FOUNDER.name:
                     try:
                         RsmcResponsesMessage.create(self.channel_name,self.wallet,
                                                 self.receiver, self.sender, self.receiver_balance,
