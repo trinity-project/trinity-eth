@@ -1139,7 +1139,7 @@ class RsmcResponsesMessage(TransactionMessage):
                 if transaction == EnumStatusCode.DBQueryWithoutMatchedItems:
                     LOG.error(EnumStatusCode.DBQueryWithoutMatchedItems.name)
                     raise Exception(EnumStatusCode.DBQueryWithoutMatchedItems.name)
-                if transaction.role == EnumTradeRole.TRADE_ROLE_FOUNDER.name:
+                if transaction[0].role == EnumTradeRole.TRADE_ROLE_FOUNDER.name:
                     try:
                         RsmcResponsesMessage.create(self.channel_name,self.wallet,
                                                 self.receiver, self.sender, self.receiver_balance,
