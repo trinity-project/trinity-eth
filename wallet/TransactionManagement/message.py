@@ -289,7 +289,11 @@ class TransactionMessage(Message):
     def __init__(self, message, wallet):
         super().__init__(message)
         self.wallet = wallet
-        self.tx_nonce = message.get("TxNonce")
+        try:
+            self.tx_nonce = int(message.get("TxNonce"))
+        except ValueError as e:
+            LOG.error(e)
+            self.tx_nonce = None
 
     def verify(self,**kwargs):
         pass
@@ -962,6 +966,14 @@ class RsmcMessage(TransactionMessage):
         # assert 0 == self.tx_nonce, 'Nonce MUST be larger than zero'
         if 0 >= self.tx_nonce:
             return False, 'Nonce MUST be larger than zero'
+        try:
+            self.payment_count = convert_float(self.payment_count, self.asset_type)
+            self.founder_deposit = convert_float(self.founder_deposit, self.asset_type)
+            self.partner_deposit = convert_float(self.partner_deposit, self.asset_type)
+        except Exception as e:
+            LOG.error(e)
+            return False, "Convert Msg Error"
+
         return True, None
 
     # def store_monitor_commitement(self):
