@@ -25,7 +25,7 @@ SOFTWARE."""
 #coding=utf-8
 
 from wallet.TransactionManagement.transaction import TrinityTransaction
-from wallet.utils import get_asset_type_id
+from wallet.utils import get_asset_type_id,convert_float
 from wallet.ChannelManagement import channel as ch
 from model.base_enum import EnumChannelState, EnumStatusCode
 from wallet.Interface.gate_way import send_message
@@ -509,12 +509,12 @@ class FounderMessage(TransactionMessage):
         assert founder.__contains__('@'), 'Invalid founder URL format.'
         assert partner.__contains__('@'), 'Invalid founder URL format.'
 
-        founder_deposit = float(founder_deposit)
+        founder_deposit = convert_float(founder_deposit, asset_type)
         assert 0 < float(founder_deposit), 'Deposit Must be lager than zero.'
 
         if partner_deposit:
             assert float(partner_deposit) <= float(founder_deposit), 'Deposit Must be lager than zero.'
-            partner_deposit = float(partner_deposit)
+            partner_deposit = convert_float(partner_deposit,asset_type)
         else:
             partner_deposit = founder_deposit
 
@@ -530,12 +530,12 @@ class FounderMessage(TransactionMessage):
             "MessageType": "Founder",
             "Sender": founder,
             "Receiver": partner,
-            "TxNonce": 0,
+            "TxNonce": str(0),
             "ChannelName": channel_name,
             "NetMagic": magic,
             "MessageBody": {
-                "FounderDeposit": founder_deposit,
-                "PartnerDeposit": partner_deposit,
+                "FounderDeposit": str(founder_deposit),
+                "PartnerDeposit": str(partner_deposit),
                 "Commitment": commitment,
                 "AssetType": asset_type.upper(),
             }
@@ -704,7 +704,7 @@ class FounderResponsesMessage(TransactionMessage):
             "MessageType": "FounderSign",
             "Sender": partner,
             "Receiver": founder,
-            "TxNonce": 0,
+            "TxNonce": str(0),
             "ChannelName": channel_name,
             "NetMagic": magic
         }
@@ -712,8 +712,8 @@ class FounderResponsesMessage(TransactionMessage):
 
         if response_status == EnumResponseStatus.RESPONSE_OK:
             try:
-                founder_deposit = float(founder_deposit)
-                partner_deposit = float(partner_deposit)
+                founder_deposit = convert_float(founder_deposit, asset_type)
+                partner_deposit = convert_float(partner_deposit, asset_type)
 
                 if not (0 < partner_deposit <= founder_deposit):
                     response_status = EnumResponseStatus.RESPONSE_FOUNDER_DEPOSIT_LESS_THAN_PARTNER
@@ -903,15 +903,15 @@ class RsmcMessage(TransactionMessage):
         sender_addr = sender.strip().split('@')[0]
         receiver_addr = receiver.strip().split('@')[0]
         asset_type = asset_type.upper()
-        payment = float(payment)
+        payment = convert_float(payment, asset_type)
 
         sender_balance = float(balance.get(sender_addr, {}).get(asset_type, 0))
         assert 0 < payment <= sender_balance, 'Sender balance<{}> is not enough.'.format(sender_balance)
         receiver_balance = float(balance.get(receiver_addr, {}).get(asset_type, 0))
         
         # calculate the balances of both
-        sender_balance      = sender_balance - payment
-        receiver_balance    = receiver_balance + payment
+        sender_balance = convert_float(sender_balance - payment, asset_type)
+        receiver_balance = convert_float(receiver_balance + payment, asset_type)
 
         # sender sign
         commitment = RsmcMessage.sign_content(
@@ -938,14 +938,14 @@ class RsmcMessage(TransactionMessage):
             "MessageType":"Rsmc",
             "Sender": sender,
             "Receiver": receiver,
-            "TxNonce": nonce,
+            "TxNonce": str(nonce),
             "ChannelName":channel_name,
             "NetMagic": RsmcMessage.get_magic(),
             "MessageBody": {
                 "AssetType":asset_type.upper(),
-                "PaymentCount": payment,
-                "SenderBalance": sender_balance,
-                "ReceiverBalance": receiver_balance,
+                "PaymentCount": str(payment),
+                "SenderBalance": str(sender_balance),
+                "ReceiverBalance": str(receiver_balance),
             }
         }
 
@@ -1191,19 +1191,19 @@ class RsmcResponsesMessage(TransactionMessage):
             sender_addr = sender.strip().split('@')[0]
             receiver_addr = receiver.strip().split('@')[0]
             asset_type = asset_type.upper()
-            payment = float(payment)
+            payment = convert_float(payment)
 
             this_sender_balance = float(balance.get(sender_addr, {}).get(asset_type, 0))
             this_receiver_balance = float(balance.get(receiver_addr, {}).get(asset_type, 0))
 
             # calculate the balances of both
-            this_sender_balance = this_sender_balance - payment
-            this_receiver_balance = this_receiver_balance + payment
+            this_sender_balance = convert_float(this_sender_balance - payment, asset_type)
+            this_receiver_balance = convert_float(this_receiver_balance + payment, asset_type)
 
-            assert (0 < this_sender_balance == float(sender_balance)), \
+            assert (0 < this_sender_balance == convert_float(sender_balance, asset_type )), \
                 'Unmatched balance of sender<{}>, balance<{}:{}>, payment<{}>'.format(sender, sender_balance,
                                                                                       this_sender_balance, payment)
-            assert (0 < this_receiver_balance == float(receiver_balance)), \
+            assert (0 < this_receiver_balance == convert_float(receiver_balance, asset_type)), \
                 'Unmatched balance of sender<{}>, balance<{}:{}>, payment<{}>'.format(receiver, receiver_balance,
                                                                                       this_receiver_balance, payment)
 
@@ -1229,14 +1229,14 @@ class RsmcResponsesMessage(TransactionMessage):
             "MessageType":"RsmcSign",
             "Sender": receiver,
             "Receiver": sender,
-            "TxNonce": nonce,
+            "TxNonce": str(nonce) ,
             "ChannelName":channel_name,
             "NetMagic": RsmcMessage.get_magic(),
             "MessageBody": {
                 "AssetType":asset_type.upper(),
-                "PaymentCount": payment,
-                "SenderBalance": this_receiver_balance,
-                "ReceiverBalance": this_sender_balance,
+                "PaymentCount": str(payment),
+                "SenderBalance": str(this_receiver_balance),
+                "ReceiverBalance": str(this_sender_balance),
                 "Commitment": commitment,
             }
         }

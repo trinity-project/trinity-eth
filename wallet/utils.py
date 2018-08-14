@@ -47,6 +47,15 @@ class SupportAssetType(object):
         else:
             return None , None # ToDo
 
+    @classmethod
+    def get_asset_decimals(cls, asset_type):
+        if asset_type.upper() == "ETH":
+            return 18
+        elif asset_type.upper() == "TNC":
+            return 8
+        else:
+            return None # ToDo
+
 
 class DepositAuth(object):
     """
@@ -310,7 +319,10 @@ def convert_number_auto(asset_type, number: int or float or str):
     return number
 
 
-def convert_float(number, decimals=8):
+def convert_float(number, asset_type="TNC"):
+    decimals = SupportAssetType.get_asset_decimals(asset_type)
+    if decimals is None:
+        raise Exception("NoSupportAsset")
     return round(float(number),decimals)
 
 
@@ -352,8 +364,8 @@ def is_valid_deposit(asset_type, deposit, spv_wallet=False):
             LOG.warn(str(e))
             min_deposit_configure = 0
 
-        max_deposit = convert_to_float(max_deposit_configure)
-        min_deposit = convert_to_float(min_deposit_configure)
+        max_deposit = float(max_deposit_configure)
+        min_deposit = float(min_deposit_configure)
 
         if min_deposit > 0 and max_deposit > 0:
             return min_deposit <= deposit <= max_deposit, None
@@ -373,11 +385,7 @@ def is_valid_deposit(asset_type, deposit, spv_wallet=False):
         return True, None
 
 
-def convert_to_float(deposit):
-    try:
-        return float(deposit)
-    except Exception as error:
-        return 0
+
 
 
 if __name__ == "__main__":
