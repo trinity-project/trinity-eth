@@ -121,7 +121,6 @@ class UserPromptInterface(PromptInterface):
                               "channel peer [state=]|[peer=]|[channel=]",
                               "channel payment {asset}, {count}, [{comments}]",
                               "channel qrcode {on/off}",
-                              "channel trans",
                               "channel show uri",
 							  "channel show trans_history {channel}",
                               "channel depoist_limit",
