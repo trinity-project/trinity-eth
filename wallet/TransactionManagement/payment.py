@@ -50,13 +50,13 @@ class Payment(object):
         else:
             asset_type = Configure.get("AssetType").get(asset_type.upper())
         hr = self.create_hr()
-        asset_type = asset_type if asset_type else ""
+        asset_type = asset_type.replace("0x","") if asset_type else ""
 
         code = "{uri}&{hr}&{asset_type}&{value}&{comments}".format(uri=self.wallet.url,
                                                                    hr=hr, asset_type=asset_type,
                                                                    value=str(value),comments=comments)
         base58_code = base58.b58encode(code.encode())
-        return "TN{}".format(base58_code)
+        return "TN{}".format(base58_code.decode())
 
     @staticmethod
     def decode_payment_code(payment_code):
@@ -114,15 +114,23 @@ def hash_r(r):
     return '0x' + keccak256(bytes.fromhex(r)).hex()
 
 if __name__ == "__main__":
-    result = Payment.decode_payment_code("TN2BfTsKzBqXChJcPrRLod7FwBy5PmwKvsiBuWuxpFGk7BSHS5Eh5HQGMoFSAAordz"
-                                         "UYo9KbV8DsrrirpUnpND6RB2Yr1Z8h48CHyCNDo8zYwJPcwHRTBQzi3ARB2sZqRhsC"
-                                         "HHTm3AkHAyGTt9dUgJz4y8Mej8fmUj81hk1n15LQwcF4Fqo1TY1C1cJABYu14E4biv"
-                                         "GKyemF8kKYqoLiB5x3qThE221Fjhc858Chk7SgqUeJyvaFqMU")
+    # result = Payment.decode_payment_code("TN2BfTsKzBqXChJcPrRLod7FwBy5PmwKvsiBuWuxpFGk7BSHS5Eh5HQGMoFSAAordz"
+    #                                      "UYo9KbV8DsrrirpUnpND6RB2Yr1Z8h48CHyCNDo8zYwJPcwHRTBQzi3ARB2sZqRhsC"
+    #                                      "HHTm3AkHAyGTt9dUgJz4y8Mej8fmUj81hk1n15LQwcF4Fqo1TY1C1cJABYu14E4biv"
+    #                                      "GKyemF8kKYqoLiB5x3qThE221Fjhc858Chk7SgqUeJyvaFqMU")
+    #
+    # print(result)
+    # key = Random.get_random_bytes(32)
+    # key_string = binascii.b2a_hex(key).decode()
+    # print(key_string)
+    # print(len(key_string))
 
-    print(result)
-    key = Random.get_random_bytes(32)
-    key_string = binascii.b2a_hex(key).decode()
-    print(key_string)
-    print(len(key_string))
+    class Wallet:
+        pass
+
+    wallet = Wallet()
+    wallet.url = "0276130e8b092a61f384dd3c8f2472a012040d664800e36aebc08de60bb911850f@47.98.228.81:8089"
+    payment = Payment(wallet).generate_payment_code("TC",10,"mmmn")
+    print(payment)
 
 
