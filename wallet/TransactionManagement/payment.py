@@ -50,6 +50,7 @@ class Payment(object):
         else:
             asset_type = Configure.get("AssetType").get(asset_type.upper())
         hr = self.create_hr()
+        asset_type = asset_type if asset_type else ""
 
         code = "{uri}&{hr}&{asset_type}&{value}&{comments}".format(uri=self.wallet.url,
                                                                    hr=hr, asset_type=asset_type,
