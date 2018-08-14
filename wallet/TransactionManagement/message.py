@@ -968,8 +968,8 @@ class RsmcMessage(TransactionMessage):
             return False, 'Nonce MUST be larger than zero'
         try:
             self.payment_count = convert_float(self.payment_count, self.asset_type)
-            self.founder_deposit = convert_float(self.founder_deposit, self.asset_type)
-            self.partner_deposit = convert_float(self.partner_deposit, self.asset_type)
+            self.sender_balance = convert_float(self.sender_balance, self.asset_type)
+            self.receiver_balance = convert_float(self.receiver_balance, self.asset_type)
         except Exception as e:
             LOG.error(e)
             return False, "Convert Msg Error"

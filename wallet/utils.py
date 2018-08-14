@@ -36,7 +36,7 @@ class SupportAssetType(object):
     """
 
     """
-    SupportAssetType = ["TNC","ETH"]
+    SupportAssetType = ["TNC"]
 
     @classmethod
     def get_asset(cls, asset_type):
