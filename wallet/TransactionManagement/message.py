@@ -1144,7 +1144,7 @@ class RsmcResponsesMessage(TransactionMessage):
                         RsmcResponsesMessage.create(self.channel_name,self.wallet,
                                                 self.receiver, self.sender, self.receiver_balance,
                                                 self.sender_balance,self.payment_count,self.tx_nonce,
-                                                transaction.commitment, self.asset_type)
+                                                transaction[0].commitment, self.asset_type)
                     except Exception as error:
                         trade_state = EnumTradeState.failed
                         LOG.exception(error)
