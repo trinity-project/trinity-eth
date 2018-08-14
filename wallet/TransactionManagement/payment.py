@@ -65,7 +65,7 @@ class Payment(object):
             return False, None
         base58_code = payment_code[2:]
         code = base58.b58decode(base58_code).decode()
-        info = code.split("&",5)
+        info = code.split("&",4)
         print(info)
         if len(info) !=5:
             return False, None
