@@ -15,6 +15,7 @@ sys.path.append(pythonpath)
 from lightwallet.Utils import get_arg,get_asset_id
 from lightwallet.Settings import settings
 from lightwallet.wallet import Wallet
+from model.base_enum import EnumStatusCode
 
 from lightwallet.UserPreferences import preferences
 import binascii
@@ -324,6 +325,9 @@ class PromptInterface(object):
         :return:
         """
         history = self.Wallet.query_history()
+        if history is EnumStatusCode.DBQueryWithoutMatchedItems:
+            print("No tx history")
+            return
         for item in history:
             print("*"*20)
             print(item)
