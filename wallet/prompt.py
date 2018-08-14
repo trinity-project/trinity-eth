@@ -359,10 +359,10 @@ class UserPromptInterface(PromptInterface):
                 self.help()
                 return None
 
-            asset_t = asset_type.upper() if check_support_asset_type(asset_type) else None
-            if not asset_t:
-                console_log.error("No support asset type %s" % asset_type)
-                return None
+        asset_t = asset_type.upper() if check_support_asset_type(asset_type) else None
+        if not asset_t:
+            console_log.error("No support asset type %s" % asset_type)
+            return None
         ch.Channel(self.Wallet.url, receiver).transfer(self.Wallet.url, receiver, asset_t, count, hr, self.Wallet)
 
         # receiverpubkey, receiverip= receiver.split("@")
