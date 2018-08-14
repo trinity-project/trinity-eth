@@ -1144,7 +1144,7 @@ class RsmcResponsesMessage(TransactionMessage):
                         RsmcResponsesMessage.create(self.channel_name,self.wallet,
                                                 self.receiver, self.sender, self.receiver_balance,
                                                 self.sender_balance,self.payment_count,self.tx_nonce,
-                                                transaction[0].commitment, self.asset_type)
+                                                transaction[0].commitment, self.asset_type, calculate=False)
                     except Exception as error:
                         trade_state = EnumTradeState.failed
                         LOG.exception(error)
@@ -1163,7 +1163,7 @@ class RsmcResponsesMessage(TransactionMessage):
 
     @staticmethod
     def create(channel_name, wallet, sender, receiver, sender_balance, receiver_balance, payment, nonce,
-               sender_commitment=None, asset_type="TNC", comments=None):
+               sender_commitment=None, asset_type="TNC", comments=None, calculate=True):
         """
 
         :param channel_name:
@@ -1209,15 +1209,19 @@ class RsmcResponsesMessage(TransactionMessage):
             this_receiver_balance = float(balance.get(receiver_addr, {}).get(asset_type, 0))
 
             # calculate the balances of both
-            this_sender_balance = convert_float(this_sender_balance - payment, asset_type)
-            this_receiver_balance = convert_float(this_receiver_balance + payment, asset_type)
+            if calculate:
+                this_sender_balance = convert_float(this_sender_balance - payment, asset_type)
+                this_receiver_balance = convert_float(this_receiver_balance + payment, asset_type)
 
-            assert (0 < this_sender_balance == convert_float(sender_balance, asset_type )), \
+                assert (0 < this_sender_balance == convert_float(sender_balance, asset_type )), \
                 'Unmatched balance of sender<{}>, balance<{}:{}>, payment<{}>'.format(sender, sender_balance,
                                                                                       this_sender_balance, payment)
-            assert (0 < this_receiver_balance == convert_float(receiver_balance, asset_type)), \
+                assert (0 < this_receiver_balance == convert_float(receiver_balance, asset_type)), \
                 'Unmatched balance of sender<{}>, balance<{}:{}>, payment<{}>'.format(receiver, receiver_balance,
                                                                                       this_receiver_balance, payment)
+                # update channel balance
+                channel.update_channel(balance={sender_addr: {asset_type: this_sender_balance},
+                                                receiver_addr: {asset_type: this_receiver_balance}})
 
 
             # sender sign
@@ -1226,9 +1230,7 @@ class RsmcResponsesMessage(TransactionMessage):
                 valueList=[channel_name, nonce, sender_addr, sender_balance, receiver_addr, receiver_balance],
                 privtKey = wallet._key.private_key_string)
 
-            # update channel balance
-            channel.update_channel(balance={sender_addr: {asset_type: this_sender_balance},
-                                            receiver_addr: {asset_type: this_receiver_balance}})
+
         except Exception as error:
             trade_state = EnumTradeState.failed
             LOG.exception(error)
