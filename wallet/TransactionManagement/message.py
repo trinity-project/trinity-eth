@@ -932,7 +932,7 @@ class RsmcMessage(TransactionMessage):
                              peer = receiver,
                              peer_balance = {asset_type.upper(): receiver_balance},
                              peer_commitment = None,
-                             state = EnumTradeState.confirming)
+                             state = EnumTradeState.confirming.name)
 
         message = {
             "MessageType":"Rsmc",
