@@ -397,7 +397,7 @@ class Channel(object):
 
     @staticmethod
     def multiply(asset_count):
-        return int(asset_count * Channel._trinity_coef)
+        return int(float(asset_count) * Channel._trinity_coef)
 
     @staticmethod
     def divide(asset_count):
