@@ -390,7 +390,7 @@ class TransactionMessage(Message):
 
     @staticmethod
     def multiply(asset_count):
-        return int(asset_count * TransactionMessage._trinity_coef)
+        return int(float(asset_count) * TransactionMessage._trinity_coef)
 
     @staticmethod
     def divide(asset_count):
@@ -1142,8 +1142,8 @@ class RsmcResponsesMessage(TransactionMessage):
                 if transaction[0].role == EnumTradeRole.TRADE_ROLE_FOUNDER.name:
                     try:
                         RsmcResponsesMessage.create(self.channel_name,self.wallet,
-                                                self.receiver, self.sender, self.receiver_balance,
-                                                self.sender_balance,self.payment_count,self.tx_nonce,
+                                                self.sender, self.receiver, self.sender_balance,
+                                                self.receiver_balance,self.payment_count,self.tx_nonce,
                                                 transaction[0].commitment, self.asset_type, calculate=False)
                     except Exception as error:
                         trade_state = EnumTradeState.failed
