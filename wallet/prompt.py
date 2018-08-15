@@ -346,6 +346,7 @@ class UserPromptInterface(PromptInterface):
                 asset_type = get_asset_type_name(asset_type)
                 count = info.get("count")
                 comments = info.get("comments")
+                console_log.info("will pay {} {} to {} comments {}".format(count, asset_type, receiver, comments))
             else:
                 print("The payment code is not correct")
                 return
