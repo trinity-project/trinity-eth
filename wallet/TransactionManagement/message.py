@@ -41,6 +41,7 @@ from blockchain.ethInterface import Interface as EthInterface
 from blockchain.web3client import Client as EthWebClient
 from model import APIChannel
 from common.log import LOG
+from common.console import console_log
 import json
 from wallet.TransactionManagement.payment import Payment
 from enum import IntEnum
@@ -82,9 +83,15 @@ class EnumResponseStatus(IntEnum):
     RESPONSE_FOUNDER_DEPOSIT_LESS_THAN_PARTNER = 0x10
     RESPONSE_FOUNDER_NONCE_NOT_ZERO = 0x11
 
+    RESPONSE_PAYMENT_NO_VAIILD = 0x20
+    RESPONSE_BALANCE_NO_ENOUGH = 0x21
+
     # Common response error
     RESPONSE_EXCEPTION_HAPPENED = 0xF0
     RESPONSE_FAIL = 0XFF
+    RESPONSE_NONCE_ERROR = 0xF1
+    RESPONSE_MESSAGE_ERROR = 0xF2
+    RESPONSE_INVALID_MAGIC = 0XF3
 
 
 class Message(object):
@@ -96,6 +103,7 @@ class Message(object):
         self.message = message
         self.receiver = message.get("Receiver")
         self.sender = message.get("Sender")
+        self.magic = message.get("NetMagic")
         #assert self.sender != self.receiver, 'Sender should be different from receiver.'
 
         self.message_type = message.get("MessageType")
@@ -130,101 +138,6 @@ class Message(object):
 
     def handle(self):
         LOG.info('Received Message<{}>'.format(self.message_type))
-
-
-class RegisterMessage(Message):
-    """
-    transaction massage:
-    { "MessageType":"RegisterChannel",
-    "Sender": "9090909090909090909090909@127.0.0.1:20553",
-    "Receiver":"101010101001001010100101@127.0.0.1:20552",
-    "ChannelName":"090A8E08E0358305035709403",
-    "MessageBody": {
-            ""
-            "AssetType": "",
-            "Deposit":"",
-        }
-    }
-    """
-
-    def __init__(self, message, wallet):
-        super().__init__(message)
-        self.deposit = self.message_body.get("Deposit")
-        self.asset_type = self.message_body.get("AssetType")
-        self.channel_name = self.message.get("ChannelName", '').lower()
-        self.wallet = wallet
-
-    def handle_message(self):
-        LOG.info("Handle RegisterMessage: {}".format(json.dumps(self.message)))
-        verify, error = self.verify()
-        if not verify:
-            message = {
-                "MessageType": "RegisterChannelFail",
-                "Sender": self.receiver,
-                "Receiver": self.sender,
-                "ChannelName": self.channel_name,
-                "MessageBody": {
-                    "OrigianlMessage": self.message
-                },
-                "Error": error
-            }
-            Message.send(message)
-            
-        founder_pubkey, founder_ip = self.sender.split("@")
-        partner_pubkey, partner_ip = self.receiver.split("@")
-        deposit = {}
-        subitem = {}
-        subitem.setdefault(self.asset_type, self.deposit)
-        deposit[founder_pubkey] = subitem
-        deposit[partner_pubkey] = subitem
-        APIChannel.add_channel(self.channel_name, self.sender.strip(), self.receiver.strip(),
-                               EnumChannelState.INIT.name, 0, deposit)
-        FounderMessage.create(self.channel_name,partner_pubkey,founder_pubkey,
-                              self.asset_type.upper(),self.deposit,founder_ip,partner_ip)
-
-    def verify(self):
-        if self.sender == self.receiver:
-            return False, "Not Support Sender is Receiver"
-        if self.receiver != self.wallet.url:
-            return False, "The Endpoint is Not Me, I am {}".format(self.wallet.url)
-        state, error = self.check_balance()
-        if not state:
-            return state, error
-        state, error = self.check_depoist()
-        if not state:
-            return state, error
-
-        return True, None
-
-    def check_depoist(self):
-        state, de = check_deposit(self.deposit)
-        if not state:
-            if isinstance(de,float):
-                return False,"Deposit should be larger than 0 , but give {}".format(str(de))
-            else:
-                return False,"Deposit Formate error {}".format(de)
-
-        state, maxd = check_max_deposit(self.deposit)
-        if not state:
-            if isinstance(maxd,float):
-                return False, "Deposit is larger than the max, max is {}".format(str(maxd))
-            else:
-                return False, "Max deposit configure error {}".format(maxd)
-
-        state , mixd = check_mix_deposit(self.deposit)
-        if not state:
-            if isinstance(mixd,float):
-                return False, "Deposit is less than the min, min is {}".format(str(mixd))
-            else:
-                return False, "Mix deposit configure error {}".format(mixd)
-
-        return True,None
-
-    def check_balance(self):
-        if check_onchain_balance(self.wallet.pubkey, self.asset_type, self.deposit):
-            return True, None
-        else:
-            return False, "No Balance OnChain to support the deposit"
 
 
 class TestMessage(Message):
@@ -295,9 +208,6 @@ class TransactionMessage(Message):
             LOG.error(e)
             self.tx_nonce = None
 
-    def verify(self,**kwargs):
-        pass
-
     def sign_message(self, context):
         """
         ToDo
@@ -360,6 +270,19 @@ class TransactionMessage(Message):
         solity_hash = TransactionMessage._eth_client().solidity_hash(typeList, valueList)
         return wallet.address == wallet.recoverHash(solity_hash, signature=signature)
 
+    def verify_magic(self):
+        """
+
+        :return:
+        """
+        if self.magic is None or self.magic != self.network_magic:
+            return False
+        return True, None
+
+    def verify(self):
+        if not self.verify_magic():
+            raise Exception(EnumResponseStatus.RESPONSE_INVALID_MAGIC)
+        return
 
     @staticmethod
     def approve(address, deposit, private_key):
@@ -457,7 +380,7 @@ class FounderMessage(TransactionMessage):
 
         status = EnumResponseStatus.RESPONSE_OK
         if not verify:
-            status = EnumResponseStatus.RESPONSE_FAIL
+            status = error
         else:
             founder_addr = self.sender.strip().split('@')[0]
             partner_addr = self.receiver.strip().split('@')[0]
@@ -583,6 +506,8 @@ class FounderMessage(TransactionMessage):
             FounderMessage.send(message)
 
     def verify(self):
+        if not self.verify_magic():
+            return False, EnumResponseStatus.RESPONSE_INVALID_MAGIC
         return True, None
 
 
@@ -643,6 +568,9 @@ class FounderResponsesMessage(TransactionMessage):
 
         if not (EnumResponseStatus.RESPONSE_OK.name == self.status):
             LOG.error('Founder failed to create channels. Status<{}>'.format(self.status))
+            console_log.error('Founder failed to create channels. Status<{}>'.format(self.status))
+            ch.Channel.delete_trade(self.channel_name,nonce=0)
+            ch.Channel.channel(self.channel_name).delete_channel()
             return
 
         verified, error = self.verify()
@@ -740,6 +668,19 @@ class FounderResponsesMessage(TransactionMessage):
                         "AssetType": asset_type
                     }
                 })
+
+                # record transaction
+                ch.Channel.add_trade(channel_name,
+                                     nonce=0,
+                                     type=EnumTradeType.TRADE_TYPE_FOUNDER.name,
+                                     role=EnumTradeRole.TRADE_ROLE_PARTNER.name,
+                                     address=partner,
+                                     balance={asset_type: partner_deposit},
+                                     commitment=commitment,
+                                     peer=founder,
+                                     peer_balance={asset_type: founder_deposit},
+                                     peer_commitment=founder_commitment,
+                                     state=trade_state.name)
             except Exception as error:
                 if response_status == EnumResponseStatus.RESPONSE_OK:
                     response_status = EnumResponseStatus.RESPONSE_EXCEPTION_HAPPENED
@@ -751,19 +692,6 @@ class FounderResponsesMessage(TransactionMessage):
 
         # fill message status
         message.update({'Status': response_status.name})
-
-        # record transaction
-        ch.Channel.add_trade(channel_name,
-                             nonce = 0,
-                             type = EnumTradeType.TRADE_TYPE_FOUNDER.name,
-                             role = EnumTradeRole.TRADE_ROLE_PARTNER.name,
-                             address = partner,
-                             balance = {asset_type: partner_deposit},
-                             commitment = commitment,
-                             peer = founder,
-                             peer_balance = {asset_type: founder_deposit},
-                             peer_commitment = founder_commitment,
-                             state = trade_state.name)
 
         # Add comments in the messages
         if comments:
@@ -838,7 +766,8 @@ class RsmcMessage(TransactionMessage):
                                  state=trade_state.name)
         else:
             LOG.error('Handle RsmcMessage error: {}'.format(error))
-        pass
+            RsmcResponsesMessage.send_response(self.channel_name, self.receiver, self.sender, self.tx_nonce,
+                                               self.message_body, error, self.comments)
 
     @staticmethod
     def create(channel_name, wallet, sender, receiver, payment, asset_type="TNC",
@@ -958,131 +887,46 @@ class RsmcMessage(TransactionMessage):
 
         return message
 
+    def is_correct_nonce(self):
+        """
+        check the tx nonce should be >0 and ==  last_nonce+1
+        :return:
+        """
+        if self.tx_nonce is None:
+            return False
+        if 0 >= self.tx_nonce:
+            return False
+        channel = ch.Channel.channel(self.channel_name)
+        transaction = channel.latest_trade(self.channel_name)
+        if int(self.tx_nonce) != int(transaction.nonce)+1:
+            return False
+        return True
 
-    # def _check_balance(self, balance):
-    #     pass
 
     def verify(self):
-        # assert 0 == self.tx_nonce, 'Nonce MUST be larger than zero'
-        if 0 >= self.tx_nonce:
-            return False, 'Nonce MUST be larger than zero'
+        if not self.verify_magic():
+            return False, EnumResponseStatus.RESPONSE_INVALID_MAGIC
+        if not self.is_correct_nonce():
+            return False, EnumResponseStatus.RESPONSE_NONCE_ERROR
         try:
             self.payment_count = convert_float(self.payment_count, self.asset_type)
             self.sender_balance = convert_float(self.sender_balance, self.asset_type)
             self.receiver_balance = convert_float(self.receiver_balance, self.asset_type)
         except Exception as e:
             LOG.error(e)
-            return False, "Convert Msg Error"
+            return False, EnumResponseStatus.RESPONSE_MESSAGE_ERROR
+
+        if self.payment_count <= 0:
+            return False, EnumResponseStatus.RESPONSE_PAYMENT_NO_VAIILD
 
         return True, None
 
-    # def store_monitor_commitement(self):
-    #     ctxid = self.commitment.get("txID")
-    #     self.transaction.update_transaction(str(self.tx_nonce), MonitorTxId=ctxid)
-    #
-    # def _handle_0_message(self):
-    #     LOG.info("RSMC handle 0 message {}".format(json.dumps(self.message)))
-    #     # recorc monitor commitment txid
-    #     self.store_monitor_commitement()
-    #     self.send_responses()
-    #
-    #     # send 1 message
-    #     RsmcMessage.create(self.channel_name,self.wallet,
-    #                            self.receiver_pubkey,self.sender_pubkey,
-    #                            self.value,self.sender_ip,self.receiver_ip,self.tx_nonce,
-    #                        asset_type=self.asset_type.upper(), role_index= 1, comments=self.comments)
-    #
-    #
-    # def _handle_1_message(self):
-    #     LOG.info("RSMC handle 1 message  {}".format(json.dumps(self.message)))
-    #     self.store_monitor_commitement()
-    #     self.send_responses()
-    #
-    #     # send 2 message
-    #     RsmcMessage.create(self.channel_name, self.wallet,
-    #                        self.receiver_pubkey, self.sender_pubkey,
-    #                        self.value, self.sender_ip, self.receiver_ip, self.tx_nonce,
-    #                        asset_type=self.asset_type.upper(), role_index=2, comments=self.comments)
-    #
-    # def _handle_2_message(self):
-    #     # send 3 message
-    #     self.transaction.update_transaction(str(self.tx_nonce), BR=self.breach_remedy)
-    #     RsmcMessage.create(self.channel_name, self.wallet,
-    #                        self.receiver_pubkey, self.sender_pubkey,
-    #                        self.value, self.sender_ip, self.receiver_ip, self.tx_nonce,
-    #                        asset_type=self.asset_type.upper(), role_index=3, comments=self.comments)
-    #     self.confirm_transaction()
-    #
-    # def _handle_3_message(self):
-    #     self.transaction.update_transaction(str(self.tx_nonce), BR=self.breach_remedy)
-    #     self.confirm_transaction()
-    #
-    # def confirm_transaction(self):
-    #     ctx = self.transaction.get_tx_nonce(str(self.tx_nonce))
-    #     monitor_ctxid = ctx.get("MonitorTxId")
-    #     txData = ctx.get("RD").get("originalData").get("txData")
-    #     txDataself = self.sign_message(txData)
-    #     txDataother = self.sign_message(ctx.get("RD").get("txDataSign")),
-    #     witness = ctx.get("RD").get("originalData").get("witness")
-    #     register_monitor(monitor_ctxid, monitor_height, txData + witness, txDataother, txDataself)
-    #     balance = self.transaction.get_balance(str(self.tx_nonce))
-    #     self.transaction.update_transaction(str(self.tx_nonce), State="confirm")
-    #     ch.Channel.channel(self.channel_name).update_channel(balance=balance)
-    #     ch.sync_channel_info_to_gateway(self.channel_name, "UpdateChannel")
-    #     last_tx = self.transaction.get_tx_nonce(str(int(self.tx_nonce) - 1))
-    #     monitor_ctxid = last_tx.get("MonitorTxId")
-    #     btxDataself = ctx.get("BR").get("originalData").get("txData")
-    #     btxsignself = self.sign_message(btxDataself)
-    #     btxsignother =  ctx.get("BR").get("txDataSign")
-    #     bwitness = ctx.get("BR").get("originalData").get("witness")
-    #     try:
-    #         self.confirm_payment()
-    #     except Exception as e:
-    #         LOG.info("Confirm payment error {}".format(str(e)))
-    #
-    #     register_monitor(monitor_ctxid, monitor_height, btxDataself + bwitness, btxsignother, btxsignself)
 
     def confirm_payment(self):
         for key, value in Payment.HashR.items():
             if key == self.comments:
                 PaymentAck.create(value[1], key)
                 Payment(self.wallet,value[1]).delete_hr(key)
-
-    # def send_responses(self, error = None):
-    #     if not error:
-    #         commitment_sig = {"txDataSign": self.sign_message(self.commitment.get("txData")),
-    #                           "originalData": self.commitment}
-    #         rd_sig = {"txDataSign": self.sign_message(self.revocable_delivery.get("txData")),
-    #                   "originalData": self.revocable_delivery}
-    #         message_response = {"MessageType": "RsmcSign",
-    #                             "Sender": self.receiver,
-    #                             "Receiver": self.sender,
-    #                             "TxNonce": self.tx_nonce,
-    #                             "ChannelName": self.channel_name,
-    #                             "MessageBody": {"Commitment": commitment_sig,
-    #                                             "RevocableDelivery": rd_sig,
-    #                                             "Value": self.value,
-    #                                             "RoleIndex": self.role_index,
-    #                                             "Comments":self.comments
-    #                                             }
-    #                             }
-    #         self.send(message_response)
-    #     else:
-    #         message_response = {"MessageType": "RsmcFail",
-    #                             "Sender": self.receiver,
-    #                             "Receiver": self.sender,
-    #                             "TxNonce": self.tx_nonce,
-    #                             "ChannelName": self.channel_name,
-    #                             "MessageBody": {"Commitment": self.commitment,
-    #                                             "RevocableDelivery": self.revocable_delivery,
-    #                                             "Value": self.value,
-    #                                             "RoleIndex": self.role_index,
-    #                                             "Comments":self.comments
-    #                                             },
-    #                             "Error": error
-    #                             }
-    #         self.send(message_response)
-    #         LOG.info("Send RsmcMessage Response {}".format(json.dumps(message_response)))
 
 
 class RsmcResponsesMessage(TransactionMessage):
@@ -1132,34 +976,33 @@ class RsmcResponsesMessage(TransactionMessage):
                 sender_addr = self.sender.strip().split('@')[0]
                 receiver_addr = self.receiver.strip().split('@')[0]
                 self.channel = ch.Channel(self.sender, self.receiver).channel(self.channel_name)
-                self.channel.update_channel(balance={sender_addr: {self.asset_type: self.sender_balance},
 
-                                                     receiver_addr: {self.asset_type: self.receiver_balance}})
                 transaction = self.channel.query_trade(self.channel_name, self.tx_nonce)
                 if transaction == EnumStatusCode.DBQueryWithoutMatchedItems:
                     LOG.error(EnumStatusCode.DBQueryWithoutMatchedItems.name)
                     raise Exception(EnumStatusCode.DBQueryWithoutMatchedItems.name)
                 if transaction[0].role == EnumTradeRole.TRADE_ROLE_FOUNDER.name:
-                    try:
-                        RsmcResponsesMessage.create(self.channel_name,self.wallet,
+                    RsmcResponsesMessage.create(self.channel_name,self.wallet,
                                                 self.sender, self.receiver, self.sender_balance,
                                                 self.receiver_balance,self.payment_count,self.tx_nonce,
                                                 transaction[0].commitment, self.asset_type, calculate=False)
-                    except Exception as error:
-                        trade_state = EnumTradeState.failed
-                        LOG.exception(error)
-                        status = EnumResponseStatus.RESPONSE_EXCEPTION_HAPPENED
 
                 ch.Channel.update_trade(self.channel_name,
                                         nonce=self.tx_nonce,
                                         peer_commitment=self.commitment,
                                         state=trade_state.name)
-
+                self.channel.update_channel(balance={sender_addr: {self.asset_type: self.sender_balance},
+                                                     receiver_addr: {self.asset_type: self.receiver_balance}})
+            else:
+                LOG.error("RsmcResponsesMessage status {} ".format(self.status))
+                console_log.error("RsmcResponsesMessage status {} ".format(self.status))
 
             # TODO: update transaction information
             LOG.info('update transaction')
         else:
-            LOG.error('Handle RsmcRespnose error: {}'.format(error))
+            LOG.error('Handle RsmcRespnose error: {}'.format(error.name))
+            console_log.error('Handle RsmcRespnose error: {}'.format(error.name))
+            ch.Channel.delete_trade(self.channel_name, self.tx_nonce)
 
     @staticmethod
     def create(channel_name, wallet, sender, receiver, sender_balance, receiver_balance, payment, nonce,
@@ -1238,31 +1081,45 @@ class RsmcResponsesMessage(TransactionMessage):
 
         # TODO: MUST record this commitment and balance info
         # add the transaction history
-
-        message = {
-            "MessageType":"RsmcSign",
-            "Sender": receiver,
-            "Receiver": sender,
-            "TxNonce": str(nonce) ,
-            "ChannelName":channel_name,
-            "NetMagic": RsmcMessage.get_magic(),
-            "MessageBody": {
+        body = {
                 "AssetType":asset_type.upper(),
                 "PaymentCount": str(payment),
                 "SenderBalance": str(this_receiver_balance),
                 "ReceiverBalance": str(this_sender_balance),
                 "Commitment": commitment,
             }
-        }
+        RsmcResponsesMessage.send_response(channel_name,receiver, sender,nonce, body,status,comments)
 
+        return status
+
+    @staticmethod
+    def send_response(channel_name,sender, receiver, nonce, message_body, status, comments=None):
+        """
+        :param channel_name:
+        :param sender:
+        :param receiver:
+        :param nonce:
+        :param message_body:
+        :param status:
+        :param comments:
+        :return:
+        """
+
+        message = {
+            "MessageType": "RsmcSign",
+            "Sender": sender,
+            "Receiver": receiver,
+            "TxNonce": str(nonce),
+            "ChannelName": channel_name,
+            "NetMagic": RsmcMessage.get_magic(),
+            "MessageBody": message_body
+            }
         message.update({'Status': status.name})
-
         if comments:
             message.update({"Comments": comments})
 
         RsmcResponsesMessage.send(message)
 
-        return status
 
     def _verify_signature(self):
         pass
@@ -1273,8 +1130,10 @@ class RsmcResponsesMessage(TransactionMessage):
 
         :return:
         """
-
-
+        if not self.verify_magic():
+            return False, EnumResponseStatus.RESPONSE_INVALID_MAGIC
+        if self.status != EnumResponseStatus.RESPONSE_OK.name:
+            return False, self.status
         return True, None
 
 
@@ -1339,7 +1198,7 @@ class RResponse(TransactionMessage):
 
             RsmcMessage.create(self.channel_name, self.wallet, sender_pubkey, receiver_pubkey, self.count,
                                partner_ip, gateway_ip, asset_type=self.asset_type,
-               role_index=0, comments=self.hr)
+                               role_index=0, comments=self.hr)
             payment = Payment.get_hash_history(self.hr)
 
             if payment:

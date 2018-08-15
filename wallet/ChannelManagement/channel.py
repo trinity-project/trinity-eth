@@ -249,6 +249,10 @@ class Channel(object):
         return APITransaction('transaction'+channel_name).add_transaction(**kwargs)
 
     @staticmethod
+    def delete_trade(channel_name,nonce):
+        return APITransaction('transaction'+channel_name).delete_transaction(nonce)
+
+    @staticmethod
     def update_trade(channel_name, nonce, **kwargs):
         return APITransaction('transaction'+channel_name).update_transaction(nonce, **kwargs)
 
