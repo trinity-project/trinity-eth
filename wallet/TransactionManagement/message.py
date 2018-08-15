@@ -1213,10 +1213,10 @@ class RsmcResponsesMessage(TransactionMessage):
                 this_sender_balance = convert_float(this_sender_balance - payment, asset_type)
                 this_receiver_balance = convert_float(this_receiver_balance + payment, asset_type)
 
-                assert (0 < this_sender_balance == convert_float(sender_balance, asset_type )), \
+                assert (0 <= this_sender_balance == convert_float(sender_balance, asset_type )), \
                 'Unmatched balance of sender<{}>, balance<{}:{}>, payment<{}>'.format(sender, sender_balance,
                                                                                       this_sender_balance, payment)
-                assert (0 < this_receiver_balance == convert_float(receiver_balance, asset_type)), \
+                assert (0 <= this_receiver_balance == convert_float(receiver_balance, asset_type)), \
                 'Unmatched balance of sender<{}>, balance<{}:{}>, payment<{}>'.format(receiver, receiver_balance,
                                                                                       this_receiver_balance, payment)
                 # update channel balance
