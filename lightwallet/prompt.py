@@ -339,8 +339,8 @@ class PromptInterface(object):
         :param result:
         :return:
         """
-        if len(result):
-            commandParts = [s for s in result.split()]
+        if result.strip():
+            commandParts =  result.strip().split()
             return commandParts[0], commandParts[1:]
         return None, None
 
