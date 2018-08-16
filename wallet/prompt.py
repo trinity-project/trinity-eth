@@ -10,9 +10,6 @@ import json
 import traceback
 import signal
 from functools import wraps
-from prompt_toolkit import prompt
-from prompt_toolkit.shortcuts import print_tokens
-from prompt_toolkit.token import Token
 from twisted.internet import reactor, endpoints, protocol
 from common.log import LOG
 from common.console import console_log
@@ -158,10 +155,10 @@ class UserPromptInterface(PromptInterface):
         out = []
         try:
             out = [
-                (Token.Command, "[%s]" % (settings.NET_NAME if not PromptInterface.locked else settings.NET_NAME + "(Locked)")),
-                (Token.Default, str(EventMonitor.get_wallet_block_height())),
-                (Token.Command, '/'),
-                (Token.Default, str(EventMonitor.get_block_height()))]
+                ("class:default", "[%s]" % (settings.NET_NAME if not PromptInterface.locked else settings.NET_NAME + "(Locked)")),
+                ("class:number", str(EventMonitor.get_wallet_block_height())),
+                ("class:default", '/'),
+                ("class:number", str(EventMonitor.get_block_height()))]
 
         except Exception as e:
             pass

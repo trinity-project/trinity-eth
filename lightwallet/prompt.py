@@ -3,13 +3,16 @@ import argparse
 import json
 import pprint
 import traceback
-from prompt_toolkit import prompt
+from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.history import FileHistory
-from prompt_toolkit.shortcuts import print_tokens
-from prompt_toolkit.styles import style_from_dict
-from prompt_toolkit.token import Token
+from prompt_toolkit.shortcuts import print_formatted_text, PromptSession
+from prompt_toolkit.formatted_text import FormattedText
+from prompt_toolkit.styles import Style
+from prompt_toolkit import prompt
+
 import os
 import sys
+import re
 pythonpath = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(pythonpath)
 from lightwallet.Utils import get_arg,get_asset_id
@@ -47,11 +50,11 @@ class PromptInterface(object):
 
     def __init__(self):
 
-        self.token_style = style_from_dict({
-            Token.Command: preferences.token_style['Command'],
-            Token.Neo: preferences.token_style['Neo'],
-            Token.Default: preferences.token_style['Default'],
-            Token.Number: preferences.token_style['Number'],
+        self.token_style = Style.from_dict({
+            "command": preferences.token_style['Command'],
+            "eth": preferences.token_style['Eth'],
+            "default": preferences.token_style['Default'],
+            "number": preferences.token_style['Number'],
         })
 
 
@@ -62,16 +65,7 @@ class PromptInterface(object):
         :return:
         """
 
-        out = []
-        try:
-            out = [
-                (Token.Command, '[%s]' % (settings.NET_NAME if not PromptInterface.locked else settings.NET_NAME + " (Locked) ")),
-
-            ]
-        except Exception as e:
-            pass
-
-        return out
+        return'[%s]' % (settings.NET_NAME if not PromptInterface.locked else settings.NET_NAME + " (Locked) ")
 
     def quit(self):
         self.go_on = False
@@ -79,8 +73,8 @@ class PromptInterface(object):
     def help(self):
         tokens = []
         for c in self.commands:
-            tokens.append((Token.Command, "%s\n" % c))
-        print_tokens(tokens)
+            tokens.append(("class:command", "%s\n" % c))
+        print_formatted_text(FormattedText(tokens), style=self.token_style)
 
     def do_create(self, arguments):
         """
@@ -394,29 +388,48 @@ class PromptInterface(object):
             print("cli is in locked mode please unlock cli via 'unlock cli'")
             return None
 
+    def get_completer(self):
+        standard_completions =[]
+        for i in self.commands:
+            sub_c = i.split()
+            for t in sub_c:
+                if re.match(r"^[a-zA-Z].+",t):
+                    standard_completions.append(t)
+
+        all_completions = list(set(standard_completions))
+
+        prompt_completer = WordCompleter(all_completions)
+
+        return prompt_completer
+
     def run(self):
         """
 
         :return:
         """
-        tokens = [(Token.Neo, 'TRINITY'), (Token.Default, ' cli. Type '),
-                  (Token.Command, "'help' "), (Token.Default, 'to get started')]
+        tokens = [("class:eth", 'EthTrinity'), ("class:default", ' cli. Type '),
+                  ("class:command", '\'help\' '), ("class:default", 'to get started')]
 
-        #print_tokens(tokens,self.token_style)
-        print("\n")
+        print_formatted_text(FormattedText(tokens), style=self.token_style)
+        print('\n')
+
 
         while self.go_on:
+            session = PromptSession("trinity> ",
+                                    completer=self.get_completer(),
+                                    history=self.history,
+                                    bottom_toolbar=self.get_bottom_toolbar,
+                                    style=self.token_style,
+                                    refresh_interval=3,
+                                    )
+
             try:
-                result = prompt("trinity>",
-                                history=self.history,
-                                get_bottom_toolbar_tokens=self.get_bottom_toolbar,
-                                style=self.token_style,
-                                # refresh_interval=15
-                                )
+                result = session.prompt()
             except EOFError:
+                # Control-D pressed: quit
                 return self.quit()
             except KeyboardInterrupt:
-                self.quit()
+                # Control-C pressed: do nothing
                 continue
             # try:
             #     command, arguments = self.parse_result(result)
