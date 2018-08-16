@@ -196,6 +196,8 @@ def get_asset_type_id(asset_name):
     """
     return Configure.get("AssetType").get(asset_name.upper())
 
+def get_support_asset():
+    return SupportAssetType.SupportAssetType
 
 def check_support_asset_type(asset_type):
     """
@@ -203,8 +205,11 @@ def check_support_asset_type(asset_type):
     :param asset_type:
     :return:
     """
-    if asset_type.upper() in SupportAssetType.SupportAssetType:
-        return True
+    if asset_type:
+        if asset_type.upper() in SupportAssetType.SupportAssetType:
+            return True
+        else:
+            return False
     else:
         return False
 

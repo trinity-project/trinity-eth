@@ -20,7 +20,7 @@ from wallet.utils import get_arg, \
     check_support_asset_type,\
     check_partner, \
     is_valid_deposit,\
-    is_correct_uri
+    is_correct_uri, SupportAssetType
 from wallet.Interface.rpc_interface import RpcInteraceApi,CurrentLiveWallet
 from twisted.web.server import Site
 from lightwallet.prompt import PromptInterface
@@ -489,8 +489,8 @@ class UserPromptInterface(PromptInterface):
         :return:
         """
         asset_type = get_arg(arguments, 1)
-        if not asset_type:
-            console_log.error("command not give the asset type")
+        if not check_support_asset_type(asset_type):
+            console_log.error("No support asset, current just support {}".format(SupportAssetType.SupportAssetType))
             return None
         value = get_arg(arguments, 2)
         if not value:

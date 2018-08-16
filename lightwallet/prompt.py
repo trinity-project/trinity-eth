@@ -9,6 +9,7 @@ from prompt_toolkit.shortcuts import print_formatted_text, PromptSession
 from prompt_toolkit.formatted_text import FormattedText
 from prompt_toolkit.styles import Style
 from prompt_toolkit import prompt
+from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 
 import os
 import sys
@@ -392,13 +393,16 @@ class PromptInterface(object):
         standard_completions =[]
         for i in self.commands:
             sub_c = i.split()
-            for t in sub_c:
-                if re.match(r"^[a-zA-Z].+",t):
-                    standard_completions.append(t)
+            for index, value in enumerate(sub_c):
+                if re.match(r"^[a-zA-Z].+", value):
+                    continue
+                else:
+                    standard_completions.append(" ".join(sub_c[:index]))
+                    break
 
         all_completions = list(set(standard_completions))
 
-        prompt_completer = WordCompleter(all_completions)
+        prompt_completer = WordCompleter(all_completions, sentence=True)
 
         return prompt_completer
 
@@ -421,6 +425,7 @@ class PromptInterface(object):
                                     bottom_toolbar=self.get_bottom_toolbar,
                                     style=self.token_style,
                                     refresh_interval=3,
+                                    auto_suggest=AutoSuggestFromHistory()
                                     )
 
             try:
