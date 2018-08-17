@@ -9,7 +9,7 @@ import argparse
 import json
 import traceback
 import signal
-from functools import wraps
+from functools import wraps, reduce
 from prompt_toolkit import prompt
 from prompt_toolkit.shortcuts import print_tokens
 from prompt_toolkit.token import Token
@@ -22,31 +22,25 @@ from wallet.utils import get_arg, \
     check_onchain_balance,\
     check_support_asset_type,\
     check_partner, \
-    is_valid_deposit,\
     is_correct_uri
+from wallet.channel import Channel, udpate_channel_when_setup
+from wallet.transaction.founder import FounderMessage, FounderResponsesMessage
+from wallet.transaction.payment import Payment, PaymentLink
+from wallet.transaction.rsmc import RsmcMessage, RsmcResponsesMessage
+from wallet.transaction.htlc import HtlcMessage, HtlcResponsesMessage, RResponse, RResponseAck
+from wallet.transaction.settle import SettleMessage, SettleResponseMessage
 from wallet.Interface.rpc_interface import RpcInteraceApi,CurrentLiveWallet
+from wallet.utils import get_magic
 from twisted.web.server import Site
 from lightwallet.prompt import PromptInterface
-from wallet.ChannelManagement.channel import create_channel, \
-    filter_channel_via_address,\
-    get_channel_via_address,\
-    chose_channel,\
-    close_channel,\
-    udpate_channel_when_setup, \
-    get_trans_history
-from wallet.ChannelManagement import channel as ch
-from wallet.TransactionManagement import message as mg
-from wallet.TransactionManagement import transaction as trinitytx
+
 from wallet.Interface.rpc_interface import MessageList
 import time
 from model.base_enum import EnumChannelState
 from wallet.Interface import gate_way
-from wallet.configure import Configure
 from blockchain.interface import get_block_count
 from blockchain.event import event_init_wallet
-from functools import reduce
 from blockchain.monior import monitorblock,EventMonitor
-from wallet.TransactionManagement.payment import Payment
 import requests
 import qrcode_terminal
 from wallet.configure import Configure
@@ -374,7 +368,8 @@ class UserPromptInterface(PromptInterface):
             console_log.error("Partner balance on chain is less than the deposit")
             return None
 
-        create_channel(self.Wallet.url, partner, asset_type, deposit, partner_deposit, wallet=self.Wallet)
+        Channel.create(self.Wallet, self.Wallet.url, partner, asset_type, deposit, partner_deposit,
+                       trigger=FounderMessage.create)
 
     @channel_opened
     @arguments_length([2,4])
@@ -390,12 +385,11 @@ class UserPromptInterface(PromptInterface):
             # payment code
             result, info = Payment.decode_payment_code(argument1)
             if result:
-                info = json.loads(info)
                 receiver = info.get("uri")
-                hr = info.get("hr")
+                hashcode = info.get("hashcode")
                 asset_type = info.get("asset_type")
                 asset_type = get_asset_type_name(asset_type)
-                count = info.get("count")
+                count = info.get("payment")
                 comments = info.get("comments")
             else:
                 print("The payment code is not correct")
@@ -404,7 +398,7 @@ class UserPromptInterface(PromptInterface):
             receiver = get_arg(arguments, 1)
             asset_type = get_arg(arguments, 2)
             count = get_arg(arguments, 3)
-            hr = None
+            hashcode = None
             if not receiver or not asset_type or not count:
                 self.help()
                 return None
@@ -413,70 +407,61 @@ class UserPromptInterface(PromptInterface):
             if not asset_type:
                 print("No support asset type %s" % asset_type)
                 return None
-        ch.Channel(self.Wallet.url, receiver).transfer(self.Wallet.url, receiver, asset_type, count, hr, self.Wallet)
 
-        # receiverpubkey, receiverip= receiver.split("@")
-        channels = filter_channel_via_address(self.Wallet.url, receiver, EnumChannelState.OPENED.name)
-        # LOG.debug("Channels {}".format(str(channels)))
-        # ch = chose_channel(channels,self.Wallet.url.split("@")[0].strip(), count, asset_type)
-        # if ch:
-        #     channel_name = ch.channel
-        # else:
-        #     channel_name =None
-        # gate_way_ip = self.Wallet.url.split("@")[1].strip()
-        #
-        # if channel_name:
-        #     tx_nonce = trinitytx.TrinityTransaction(channel_name, self.Wallet).get_latest_nonceid()
-        #     mg.RsmcMessage.create(channel_name,self.Wallet,self.Wallet.pubkey,
-        #                           receiverpubkey, float(count), receiverip, gate_way_ip, str(tx_nonce+1),
-        #                           asset_type=asset_type, comments=hr)
-        # else:
-        #     message = {"MessageType":"GetRouterInfo",
-        #                "Sender":self.Wallet.url,
-        #                 "Receiver": receiver,
-        #                "MessageBody":{
-        #                    "AssetType":asset_type,
-        #                    "Value":count
-        #                    }
-        #                }
-        #     result = gate_way.get_router_info(message)
-        #     routerinfo = json.loads(result.get("result"))
-        #     router=routerinfo.get("RouterInfo")
-        #     if router:
-        #         if not hr:
-        #             print("No hr in payments")
-        #             return
-        #         r = router.get("FullPath")
-        #         LOG.info("Get Router {}".format(str(r)))
-        #         n = router.get("Next")
-        #         LOG.info("Get Next {}".format(str(n)))
-        #         fee_router = [i for i in r if i[0] not in (self.Wallet.url, receiver)]
-        #         if fee_router:
-        #             fee = reduce(lambda x, y:x+y,[float(i[1]) for i in fee_router])
-        #         else:
-        #             fee = 0
-        #         LOG.info("Get Fee {}".format(str(fee)))
-        #         answer = prompt("will use fee %s , Do you still want tx? [Yes/No]> " %(str(fee)))
-        #         if answer.upper() in["YES","Y"]:
-        #             count = float(count) + float(fee)
-        #             next = r[1][0]
-        #             channels = filter_channel_via_address(self.Wallet.url, next, EnumChannelState.OPENED.name)
-        #             LOG.debug("Channels {}".format(str(channels)))
-        #             ch = chose_channel(channels, self.Wallet.url.split("@")[0].strip(), count, asset_type)
-        #             if ch:
-        #                 channel_name = ch.channel
-        #             else:
-        #                 print("Error, can not find the channel with next router")
-        #                 return None
-        #             tx_nonce = trinitytx.TrinityTransaction(channel_name, self.Wallet).get_latest_nonceid()
-        #             tx_nonce = int(tx_nonce)+1
-        #             mg.HtlcMessage.create(channel_name, self.Wallet,self.Wallet.url, next,
-        #                                  count, hr,tx_nonce, role_index=0,asset_type=asset_type,
-        #                                   router=r, next_router=r[2][0], comments=comments)
-        #         else:
-        #             return None
-        #     else:
-        #         return
+        # query channels by address
+        channel_set = Channel.get_channel(self.Wallet.url, receiver, EnumChannelState.OPENED)
+        if channel_set and channel_set[0]:
+            Channel.transfer(channel_set[0].channel, self.Wallet, receiver, asset_type, count, hashcode,
+                             cli=True, trigger=RsmcMessage.create)
+        else:
+            message = {"MessageType":"GetRouterInfo",
+                       "Sender":self.Wallet.url,
+                       "Receiver": receiver,
+                       "AssetType": asset_type,
+                       "Magic": get_magic(),
+                       "MessageBody":{
+                           "AssetType":asset_type,
+                           "Value":count
+                           }
+                       }
+            result = gate_way.get_router_info(message)
+            routerinfo = json.loads(result.get("result"))
+            router=routerinfo.get("RouterInfo")
+            if not router:
+                LOG.error('Router between {} and {} was not found.'.format(self.Wallet.url, receiver))
+                console_log.error('Router not found for HTLC transfer.')
+                return
+
+            if not hashcode:
+                print("NO HR in payments")
+                return
+
+            full_path = router.get("FullPath")
+            LOG.info("Get Router {}".format(str(full_path)))
+
+            next_jump = router.get("Next")
+            LOG.info("Get Next {}".format(str(next_jump)))
+            fee_router = [i for i in full_path if i[0] not in (self.Wallet.url, receiver)]
+            if fee_router:
+                fee = reduce(lambda x, y:x+y,[float(i[1]) for i in fee_router])
+            else:
+                fee = 0
+
+            count = HtlcMessage.float_calculate(count, fee)
+            receiver = full_path[1][0]
+            channel_set = Channel.get_channel(self.Wallet.url, receiver, EnumChannelState.OPENED)
+            if not(channel_set and channel_set[0]):
+                print('No OPENED channel was found for HTLC trade.')
+                return
+            LOG.info("Get Fee {}".format(str(fee)))
+            answer = prompt("You will pay extra fee {}. Do you wish continue this transaction? [Yes/No]>".format(fee))
+            if answer.upper() in["YES", "Y"]:
+                channel_name = channel_set[0].channel
+                Channel.transfer(channel_name, self.Wallet, receiver, asset_type, count, hashcode, router=full_path,
+                                 next_jump=full_path[2][0], cli=True, trigger=HtlcMessage.create)
+
+            else:
+                return
 
     @channel_opened
     @arguments_length(2)
@@ -505,7 +490,7 @@ class UserPromptInterface(PromptInterface):
 
         console_log.info("Closing channel {}".format(channel_name))
         if channel_name:
-            ch.Channel.quick_close(self.Wallet, channel_name)
+            Channel.quick_close(channel_name, wallet=self.Wallet, cli=True, trigger=SettleMessage.create)
         else:
             console_log.warn("No Channel Create")
 
@@ -517,8 +502,8 @@ class UserPromptInterface(PromptInterface):
         :param arguments:
         :return:
         """
-        state = get_arg(arguments, 1)
-        get_channel_via_address(self.Wallet.url, state)
+        state = '{}'.format(get_arg(arguments, 1)).upper()
+        Channel.get_channel_list(self.Wallet.url, state=state)
         return
 
     @channel_opened
@@ -539,7 +524,9 @@ class UserPromptInterface(PromptInterface):
         comments = " ".join(arguments[3:])
         comments = comments if comments else "None"
         try:
-            paycode = Payment(self.Wallet).generate_payment_code(asset_type, value, comments)
+            hash_r, rcode = Payment.create_hr()
+            Channel.add_payment(None, hash_r, rcode, value)
+            paycode = Payment.generate_payment_code(self.Wallet.url, asset_type, value, hash_r, comments)
         except Exception as e:
             LOG.error(e)
             console_log.error("Get payment link error, please check the log")
@@ -567,7 +554,7 @@ class UserPromptInterface(PromptInterface):
             if channel_name is None:
                 console_log.error("No provide channel")
                 return None
-            tx_his = get_trans_history(channel_name)
+            tx_his = Channel.query_trade(channel_name)
             for tx in tx_his:
                 console_log.info(tx)
             return None
@@ -656,46 +643,46 @@ class UserPromptInterface(PromptInterface):
         except AttributeError:
             return "Error Message"
         if message_type  == "Founder":
-            m_instance = mg.FounderMessage(message, self.Wallet)
+            m_instance = FounderMessage(message, self.Wallet)
 
         elif message_type in [ "FounderSign" ,"FounderFail"]:
-            m_instance = mg.FounderResponsesMessage(message, self.Wallet)
+            m_instance = FounderResponsesMessage(message, self.Wallet)
 
         elif message_type == "Htlc":
-            m_instance = mg.HtlcMessage(message, self.Wallet)
+            m_instance = HtlcMessage(message, self.Wallet)
 
         elif message_type in ["HtlcSign", "HtlcFail"]:
-            m_instance = mg.HtlcResponsesMessage(message, self.Wallet)
+            m_instance = HtlcResponsesMessage(message, self.Wallet)
 
         elif message_type == "Rsmc":
-            m_instance = mg.RsmcMessage(message, self.Wallet)
+            m_instance = RsmcMessage(message, self.Wallet)
 
         elif message_type in ["RsmcSign", "RsmcFail"]:
-            m_instance = mg.RsmcResponsesMessage(message, self.Wallet)
+            m_instance = RsmcResponsesMessage(message, self.Wallet)
 
         elif message_type == "Settle":
-            m_instance = mg.SettleMessage(message, self.Wallet)
+            m_instance = SettleMessage(message, self.Wallet)
 
         elif message_type in ["SettleSign","SettleFail"]:
-            m_instance = mg.SettleResponseMessage(message, self.Wallet)
+            m_instance = SettleResponseMessage(message, self.Wallet)
 
         elif message_type == "RResponseAck":
-            m_instance = mg.RResponseAck(message,self.Wallet)
+            m_instance = RResponseAck(message,self.Wallet)
 
         elif message_type  == "RResponse":
-            m_instance = mg.RResponse(message, self.Wallet)
+            m_instance = RResponse(message, self.Wallet)
 
-        elif message_type == "RegisterChannel":
-            m_instance = mg.RegisterMessage(message, self.Wallet)
-
-        elif message_type == "CreateTranscation":
-            m_instance = mg.CreateTranscation(message, self.Wallet)
-
-        elif message_type == "TestMessage":
-            m_instance = mg.TestMessage(message, self.Wallet)
+        # elif message_type == "RegisterChannel":
+        #     m_instance = RegisterMessage(message, self.Wallet)
+        #
+        # elif message_type == "CreateTranscation":
+        #     m_instance = CreateTranscation(message, self.Wallet)
+        #
+        # elif message_type == "TestMessage":
+        #     m_instance = TestMessage(message, self.Wallet)
 
         elif message_type == "PaymentLink":
-            m_instance = mg.PaymentLink(message, self.Wallet)
+            m_instance = PaymentLink(message, self.Wallet)
 
         else:
             return "No Support Message Type "

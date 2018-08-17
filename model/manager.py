@@ -243,26 +243,26 @@ class DBManager(object):
 
     def query_one(self, primary_key, *args, **kwargs):
         result = self.db_table.find_one({self.primary_key: primary_key}, *args, **kwargs)
-        return [ModelSet(**result)] if result else EnumStatusCode.DBQueryWithoutMatchedItems
+        return [ModelSet(**result)] if result else []
 
     def query_many(self, filters, *args, **kwargs):
         cursor = self.db_table.find(filters, *args, **kwargs)
         result = [ModelSet(**res) for res in cursor.limit(0)]
-        return result if result else EnumStatusCode.DBQueryWithoutMatchedItems
+        return result if result else []
 
     def sort(self, key, descending=True):
         if descending:
-            result = self.db_table.find().sort([(key, pymongo.DESCENDING)])
+            result = self.db_table.find().sort([(key, pymongo.DESCENDING)]).limit(0)
         else:
-            result = self.db_table.find().sort([(key, pymongo.ASCENDING)])
+            result = self.db_table.find({}).sort([(key, pymongo.ASCENDING)]).limit(0)
 
-        result = [ModelSet(**res) for res in result]
+        result = [ModelSet(**res) for res in result.limit(1)]
         return result
 
     def query_many(self, filters, *args, **kwargs):
         cursor = self.db_table.find(filters, *args, **kwargs)
         result = [ModelSet(**res) for res in cursor.limit(0)]
-        return result if result else EnumStatusCode.DBQueryWithoutMatchedItems
+        return result if result else []
 
     def is_all(self, filters):
         return 'all' == filters.get(self.primary_key)

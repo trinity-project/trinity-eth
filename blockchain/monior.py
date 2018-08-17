@@ -26,6 +26,7 @@ from threading import Lock
 import socket
 import time
 import json
+from wallet.event import event_machine
 
 from blockchain.interface import get_block_count
 from common.log import LOG
@@ -347,8 +348,12 @@ def monitorblock():
         channel_event = ws_instance.pre_execution()
         ucoro_event(event_coro, channel_event)
 
+        # reset event machine
+        event_machine.reset_polling()
+
         end_time = time.time() + 15 # sleep 15 second according to the chain update block time
         need_update = False
+        trigger_per_block = False
         while True:
             try:
                 if 0 < block_delta < 2010:
@@ -356,22 +361,25 @@ def monitorblock():
                         pass
                     else:
                         blockheight += 1
-                        need_update = True
-                elif 2010 <= block_delta:
+                        if blockheight <= blockheight_onchain:
+                            need_update = True
+                elif 2010 <= block_delta and not trigger_per_block:
                     # use magic number
                     blockheight = int(blockheight_onchain) - 2000
-                    need_update = True
+                    trigger_per_block = True
                 else:
                     need_update = False
 
                 # update
-                if need_update:
+                if need_update or trigger_per_block:
                     EventMonitor.update_wallet_block_height(blockheight)
+
+                event_machine.handle(blockheight_onchain)
             except Exception as error:
                 pass
 
             time.sleep(0.1)
-            if time.time() - end_time <= 0.15:  # 150 ms
+            if end_time - time.time() <= 0.15:  # 150 ms
                 break
 
     # stop monitor

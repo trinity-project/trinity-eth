@@ -104,36 +104,29 @@ class APIChannel(object):
     table = TBLChannel()
 
     @classmethod
-    @rpc_response('AddChannel')
     def add_channel(cls, *args, **kwargs):
         return cls.table.add_one(*args, **kwargs)
 
     @classmethod
-    @rpc_response('DeleteChannel')
     def delete_channel(cls, channel):
         return cls.table.delete_one(channel)
 
     @classmethod
-    @rpc_response('BatchDeleteChannel')
     def batch_delete_channel(cls, filters):
         return cls.table.delete_many(filters)
 
     @classmethod
-    @rpc_response('QueryChannel')
     def query_channel(cls, channel, *args, **kwargs):
         return cls.table.query_one(channel, *args, **kwargs)
 
     @classmethod
-    @rpc_response('BatchQueryChannel')
     def batch_query_channel(cls, filters, *args, **kwargs):
         return cls.table.query_many(filters, *args, **kwargs)
 
     @classmethod
-    @rpc_response('UpdateChannel')
     def update_channel(cls, channel, **kwargs):
         return cls.table.update_one(channel, **kwargs)
 
     @classmethod
-    @rpc_response('BatchUpdateChannel')
     def batch_update_channel(cls, filters, **kwargs):
         return cls.table.update_many(filters, **kwargs)

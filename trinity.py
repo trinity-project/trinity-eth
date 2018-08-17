@@ -34,7 +34,6 @@ __running_mode__ = (0 == operator.imod(int(__version__.split('.')[1]), 2))
 Console_log = False
 
 
-
 DATABASE_CONFIG = {
     'authentication': {
         'user': os.getenv('DB_USER'),
@@ -47,3 +46,6 @@ DATABASE_CONFIG = {
     'host': os.getenv('DB_HOST', '127.0.0.1'),
     'port': int(os.getenv('DB_PORT', 27017))
 }
+
+
+IS_SUPPORTED_ASSET = lambda asset_type: asset_type.upper() in ['TNC']

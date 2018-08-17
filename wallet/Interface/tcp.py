@@ -47,7 +47,7 @@ class GatwayClientProtocol(protocol.Protocol):
                   }
         self.transport.write(encode_bytes(message))
         if CurrentLiveWallet.Wallet:
-            join_gateway(CurrentLiveWallet.Wallet.pubkey)
+            join_gateway(CurrentLiveWallet.Wallet.address)
         else:
             pass
         print("Connect the Gateway")

@@ -31,9 +31,16 @@ class TBLTransaction(DBManager):
         Created         : 2018-02-13
         Modified        : 2018-03-21
     """
-    def add_one(self, **kwargs):
-        # to check whether the state is correct:
-        return super(TBLTransaction, self).add(**kwargs)
+    def add_one(self, nonce:int or float, founder={}, rsmc={}, htlc={}, settle={}):
+        """
+
+        :param nonce:
+        :param deposit: record founder transaction trade
+        :param rsmc: record rsmc transaction trade,
+        :param htlc: record htlc transaction trade
+        :return:
+        """
+        return super(TBLTransaction, self).add(nonce=nonce, founder=founder, rsmc=rsmc, htlc=htlc, settle=settle)
 
     @property
     @connection_singleton
@@ -58,15 +65,14 @@ class TBLTransaction(DBManager):
         return self.client.trans_db.drop_collection(collection_index)
 
 
-
 class APITransaction(object):
     table = TBLTransaction()
 
-    def __init__(self, transaction_index):
-        self.table.set_collection(transaction_index)
+    def __init__(self, transaction_index:str):
+        self.table.set_collection('transaction'+transaction_index)
 
-    def add_transaction(self, **kwargs):
-        return self.table.add_one(**kwargs)
+    def add_transaction(self, *args, **kwargs):
+        return self.table.add_one(*args, **kwargs)
 
     def delete_transaction(self, transaction):
         return self.table.delete_one(transaction)

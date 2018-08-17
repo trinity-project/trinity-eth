@@ -22,35 +22,19 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
-import time
-from .log import LOG
 
 
-def ucoro(timeout = 0.1):
-    def handler(callback):
-        def wrapper(*args, **kwargs):
-            # use such mode to modulate blocking-mode to received
-            while True:
-                try:
-                    received = yield
-                    if received in ['exit', None]:
-                        break
+class SingletonClass(type):
+    """
 
-                    callback(*args, received, **kwargs)
-                except Exception as error:
-                    LOG.error('Co-routine received<{}>, error: {}'.format(received, error))
-                finally:
-                    time.sleep(timeout)
+    """
+    def __init__(cls, name, *args, **kwargs):
+        super(SingletonClass, cls).__init__(name, *args, **kwargs)
 
-        return wrapper
-    return handler
+    def __call__(cls, *args, **kwargs):
+        if not hasattr(cls, '_singleton_instance'):
+            cls._singleton_instance = super(SingletonClass, cls).__call__(*args, **kwargs)
+        return cls._singleton_instance
 
-
-def ucoro_event(coro, iter_data):
-    try:
-        coro.send(iter_data)
-    except StopIteration as error:
-        LOG.debug('Co-routine has been killed')
-        pass
-    except Exception as error:
-        LOG.warning('Error occurred during using co-routine. error: {}'.format(error))
+    def __new__(cls, name, *args, **kwargs):
+        return type.__new__(cls, name, *args, **kwargs)

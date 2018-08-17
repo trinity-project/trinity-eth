@@ -1,4 +1,5 @@
-"""Author: Trinity Core Team 
+# --*-- coding : utf-8 --*--
+"""Author: Trinity Core Team
 
 MIT License
 
@@ -21,3 +22,15 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
+import re
+from common.log import LOG
+
+
+def uri_parser(uri):
+    uri_list = re.split(r'[@:]', uri)
+
+    # to check the length
+    if 3 == len(uri_list):
+        return uri_list[0].strip(), uri_list[1].strip(), uri_list[2].strip()
+
+    raise ValueError('Invalid uri<{}>'.format(uri))

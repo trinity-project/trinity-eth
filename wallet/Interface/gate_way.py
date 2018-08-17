@@ -26,7 +26,8 @@ import requests
 from wallet.configure import Configure
 from common.log import LOG
 import json
-from wallet.utils import get_wallet_info
+from wallet.utils import get_wallet_info, get_magic
+
 
 class GatewayInfo(object):
     Spv_port = None
@@ -39,16 +40,15 @@ class GatewayInfo(object):
     def get_spv_port(cls):
         return cls.Spv_port
 
-def sync_channel(message_type, channel_name,founder, receiver, balance):
+def sync_channel(message_type, channel_name, founder, receiver, balance, asset_type):
     message = {"MessageType": message_type,
+               "AssetType": asset_type.upper(),
+               "Magic": get_magic(),
                "MessageBody": {
                    "ChannelName": channel_name,
                    "Founder": founder,
                    "Receiver": receiver,
                    "Balance": balance
-               ## deposit is like format : {${address_1}: {${asset_type}: amount}, ${address_2}: {${asset_type}: amount}}
-                   ##${address_1} ${address_2} -- the node address of the channel bi-direction's owner
-                   ##${asset_type} -- current just support "NEO", "TNC"
                   }
                }
 
@@ -121,6 +121,17 @@ def send_message(message, method="TransactionMessage" ):
     result = requests.post(Configure["GatewayURL"], json=request)
     return result.json()
 
-
-
-
+def close_wallet():
+    message = {
+        "MessageType": "CloseWallet",
+        "Magic":get_magic(),
+        "Ip": "{}:{}".format(Configure.get("NetAddress"), Configure.get("NetPort"))
+    }
+    request= {
+        "jsonrpc": "2.0",
+        "method": "CloseWallet",
+        "params": [message],
+        "id": 1
+    }
+    result = requests.post(Configure["GatewayURL"], json=request)
+    return result.json()

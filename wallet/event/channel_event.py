@@ -22,11 +22,13 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
-from .event import EventBase
-from wallet.channel import Channel
-from wallet.definition import EnumEventType, EnumEventAction
+from .event import EventBase, EnumEventType, EnumEventAction
+from wallet.channel import Channel, sync_channel_info_to_gateway
 from blockchain.event import event_test_state
 from common.log import LOG
+from common.console import console_log
+from common.common import uri_parser
+from .contract_event import contract_event_api
 
 
 class ChannelEventBase(EventBase):
@@ -37,84 +39,124 @@ class ChannelEventBase(EventBase):
         super(ChannelEventBase, self).__init__(channel_name, event_type, is_event_founder)
 
         self.channel_name = channel_name
-        self.channel = Channel.channel(channel_name)
+        self.channel = Channel(channel_name)
 
 
 class ChannelTestEvent(ChannelEventBase):
     def __init__(self):
         super(ChannelTestEvent, self).__init__('test_event', EnumEventType.EVENT_TYPE_TEST_STATE, True)
+        self.event_stage_iterator = iter([EnumEventAction.EVENT_EXECUTE, EnumEventAction.EVENT_COMPLETE])
 
     def execute(self, *args, **kwargs):
         super(ChannelTestEvent, self).execute(*args, **kwargs)
         event_test_state()
-        self.set_event_stage(EnumEventAction.EVENT_COMPLETE)
+        self.next_stage()
 
 
 class ChannelDepositEvent(ChannelEventBase):
     def __init__(self, channel_name, is_event_founder=True):
         super(ChannelDepositEvent, self).__init__(channel_name, EnumEventType.EVENT_TYPE_DEPOSIT, is_event_founder)
 
-    def prepare(self, *args, **kwargs):
-        super(ChannelDepositEvent, self).prepare(*args, **kwargs)
-        if hasattr(self, EnumEventAction.prepare_event.name):
-            length_of_args = len(self.prepare_event.args)
-            address = self.prepare_event.args[0] if 1 <= length_of_args else self.prepare_event.kwargs.get('address')
-            balance = self.prepare_event.args[1] if 2 <= length_of_args else self.prepare_event.kwargs.get('balance')
-            peer_address = self.prepare_event.args[2] if 3 <= length_of_args else self.prepare_event.kwargs.get('peer_address')
-            peer_balance = self.prepare_event.args[3] if 4 <= length_of_args else self.prepare_event.kwargs.get('peer_balance')
+        self.deposit = 0.0
+        self.partner_deposit = 0.0
+        pass
 
-            try:
-                # approved balance
-                approved_balance = float(self.channel.get_approved_asset(address))
-                peer_approved_balance = float(self.channel.get_approved_asset(peer_address))
-                if 0 == approved_balance or 0 == peer_approved_balance:
-                    return None, None
+    def prepare(self, block_height, address='', deposit=0.0, key=''):
+        super(ChannelDepositEvent, self).prepare(block_height)
 
-                LOG.debug('Approved asset: self<{}:{}>, peer<{}:{}>'.format(address, approved_balance,
-                                                                            peer_address, peer_approved_balance))
-                return approved_balance >= float(balance), peer_approved_balance >= float(peer_balance)
-            except Exception as error:
-                LOG.error('Action prepare exception: {}'.format(error))
-                pass
-        else:
-            return True, True
+        result = contract_event_api.approve(address, deposit, key, gwei_coef=self.gwei_coef)
+        if result:
+            self.next_stage()
+            return True
 
-        return None, None
+        return False
 
-    def action(self):
-        super(ChannelDepositEvent, self).action()
-        self.finish_preparation = True
-        if hasattr(self, EnumEventAction.action_event.name):
-            try:
-                if self.is_founder:
-                    self.channel.approve_deposit(*self.action_event.args, **self.action_event.kwargs)
-            except Exception as error:
-                pass
+    def execute(self, block_height, address='', channel_id='', nonce='',
+                founder='', deposit=0, partner='', partner_deposit=0,
+                founder_sign='', partner_sign='', private_key=''):
+        super(ChannelDepositEvent, self).execute(block_height)
+
+        # execute stage of channel event
+        try:
+
+            approved_deposit = contract_event_api.get_approved_asset(founder)
+            peer_approved_deposit = contract_event_api.get_approved_asset(partner)
+
+            if approved_deposit >= float(deposit) and peer_approved_deposit >= float(partner_deposit):
+                LOG.debug('Approved asset: self<{}:{}>, peer<{}:{}>'.format(address, approved_deposit,
+                                                                            partner, peer_approved_deposit))
+
+                # update the founder and partner deposit
+                self.deposit = deposit
+                self.partner_deposit = partner_deposit
             else:
-                # register monitor deposit event
-                event_monitor_deposit(self.channel_name, self.asset_type)
+                return False
 
-    def terminate(self):
-        super(ChannelDepositEvent, self).terminate()
-        if hasattr(self, EnumEventAction.terminate_event.name):
-            return self.channel.update_channel(**self.terminate_event.kwargs)
+            if self.is_event_founder:
+                contract_event_api.approve_deposit(address, channel_id, nonce, founder, deposit,
+                                                   partner, partner_deposit,
+                                                   founder_sign, partner_sign, private_key, gwei_coef=self.gwei_coef)
+        except Exception as error:
+            LOG.warning('Failed to approve deposit of Channel<{}>. Exception: {}'.format(self.channel_name, error))
+        else:
+            self.next_stage()
+
+        return False
+
+    def terminate(self, block_height, state='', asset_type='TNC'):
+        super(ChannelDepositEvent, self).terminate(block_height)
+
+        # check the deposit of the contract address
+        total_deposit = contract_event_api.get_channel_total_balance(self.channel_name)
+        if total_deposit >= self.deposit + self.partner_deposit:
+            Channel.update_channel(self.channel_name, state=state)
+            sync_channel_info_to_gateway(self.channel_name, 'AddChannel', asset_type)
+            console_log.info('Channel {} state is {}'.format(self.channel_name, state))
+            self.next_stage()
+
+    def timeout_handler(self, block_height, *args, **kwargs):
+        super(ChannelDepositEvent, self).timeout_handler(block_height, *args, **kwargs)
+
+    def complete(self, block_height, *args, **kwargs):
+        super(ChannelDepositEvent, self).complete(block_height, *args, **kwargs)
+
+    def error_handler(self, block_height, *args, **kwargs):
+        super(ChannelDepositEvent, self).error_handler(block_height, *args, **kwargs)
 
 
 class ChannelQuickSettleEvent(ChannelEventBase):
-    def __init__(self, channel_name, asset_type):
-        super(ChannelQuickSettleEvent, self).__init__(channel_name, asset_type, EnumEventType.EVENT_TYPE_QUICK_SETTLE)
+    def __init__(self, channel_name, is_event_founder=True):
+        super(ChannelQuickSettleEvent, self).__init__(channel_name, EnumEventType.EVENT_TYPE_QUICK_SETTLE,
+                                                      is_event_founder)
 
-    def action(self):
-        super(ChannelQuickSettleEvent, self).action()
-        self.finish_preparation = True
-        if hasattr(self, EnumEventAction.action_event.name):
-            if self.is_founder:
-                self.channel.quick_settle(*self.action_event.args, **self.action_event.kwargs)
+        # different event stage
+        self.event_stage_list = [EnumEventAction.EVENT_PREPARE, EnumEventAction.EVENT_EXECUTE,
+                                 EnumEventAction.EVENT_TERMINATE, EnumEventAction.EVENT_COMPLETE]
+        self.event_stage_iterator = iter(self.event_stage_list)
 
-            # register monitor quick settle event
-            event_monitor_quick_close_channel(self.channel_name, self.asset_type)
+    def prepare(self, block_height, *args, **kwargs):
+        super(ChannelQuickSettleEvent, self).prepare(block_height, *args, **kwargs)
+        self.next_stage()
 
-    def terminate(self):
-        super(ChannelQuickSettleEvent, self).terminate()
-        if hasattr(self, EnumEventAction.terminate_event.name):
-            return self.channel.update_channel(**self.terminate_event.kwargs)
+    def execute(self, block_height, invoker='', channel_id='', nonce='', founder='', founder_balance=0.0,
+                partner='', partner_balance=0.0, founder_signature='', partner_signature='', invoker_key=''):
+        super(ChannelQuickSettleEvent, self).execute(block_height)
+
+        if self.is_event_founder:
+            contract_event_api.quick_settle(invoker, channel_id, nonce, founder, founder_balance,
+                                            partner, partner_balance, founder_signature, partner_signature, invoker_key)
+
+        # set next stage
+        self.next_stage()
+
+    def terminate(self, block_height, state='', asset_type='TNC'):
+        super(ChannelQuickSettleEvent, self).terminate(block_height)
+
+        # to check the total deposit of the channel
+        total_deposit = contract_event_api.get_channel_total_balance(self.channel_name)
+        if 0 >= total_deposit:
+            Channel.update_channel(self.channel_name, state=state)
+            sync_channel_info_to_gateway(self.channel_name, 'DeleteChannel', asset_type)
+            console_log.info('Channel {} state is {}'.format(self.channel_name, state))
+            self.next_stage()
+

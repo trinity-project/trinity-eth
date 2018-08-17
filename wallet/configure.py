@@ -37,7 +37,7 @@ Configure = {
     "NetPort":"20556",
     "GatewayTCP":"localhost:8089",
     "AssetType":{
-        "TNC": "0x849d095d07950b9e56d0c895ec48ec5100cfdff1"
+        "TNC": "0x65096f2B7A8dc1592479F1911cd2B98dae4d2218"
     },
     "BlockChain":{
         "EthNetUrl" : "https://ropsten.infura.io"
