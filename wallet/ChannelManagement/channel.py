@@ -105,19 +105,37 @@ class Channel(object):
                       "\nBalance:", json.dumps(ch.balance, indent=1))
 
     @classmethod
-    def channel(cls,channelname):
+    def channel(cls, channelname):
+        """
+
+        :param channelname:
+        :return:
+        """
         try:
             channel = APIChannel.query_channel(channel=channelname)
-            cls.channel_set = channel["content"][0]
+            channel_set = channel["content"][0]
         except Exception as e:
             LOG.error(e)
             return None
-        ch = cls(cls.channel_set.src_addr, cls.channel_set.dest_addr)
-        ch.channel_set = cls.channel_set
+        ch = cls(channel_set.src_addr, channel_set.dest_addr)
+        ch.channel_set = channel_set
         ch.channel_name = channelname
         return ch
 
-    def create(self, asset_type, deposit, partner_deposit = None, cli=True, comments=None, channel_name=None, wallet = None):
+    def create(self, asset_type, deposit, partner_deposit = None, cli=True,
+               comments=None, channel_name=None, wallet = None):
+        """
+
+        :param asset_type:
+        :param deposit:
+        :param partner_deposit:
+        :param cli:
+        :param comments:
+        :param channel_name:
+        :param wallet:
+        :return:
+        """
+
         if not partner_deposit:
             partner_deposit = deposit
 
@@ -140,7 +158,8 @@ class Channel(object):
             deposit = convert_number_auto(asset_type.upper(), deposit)
             partner_deposit = convert_number_auto(asset_type.upper(), partner_deposit)
             if 0 >= deposit or 0 >= partner_deposit:
-                LOG.error('Could not trigger register channel because of illegal deposit<{}:{}>.'.format(deposit, partner_deposit))
+                LOG.error('Could not trigger register channel because of illegal deposit<{}:{}>.'.format(deposit,
+                                                                                                         partner_deposit))
                 return False
 
             try:
@@ -179,7 +198,11 @@ class Channel(object):
 
     @property
     def state(self):
-        return None
+        ch = self._get_channel()
+        if ch:
+            return ch.state
+        else:
+            return None
 
     @property
     def src_addr(self):
@@ -326,9 +349,7 @@ class Channel(object):
         except Exception as error:
             LOG.error('Could not close channel. error: {}.'.format(error))
             console_log.error('Could not close channel. error: {}.'.format(error))
-
         return
-
 
     @staticmethod
     def _eth_interface():
