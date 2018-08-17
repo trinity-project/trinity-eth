@@ -114,17 +114,18 @@ else:
 
             pass
 
-        def error(self, value):
-            print(self._fg_red.format(value))
+        def error(self, *args):
+            print('\033[0;31;0m', *args, '\033[0m')
 
-        def info(self, value):
-            print(self._fg_green.format(value))
+        def info(self, *args):
+            print('\033[0;32;0m', *args, '\033[0m')
 
-        def warning(self, value):
-            print(self._fg_yellow.format(value))
+        def warning(self, *args):
+            print('\033[0;33;0m', *args, '\033[0m')
 
         def warn(self, value):
             self.warning(value)
 
 
 console_log = ConsoleLog()
+

@@ -62,36 +62,29 @@ class APINode(object):
     table = TBLNode()
 
     @classmethod
-    @rpc_response('AddNode')
     def add_ransaction(cls, *args):
         return cls.table.add_one(*args)
 
     @classmethod
-    @rpc_response('DeleteNode')
     def delete_ransaction(cls, node):
         return cls.table.delete_one(node)
 
     @classmethod
-    @rpc_response('BatchDeleteNode')
     def batch_delete_node(cls, filters):
         return cls.table.delete_many(filters)
 
     @classmethod
-    @rpc_response('QueryNode')
     def query_node(cls, node, *args, **kwargs):
         return cls.table.query_one(node, *args, **kwargs)
 
     @classmethod
-    @rpc_response('BatchQueryNode')
     def batch_query_node(cls, filters, *args, **kwargs):
         return cls.table.query_many(filters, *args, **kwargs)
 
     @classmethod
-    @rpc_response('UpdateNode')
     def update_node(cls, node, **kwargs):
         return cls.table.update_one(node, **kwargs)
 
     @classmethod
-    @rpc_response('BatchUpdateNode')
     def batch_update_node(cls, filters, **kwargs):
         return cls.table.update_many(filters, **kwargs)

@@ -65,36 +65,29 @@ class APIWalletAddress(object):
     table = TBLWalletAddress()
 
     @classmethod
-    @rpc_response('AddWalletAddress')
     def add_wallet_address(cls, *args):
         return cls.table.add_one(*args)
 
     @classmethod
-    @rpc_response('DeleteWalletAddress')
     def delete_wallet_address(cls, address):
         return cls.table.delete_one(address)
 
     @classmethod
-    @rpc_response('BatchDeleteWalletAddress')
     def batch_delete_wallet_address(cls, filters):
         return cls.table.delete_many(filters)
 
     @classmethod
-    @rpc_response('QueryWalletAddress')
     def query_wallet_address(cls, address, *args, **kwargs):
         return cls.table.query_one(address, *args, **kwargs)
 
     @classmethod
-    @rpc_response('BatchQueryWalletAddress')
     def batch_query_wallet_address(cls, filters, *args, **kwargs):
         return cls.table.query_many(filters, *args, **kwargs)
 
     @classmethod
-    @rpc_response('UpdateWalletAddress')
     def update_wallet_address(cls, address, **kwargs):
         return cls.table.update_one(address, **kwargs)
 
     @classmethod
-    @rpc_response('BatchUpdateWalletAddress')
     def update_wallet_address(cls, filters, **kwargs):
         return cls.table.update_many(filters, **kwargs)

@@ -23,9 +23,34 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 from threading import Lock
-from wallet.definition import EnumEventAction
+from enum import Enum, IntEnum
 from common.coroutine import ucoro
 from common.log import LOG
+
+
+class EnumEventAction(Enum):
+    EVENT_INIT = 'INIT'
+    EVENT_PREPARE = 'prepare'
+    EVENT_EXECUTE = 'execute'
+    EVENT_TERMINATE = 'terminate'
+    EVENT_COMPLETE = 'complete'
+
+    EVENT_TIMEOUT = 'timeout_handler'
+    EVENT_ERROR = 'error_handler'
+
+
+class EnumEventType(IntEnum):
+    # both wallet are online
+    EVENT_TYPE_DEPOSIT = 0x0
+    EVENT_TYPE_RSMC = 0x04
+    EVENT_TYPE_HTLC = 0x08
+    EVENT_TYPE_QUICK_SETTLE = 0x0c
+
+    # One of Both wallets is online
+    EVENT_TYPE_SETTLE = 0x10
+
+    # test event
+    EVENT_TYPE_TEST_STATE = 0xE0
 
 
 class EventArgs(object):
@@ -47,18 +72,26 @@ class EventBase(object):
 
         self.is_event_founder = is_event_founder
         self.retry = False
-        self._event_timeout = 12        # default timeout: 12 block height. it's about 3 minutes
+        self._event_timeout = 30        # default timeout: 12 block height. it's about 3 minutes
         self.is_event_ready = False
-        self.event_stage = EnumEventAction.EVENT_PREPARE
+
+        self.event_stage_list = [EnumEventAction.EVENT_PREPARE, EnumEventAction.EVENT_EXECUTE,
+                                 EnumEventAction.EVENT_TERMINATE, EnumEventAction.EVENT_COMPLETE]
+        self.event_stage_iterator = iter(self.event_stage_list)
+        self.event_stage = self.next_stage()
 
         self.start_time = 0
         self.need_websocket = False
 
+        self.gwei_coef = 6
+
     def retry_event(self):
         self.retry = True
+        self.gwei_coef = 8
         self._event_timeout += 20       # retry timeout: extra 20 block height. it's about 5 minutes
         self.is_event_ready = False
-        self.event_stage = EnumEventAction.EVENT_PREPARE
+        self.event_stage_iterator = iter(self.event_stage_list)
+        self.event_stage = self.next_stage()
 
     @property
     def event_timeout(self):
@@ -76,8 +109,15 @@ class EventBase(object):
         if 0 == self.start_time:
             self.start_time = start_time + 1
 
-    def set_event_stage(self, stage=EnumEventAction.EVENT_PREPARE):
-        self.event_stage = stage
+    def next_stage(self):
+        self.event_stage = next(self.event_stage_iterator)
+        return self.event_stage
+
+    def set_timeout_stage(self):
+        self.event_stage = EnumEventAction.EVENT_TIMEOUT
+
+    def set_error_stage(self):
+        self.event_stage = EnumEventAction.EVENT_ERROR
 
     def set_event_ready(self, ready=True):
         LOG.debug('set event<{}> ready'.format(self.event_name))
@@ -90,38 +130,52 @@ class EventBase(object):
     def stage_name(self):
         return self.event_stage.name
 
+    @property
+    def stage_action(self):
+        return self.event_stage.value
+
+    @property
+    def event_type_name(self):
+        return self.event_type.name
+
     @staticmethod
     def check_valid_action(self, action_type):
         assert EnumEventAction.__contains__(action_type), 'Invalid action_type<{}>'.format(action_type)
 
-    def prepare(self, *args, **kwargs):
-        LOG.debug('Start preparing stage of event<{}-{}>'.format(self.event_name, self.event_type))
-        self.set_event_start_time(int(args[0]))
-        pass
+    def prepare(self, block_height, *args, **kwargs):
+        print('prepare')
+        LOG.debug('{} stage of event<{}-{}> at block-{}'.format(self.stage_action, self.event_name,
+                                                                self.event_type_name, block_height))
+        self.set_event_start_time(int(block_height))
+        return True
 
-    def execute(self, *args, **kwargs):
-        LOG.debug('Start executing stage of event<{}-{}>'.format(self.event_name, self.event_type))
-        pass
+    def execute(self, block_height, *args, **kwargs):
+        LOG.debug('{} stage of event<{}-{}> at block-{}'.format(self.stage_action, self.event_name,
+                                                                self.event_type_name, block_height))
+        return True
 
-    def terminate(self, *args, **kwargs):
-        LOG.debug('Start terminating stage of event<{}-{}>'.format(self.event_name, self.event_type))
-        pass
+    def terminate(self, block_height, *args, **kwargs):
+        LOG.debug('{} stage of event<{}-{}> at block-{}'.format(self.stage_action, self.event_name,
+                                                                self.event_type_name, block_height))
+        return True
 
-    def complete(self, *args, **kwargs):
-        LOG.debug('Complete event<{}-{}>'.format(self.event_name, self.event_type))
-        pass
+    def complete(self, block_height, *args, **kwargs):
+        LOG.info('{} stage of event<{}-{}> at block-{}'.format(self.stage_action, self.event_name,
+                                                                self.event_type_name, block_height))
+        return True
 
-    def timeout_handler(self, *args, **kwargs):
-        LOG.warning('Timeout occurred for event<{}-{}>'.format(self.event_name, self.event_type))
+    def timeout_handler(self, block_height, *args, **kwargs):
+        LOG.warning('Timeout stage of event<{}-{}> at block-{}'.format(self.event_name, self.event_type_name,
+                                                                       block_height))
 
         if not self.retry:
             self.retry_event()
         else:
-            self.set_event_stage(EnumEventAction.EVENT_ERROR)
+            self.set_error_stage()
         pass
 
-    def error_handler(self, *args, **kwargs):
-        LOG.error('Error to execute event<{}-{}>'.format(self.event_name, self.event_type))
+    def error_handler(self, block_height, *args, **kwargs):
+        LOG.error('Error stage of event<{}-{}> at block-{}'.format(self.event_name, self.event_type_name, block_height))
         pass
 
     def register_args(self, action_type, *args, **kwargs):
@@ -130,8 +184,17 @@ class EventBase(object):
         action_name = action_type.name
         self.__dict__.update({action_name: EventArgs(*args, **kwargs)})
 
-    def is_valid_action(self, action_type):
+    @property
+    def event_arguments(self):
+        return self.__dict__.get(self.stage_name, EventArgs())
+
+    @staticmethod
+    def is_valid_action(action_type):
         assert EnumEventAction.__contains__(action_type), 'Invalid action_type<{}>.'.format(action_type)
+
+    def handle(self, block_height):
+        event_args = self.event_arguments
+        self.__getattribute__(self.stage_action)(block_height, *event_args.args, **event_args.kwargs)
 
 
 class EventMachine(object):
@@ -145,35 +208,36 @@ class EventMachine(object):
         self.__event_ordered_list = list()
 
         self.event_lock = Lock()
+        self.total_task_per_poll = 0
 
     @ucoro(0.1, True)
-    def __coroutine_handler(self, block_height:int):
+    def __coroutine_handler(self, block_height:int, **kwargs):
         event_name, current_event = self.get_event()
-        old_stage = EnumEventAction.EVENT_PREPARE
+        old_stage = EnumEventAction.EVENT_INIT
+
+        # execute the event method according to the event stage
+        while current_event.stage_is_changed(old_stage):
+            old_stage = current_event.event_stage
+            current_event.handle(block_height)
+
+        if not self.is_event_completed(current_event.event_stage):
+            # insert the event back into the queue
+            self.insert_event_back_into_queue(event_name, current_event)
 
         # to judge whether current event is timeout or not
         if block_height > current_event.event_timeout:
             # set the event timeout
-            current_event.set_event_stage(EnumEventAction.EVENT_TIMEOUT)
-
-        # execute the event method according to the event stage
-        while current_event.stage_is_changed(old_stage):
-            current_event.__dict__[current_event.stage_name](block_height)
-            old_stage = current_event.event_stage
-
-        #
-        if not self.is_event_completed(current_event.event_stage):
-            # insert the event back into the queue
-            self.insert_event_back_into_queue(event_name, current_event)
+            current_event.set_timeout_stage()
 
     def coro_grouper(self, block_height):
         while True:
             yield from self.__coroutine_handler(block_height)
 
     def handle(self, block_height):
-        if self.is_queue_empty():
+        if self.is_queue_empty() or self.is_polling_finished:
             return None
         max_task = min(self._coro_number, len(self.__event_ordered_list))
+        self.total_task_per_poll += max_task
 
         for task_idx in range(max_task):
             coro = self.coro_grouper(block_height)
@@ -182,6 +246,14 @@ class EventMachine(object):
 
         pass
 
+    @property
+    def is_polling_finished(self):
+        return self.total_task_per_poll >= len(self.__event_ordered_list)
+
+    def reset_polling(self):
+        if self.is_polling_finished:
+            self.total_task_per_poll = 0
+
     def get_event(self):
         self.event_lock.acquire()
         name = self.__event_ordered_list.pop(0)
@@ -189,6 +261,9 @@ class EventMachine(object):
         self.event_lock.release()
 
         return name, event
+
+    def get_registered_event(self, name):
+        return self.__event_queue.get(name)
 
     def insert_event_back_into_queue(self, name, event):
         self.event_lock.acquire()
@@ -202,7 +277,10 @@ class EventMachine(object):
         self.__event_queue.update({name: event})
         self.event_lock.release()
 
-    def register_event_key(self, name):
+    def update_event(self, name, event):
+        self.register_event(name, event)
+
+    def trigger_start_event(self, name):
         self.event_lock.acquire()
         self.__event_ordered_list.append(name)
         self.event_lock.release()

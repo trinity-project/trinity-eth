@@ -26,8 +26,7 @@ import json
 from json.decoder import JSONDecodeError
 from klein import Klein
 from wallet.Interface.rpc_utils import json_response, cors_header
-from wallet.ChannelManagement.channel import get_channel_via_name, close_channel, udpate_channel_when_setup
-from wallet.TransactionManagement import transaction, message
+from wallet.channel import get_channel_via_name, udpate_channel_when_setup
 from common.log import LOG
 from wallet.configure import Configure
 from blockchain.interface import get_balance
@@ -151,24 +150,24 @@ class RpcInteraceApi(object):
 
     def json_rpc_method_handler(self, method, params):
 
-        if method == "SendRawtransaction":
-            return transaction.TrinityTransaction.sendrawtransaction(params[0])
+        # if method == "SendRawtransaction":
+        #     return transaction.TrinityTransaction.sendrawtransaction(params[0])
 
-        elif method == "TransactionMessage":
+        if method == "TransactionMessage":
             LOG.info("<-- {}".format(params))
             return MessageList.append(params)
 
-        elif method == "FunderTransaction":
-            return transaction.funder_trans(params)
+        # elif method == "FunderTransaction":
+        #     return transaction.funder_trans(params)
 
-        elif method == "FunderCreate":
-            return transaction.funder_create(params)
+        # elif method == "FunderCreate":
+        #     return transaction.funder_create(params)
 
-        elif method == "RSMCTransaction":
-            return transaction.rsmc_trans(params)
-
-        elif method == "HTLCTransaction":
-            return transaction.hltc_trans(params)
+        # elif method == "RSMCTransaction":
+        #     return transaction.rsmc_trans(params)
+        #
+        # elif method == "HTLCTransaction":
+        #     return transaction.hltc_trans(params)
 
         elif method == "SyncWallet":
             from wallet import prompt as PR
@@ -181,34 +180,34 @@ class RpcInteraceApi(object):
             return {'MessageType': 'GetChannelState',
                     'MessageBody': get_channel_via_name(params)}
 
-        elif method == "CloseChannel":
-            class TestWallet():
-                def __init__(self):
-                    self.url = params[1]
-            close_channel(params[0], TestWallet())
+        # elif method == "CloseChannel":
+        #     class TestWallet():
+        #         def __init__(self):
+        #             self.url = params[1]
+        #     close_channel(params[0], TestWallet())
 
-        elif method == "GenerateRSMCMessage":
-            tx_nonce = transaction.TrinityTransaction(params[0], None).get_latest_nonceid()
-            tx_nonce = int(tx_nonce)
+        # elif method == "GenerateRSMCMessage":
+        #     tx_nonce = transaction.TrinityTransaction(params[0], None).get_latest_nonceid()
+        #     tx_nonce = int(tx_nonce)
+        #
+        #     return message.RsmcMessage.create(params[0], None, params[1], params[3], params[5], params[4], params[2] ,
+        #                                             tx_nonce+1, asset_type="TNC",cli =False,router = None, next_router=None,
+        #                                             role_index=0, comments=None)
 
-            return message.RsmcMessage.create(params[0], None, params[1], params[3], params[5], params[4], params[2] ,
-                                                    tx_nonce+1, asset_type="TNC",cli =False,router = None, next_router=None,
-                                                    role_index=0, comments=None)
+        # elif method == "GetRSMCMessage":
+        #     if not params:
+        #         LOG.error('Parameters <{}> is used for GetRSMCMessage')
+        #         return {'MessageType': 'GetRSMCAck',
+        #                 'MessageBody': None}
+        #
+        #     sender_list = params[1].split('@')
+        #     receiver_list = params[2].split('@')
+        #
+        #     rsmc_message = message.RsmcMessage.generateRSMC(params[0], None, sender_list[0], receiver_list[0], float(params[4]),
+        #                                                receiver_list[1], sender_list[1], int(params[5]), params[3],
+        #                                                role_index=int(params[6]))
 
-        elif method == "GetRSMCMessage":
-            if not params:
-                LOG.error('Parameters <{}> is used for GetRSMCMessage')
-                return {'MessageType': 'GetRSMCAck',
-                        'MessageBody': None}
-
-            sender_list = params[1].split('@')
-            receiver_list = params[2].split('@')
-
-            rsmc_message = message.RsmcMessage.generateRSMC(params[0], None, sender_list[0], receiver_list[0], float(params[4]),
-                                                       receiver_list[1], sender_list[1], int(params[5]), params[3],
-                                                       role_index=int(params[6]))
-
-            return rsmc_message
+            # return rsmc_message
 
         elif method == "GetChannelList":
             from wallet.utils import get_wallet_info
@@ -224,8 +223,8 @@ class RpcInteraceApi(object):
                         "MessageBody": {"Error":"Wallet No Open"}
                 }
 
-        elif method == 'RefoundTrans':
-            return transaction.refound_trans(params)
+        # elif method == 'RefoundTrans':
+        #     return transaction.refound_trans(params)
 
 
 

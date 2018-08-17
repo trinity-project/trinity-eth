@@ -63,7 +63,7 @@ def get_balance(address, asset_type, asset_address=None, asset_abi=None):
         try:
             return EthClient.get_balance_of_erc20(asset_address, asset_abi, address)
         except Exception as e:
-            LOG.error(e)
+            LOG.exception(e)
             return 0
 
 
