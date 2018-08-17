@@ -64,7 +64,11 @@ class Payment(object):
             LOG.error("payment code is not trinity payment")
             return False, None
         base58_code = payment_code[2:]
-        code = base58.b58decode(base58_code).decode()
+        try:
+            code = base58.b58decode(base58_code).decode()
+        except Exception as e:
+            LOG.exception(e)
+            return False,str(e)
         info = code.split("&",4)
         if len(info) !=5:
             return False, None
@@ -124,12 +128,13 @@ if __name__ == "__main__":
     # print(key_string)
     # print(len(key_string))
 
-    class Wallet:
-        pass
-
-    wallet = Wallet()
-    wallet.url = "0276130e8b092a61f384dd3c8f2472a012040d664800e36aebc08de60bb911850f@47.98.228.81:8089"
-    payment = Payment(wallet).generate_payment_code("TC",10,"mmmn")
-    print(payment)
-
-
+    # class Wallet:
+    #     pass
+    #
+    # wallet = Wallet()
+    # wallet.url = "0276130e8b092a61f384dd3c8f2472a012040d664800e36aebc08de60bb911850f@47.98.228.81:8089"
+    # payment = Payment(wallet).generate_payment_code("TC",10,"mmmn")
+    # print(payment)
+    print(Payment.decode_payment_code("""TNGeQBEzfvehh63WpFaFUy4wsNfW8nioRJ9mkBN5D3xeQrxLGuLV3RGrqHoUNgTRPjCHerJZVuaGKCySF55DeSRgnytoM2cbPeRwkQ6JF4JTHz7VNf2U3pAcoxv4Vi7Zuu5869Bm55HnhoQSFyUUJgn9obDbGHNVu77yf6s
+JqbR4u8HmuwMFpbmsjjw17J7pyD49wKqpbxcH1JYANqXYbMFUvsULBkxNNxTw66xMErcBV3KK6zraGTNGeQBEzfvehh63WpFaFUy4wsNfW8nioRJ9mkBN5D3xeQrxLGuLV3RGrqHoUNgTRPjCHerJZVuaGKCySF55DeSRgnytoM2cbPeRwkQ6JF4JTH
+z7VNf2U3pAcoxv4Vi7Zuu5869Bm55HnhoQSFyUUJgn9obDbGHNVu77yf6sJqbR4u8HmuwMFpbmsjjw17J7pyD49wKqpbxcH1JYANqXYbMFUvsULBkxNNxTw66xMErcBV3KK6zr"""))
