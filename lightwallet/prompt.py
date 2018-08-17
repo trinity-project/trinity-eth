@@ -392,16 +392,10 @@ class PromptInterface(object):
     def get_completer(self):
         standard_completions =[]
         for i in self.commands:
-            sub_c = i.split()
-            for index, value in enumerate(sub_c):
-                if re.match(r"^[a-zA-Z].+", value):
-                    continue
-                else:
-                    standard_completions.append(" ".join(sub_c[:index]))
-                    break
-
+            sub_c = re.match(r"(^[a-zA-Z ]+).+",i)
+            if sub_c:
+                standard_completions.append(sub_c.groups()[0].strip())
         all_completions = list(set(standard_completions))
-
         prompt_completer = WordCompleter(all_completions, sentence=True)
 
         return prompt_completer
