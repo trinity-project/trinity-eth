@@ -308,13 +308,27 @@ class Channel(object):
 
         try:
             if channel.channel_set:
-                mg.SettleMessage.create(wallet, channel_name, channel.src_addr, channel.dest_addr, 'TNC')
+                if channel.state in [EnumChannelState.CLOSED.name,
+                                     EnumChannelState.OPENING.name,
+                                     EnumChannelState.CLOSING.name,
+                                     EnumChannelState.SETTLED.name,
+                                     EnumChannelState.SETTLING.name]:
+                    LOG.warn("Channel in {} state".format(channel.state))
+                    console_log.warn("Channel in {} state".format(channel.state))
+                    return
+                elif channel.state in [EnumChannelState.INIT.name]:
+                    channel.delete_channel()
+                else:
+                    mg.SettleMessage.create(wallet, channel_name, channel.src_addr, channel.dest_addr, 'TNC')
             else:
                 LOG.error('Could not close channel<{}> since channel not found.'.format(channel_name))
+                console_log.error('Could not close channel<{}> since channel not found.'.format(channel_name))
         except Exception as error:
             LOG.error('Could not close channel. error: {}.'.format(error))
+            console_log.error('Could not close channel. error: {}.'.format(error))
 
         return
+
 
     @staticmethod
     def _eth_interface():

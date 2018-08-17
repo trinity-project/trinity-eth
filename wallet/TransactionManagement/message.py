@@ -1632,8 +1632,12 @@ class SettleMessage(TransactionMessage):
         if not channel:
             LOG.error('Channel<{}> not found!'.format(channel_name))
             return
-
-        nonce = 0xFFFFFFFF
+        latest_trade = channel.latest_trade(channel_name)
+        if latest_trade:
+            latest_nonce = latest_trade.nonce
+        else:
+            raise Exception(EnumResponseStatus.RESPONSE_NONCE_ERROR.name)
+        nonce = int(latest_trade)+1
         asset_type = asset_type.upper()
 
         sender_addr = sender.split("@")[0].strip()
@@ -1666,7 +1670,7 @@ class SettleMessage(TransactionMessage):
         channel.update_channel(state=EnumChannelState.SETTLING.name)
         ch.Channel.add_trade(channel_name,
                              nonce = str(nonce),
-                             type = EnumTradeType.TRADE_TYPE_SETTLE.value,
+                             type = EnumTradeType.TRADE_TYPE_SETTLE.name,
                              role = EnumTradeRole.TRADE_ROLE_FOUNDER,
                              payment = 0,
                              address = sender,
