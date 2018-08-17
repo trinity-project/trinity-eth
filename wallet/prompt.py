@@ -366,7 +366,7 @@ class UserPromptInterface(PromptInterface):
                        "Sender":self.Wallet.url,
                        "Receiver": receiver,
                        "AssetType": asset_type,
-                       "Magic": get_magic(),
+                       "NetMagic": get_magic(),
                        "MessageBody":{
                            "AssetType":asset_type,
                            "Value":count
