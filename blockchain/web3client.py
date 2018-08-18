@@ -29,7 +29,7 @@ class Client(object):
 
     def construct_common_tx(self, addressFrom, addressTo, value, gasLimit=None):
         tx = {
-            'gas': gasLimit,
+            'gas': gasLimit if gasLimit else 4500000,
             'to': addressTo,
             'value': int(value*10**18),
             'gasPrice': self.web3.eth.gasPrice,
@@ -51,10 +51,12 @@ class Client(object):
 
     def construct_erc20_tx(self, contract,addressFrom, addressTo,value, gasLimit=None, gasprice=None):
         tx_d = {
-            "gas": gasLimit,
+
             'gasPrice': self.web3.eth.gasPrice * 2 if not gasprice  else gasprice,
             'nonce': self.web3.eth.getTransactionCount(addressFrom),
         }
+        if gasLimit:
+            tx_d.update({"gas": gasLimit})
 
         tx = contract.functions.transfer(
             addressTo,
