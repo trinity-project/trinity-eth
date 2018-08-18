@@ -35,7 +35,7 @@ def eth_websocket(callback):
             if not payload.get('walletAddress'):
                 payload.update({'walletAddress': ws_instance.wallet_address})
         except Exception as error:
-            LOG.exception('Call {} error: {}'.format(callback.__name__, error))
+            LOG.error('Call {} error: {}'.format(callback.__name__, error))
         else:
             # to send the data by wwebsocket connection
             ws_instance.send(json.dumps(payload))

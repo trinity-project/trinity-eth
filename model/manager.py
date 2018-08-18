@@ -97,7 +97,7 @@ class DBClient(object):
         try:
             self.db_client.close()
         except Exception as exp_info:
-            LOG.exception('Exception happened to close DB client. Exception: {}'.format(exp_info))
+            LOG.error('Exception happened to close DB client. Exception: {}'.format(exp_info))
 
         # reset the class member's value
         self.db_client = None
@@ -179,10 +179,10 @@ class DBManager(object):
 
             return EnumStatusCode.OK
         except DuplicateKeyError as exp_info:
-            LOG.exception('Primary Key {} is Duplicated. Exception: {}'.format(kwargs.get(self.primary_key), exp_info))
+            LOG.error('Primary Key {} is Duplicated. Exception: {}'.format(kwargs.get(self.primary_key), exp_info))
             return EnumStatusCode.PrimaryKeyIsDuplicated
         except Exception as exp_info:
-            LOG.exception('Exception occurred during add item {}. Exception'.format(kwargs, exp_info))
+            LOG.error('Exception occurred during add item {}. Exception'.format(kwargs, exp_info))
             return EnumStatusCode.PrimaryKeyInsertWithException
 
     def update_one(self, primary_key, **kwargs):

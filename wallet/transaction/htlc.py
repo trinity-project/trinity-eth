@@ -151,7 +151,7 @@ class RResponse(Message):
             LOG.info(info)
         except Exception as error:
             status = EnumResponseStatus.RESPONSE_EXCEPTION_HAPPENED
-            LOG.exception('Failed to handle RResponse with HashR<{}>. Exception: {}'.format(self.hashcode, error))
+            LOG.error('Failed to handle RResponse with HashR<{}>. Exception: {}'.format(self.hashcode, error))
             pass
         finally:
             RResponseAck.create(self.sender, self.receiver, self.channel_name, self.nonce, self.asset_type,
@@ -266,7 +266,9 @@ class HtlcMessage(Message):
         if not verified:
             return verified, error
 
-        self.check_payment(self.payment)
+        verified = self.check_payment(self.payment)
+        if not verified:
+            return verified, 'Payment should not be negative number.'
 
         return True, None
 
@@ -313,7 +315,7 @@ class HtlcMessage(Message):
         except GoTo as error:
             LOG.error(error)
         except Exception as error:
-            LOG.exception('Failed to handle Htlc message for channel<{}>, HashR<{}>. Exception:{}'.format(self.channel_name,
+            LOG.error('Failed to handle Htlc message for channel<{}>, HashR<{}>. Exception:{}'.format(self.channel_name,
                                                                                                       self.hashcode,
                                                                                                       error))
         else:
@@ -379,7 +381,11 @@ class HtlcMessage(Message):
             receiver_address, _, _ = uri_parser(receiver)
             asset_type = asset_type.upper()
 
-            HtlcMessage.check_payment(payment)
+            verified = RsmcMessage.check_payment(payment)
+            if not verified:
+                status = EnumResponseStatus.RESPONSE_TRADE_PAYMENT_IS_NEGATIVE
+                raise GoTo('Payment<{}> should not be negative number'.format(payment))
+
             balance = channel.balance
             sender_balance = float(balance.get(sender_address, {}).get(asset_type, 0))
             assert sender_balance >= payment, 'No enough balance<{}> for payment<{}>'.format(sender_balance, payment)
@@ -554,7 +560,11 @@ class HtlcResponsesMessage(Message):
             receiver_address, _, _ = uri_parser(receiver)
             asset_type = asset_type.upper()
 
-            HtlcResponsesMessage.check_payment(payment)
+            verified = RsmcMessage.check_payment(payment)
+            if not verified:
+                status = EnumResponseStatus.RESPONSE_TRADE_PAYMENT_IS_NEGATIVE
+                raise GoTo('Payment<{}> should not be negative number'.format(payment))
+
             balance = channel.balance
             sender_balance = HtlcResponsesMessage.float_calculate(
                 balance.get(sender_address, {}).get(asset_type, 0), payment, False)
@@ -595,7 +605,7 @@ class HtlcResponsesMessage(Message):
             LOG.error(error)
         except Exception as error:
             status = EnumResponseStatus.RESPONSE_EXCEPTION_HAPPENED
-            LOG.exception(error)
+            LOG.error(error)
         finally:
             # whatever happened, we need record the trade
             # # add trade to database

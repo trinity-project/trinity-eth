@@ -72,6 +72,7 @@ class Message(object):
     """
     _FOUNDER_NONCE = 0
     _SETTLE_NONCE = 0xFFFFFFFF
+    _message_name = None
 
     def __init__(self, message):
         self.message = message
@@ -122,7 +123,27 @@ class Message(object):
         if negotiated:
             Channel.add_trade(channel_name, nonce=new_nonce)
 
-        return negotiated, nonce
+        return negotiated, new_nonce
+
+    @classmethod
+    def update_trade_after_negotiated(cls, channel_name, nonce):
+        """
+
+        :param channel_name:
+        :param nonce:
+        :return:
+        """
+        try:
+            latest_trade = Channel.latest_trade(channel_name)[0]
+            latest_nonce = latest_trade.nonce
+        except Exception as error:
+            raise GoTo('Trade record with nonce<{}> not found'.format(nonce))
+        else:
+            # need add a new trade with new nonce
+            if nonce != latest_nonce:
+                Channel.add_trade(channel_name, nonce=nonce, founder=latest_trade.founder,
+                                  rsmc=latest_trade.rsmc, htlc=latest_trade.htlc, settle=latest_trade.nonce)
+
 
     @classmethod
     def check_nonce(cls, channel_name, nonce):
@@ -163,7 +184,7 @@ class Message(object):
 
             return float(balance) == float(expected_balance) and float(peer_balance) == float(expected_peer_balance)
         except Exception as error:
-            LOG.exception('Channel<{}> was not found. Exception: {}'.format(channel_name, error))
+            LOG.error('Channel<{}> was not found. Exception: {}'.format(channel_name, error))
             return False
 
     def verify(self):
@@ -237,4 +258,17 @@ class Message(object):
     @classmethod
     def check_payment(cls, payment):
         if 0 >= payment:
-            raise GoTo('Payment<{}> should not be negative number'.format(payment))
+            return False
+        return True
+
+    @classmethod
+    def send_error_response(cls, sender:str, receiver:str, channel_name:str, asset_type:str,
+                       nonce:int, status = None):
+        message = cls.create_message_header(receiver, sender, cls._message_name, channel_name, asset_type, nonce)
+        message = message.message_header
+        message.update({'MessageBody': {}})
+
+        if status:
+            message.update({'Status': status.name})
+
+        cls.send(message)

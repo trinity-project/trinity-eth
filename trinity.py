@@ -50,7 +50,7 @@ DATABASE_CONFIG = {
 SUPPORTED_ASSET_TYPE = {'TNC': '0x65096f2B7A8dc1592479F1911cd2B98dae4d2218'}
 IS_SUPPORTED_ASSET_TYPE = lambda asset_type: \
     isinstance(asset_type, str) and \
-    (asset_type.upper() in ['TNC'] or\
+    (asset_type.upper() in ['TNC'] or \
      (SUPPORTED_ASSET_TYPE['TNC'].__contains__(asset_type.replace('0x', ''))))
 
 

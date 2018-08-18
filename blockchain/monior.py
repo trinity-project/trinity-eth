@@ -152,7 +152,7 @@ class WebSocketConnection(object):
             if self._conn:
                 self._conn.send(payload)
         except Exception as error:
-            LOG.exception('send: Websocket exception: {}'.format(error))
+            LOG.error('send: Websocket exception: {}'.format(error))
 
     def receive(self):
         try:
@@ -167,7 +167,7 @@ class WebSocketConnection(object):
         except Exception as error:
             if not self._conn:
                 self.reconnect()
-            LOG.exception('receive: Websocket exception: {}'.format(error))
+            LOG.error('receive: Websocket exception: {}'.format(error))
 
         return None
 

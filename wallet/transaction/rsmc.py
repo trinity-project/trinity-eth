@@ -70,16 +70,22 @@ class RsmcMessage(Message):
     def handle(self):
         super(RsmcMessage, self).handle()
 
+        status = EnumResponseStatus.RESPONSE_OK
         try:
             verified, error = self.verify()
             if not verified:
+                status = EnumResponseStatus.RESPONSE_TRADE_VERIFIED_ERROR
                 raise GoTo('Handle RsmcMessage error: {}'.format(error))
 
-            RsmcMessage.check_payment(self.payment)
+            verified = RsmcMessage.check_payment(self.payment)
+            if not verified:
+                status = EnumResponseStatus.RESPONSE_TRADE_PAYMENT_IS_NEGATIVE
+                raise GoTo('Payment<{}> should not be negative number'.format(self.payment))
 
             verified, error = self.verify_channel_balance(self.sender_balance+self.payment,
                                                           self.receiver_balance-self.payment)
             if not verified:
+                status = EnumResponseStatus.RESPONSE_TRADE_BALANCE_ERROR
                 raise GoTo('Verify balance error: {}'.format(error))
 
             RsmcResponsesMessage.create(self.channel_name, self.wallet, self.sender, self.receiver,
@@ -87,8 +93,10 @@ class RsmcMessage(Message):
                                         self.nonce, self.rsmc_sign_role, self.asset_type, comments=self.comments)
         except GoTo as error:
             LOG.error(error)
+
+            return
         except Exception as error:
-            LOG.error('Failed to andle RsmcMessage. Exception: {}'.format(error))
+            LOG.error('Failed to handle RsmcMessage. Exception: {}'.format(error))
             return
         finally:
             pass
@@ -136,7 +144,10 @@ class RsmcMessage(Message):
             receiver_address, _, _ = uri_parser(receiver)
             asset_type = asset_type.upper()
             payment = float(payment)
-            RsmcMessage.check_payment(payment)
+            verified = RsmcMessage.check_payment(payment)
+            if not verified:
+                status = EnumResponseStatus.RESPONSE_TRADE_PAYMENT_IS_NEGATIVE
+                raise GoTo('Payment<{}> should not be negative number'.format(payment))
 
             sender_balance = RsmcMessage.float_calculate(balance.get(sender_address, {}).get(asset_type, 0), payment, False)
             if sender_balance < 0:
@@ -171,7 +182,7 @@ class RsmcMessage(Message):
         except GoTo as error:
             LOG.error(error)
         except Exception as error:
-            LOG.exception('Create Rsmc message error: {}'.format(error))
+            LOG.error('Create Rsmc message error: {}'.format(error))
             if cli:
                 print(error)
         else:
@@ -242,7 +253,10 @@ class RsmcResponsesMessage(Message):
             if not verified:
                 raise GoTo(error)
 
-            RsmcResponsesMessage.check_payment(self.payment)
+            verified = RsmcMessage.check_payment(self.payment)
+            if not verified:
+                status = EnumResponseStatus.RESPONSE_TRADE_PAYMENT_IS_NEGATIVE
+                raise GoTo('Payment<{}> should not be negative number'.format(self.payment))
             
             if 0 == self.role_index:
                 status = self.create(self.channel_name, self.wallet, self.sender, self.receiver, self.payment,
@@ -270,7 +284,7 @@ class RsmcResponsesMessage(Message):
         except GoTo as error:
             LOG.error(error)
         except Exception as error:
-            LOG.exception('Failed to handle RsmcSign for channel<{}> '.format(self.channel_name),
+            LOG.error('Failed to handle RsmcSign for channel<{}> '.format(self.channel_name),
                           'nonce<{}>, role_index<{}>.'.format(self.nonce, self.role_index),
                           'Exception: {}'.format(error))
 
