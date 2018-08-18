@@ -83,7 +83,8 @@ class PromptInterface(object):
         :param arguments:
         :return:
         """
-        self.do_close_wallet()
+        if self.Wallet:
+            self.do_close_wallet()
         item = get_arg(arguments)
         if self.Wallet:
             self.do_close_wallet()
