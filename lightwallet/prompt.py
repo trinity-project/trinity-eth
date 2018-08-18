@@ -408,7 +408,7 @@ class PromptInterface(object):
         tokens = [("class:eth", 'EthTrinity'), ("class:default", ' cli. Type '),
                   ("class:command", '\'help\' '), ("class:default", 'to get started')]
 
-        #print_formatted_text(FormattedText(tokens), style=self.token_style)
+        print_formatted_text(FormattedText(tokens), style=self.token_style)
         print('\n')
 
 
@@ -416,8 +416,8 @@ class PromptInterface(object):
             session = PromptSession("trinity> ",
                                     completer=self.get_completer(),
                                     history=self.history,
-                                    #bottom_toolbar=self.get_bottom_toolbar,
-                                    #style=self.token_style,
+                                    bottom_toolbar=self.get_bottom_toolbar,
+                                    style=self.token_style,
                                     refresh_interval=3,
                                     auto_suggest=AutoSuggestFromHistory()
                                     )

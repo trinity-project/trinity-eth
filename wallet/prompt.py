@@ -314,7 +314,7 @@ class UserPromptInterface(PromptInterface):
             console_log.error("Partner URI is not correct, Please check the partner uri")
             return None
 
-        if not check_onchain_balance(partner.strip().split("@")[0], asset_type, deposit):
+        if not check_onchain_balance(partner.strip().split("@")[0], asset_type, partner_deposit):
             console_log.error("Partner balance on chain is less than the deposit")
             return None
 
