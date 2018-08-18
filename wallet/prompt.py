@@ -137,14 +137,17 @@ class UserPromptInterface(PromptInterface):
         :param arguments:
         :return:
         """
-        if command is not None and len(command) > 0:
-            command = command.lower()
-            if command == 'channel':
-                self.do_channel(arguments)
-            elif command == "faucet":
-                self.do_faucet()
-            else:
-                super().handle_commands(command,arguments)
+        try:
+            if command is not None and len(command) > 0:
+                command = command.lower()
+                if command == 'channel':
+                    self.do_channel(arguments)
+                elif command == "faucet":
+                    self.do_faucet()
+                else:
+                    super().handle_commands(command,arguments)
+        except Exception as error:
+            console_log.error('Error occurred to execute wallet command. Please check log for details')
 
 
     def get_bottom_toolbar(self, cli=None):

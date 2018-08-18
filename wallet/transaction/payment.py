@@ -56,6 +56,8 @@ class Payment(metaclass=SingletonClass):
             return None
 
         asset_type = asset_type.replace('0x', '')
+        if asset_type.upper() in SUPPORTED_ASSET_TYPE.keys():
+            asset_type = asset_type.upper()
 
         hashcode = hashcode.strip()
         hashcode = hashcode.replace('0x', '')

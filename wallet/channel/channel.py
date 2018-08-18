@@ -213,8 +213,8 @@ class Channel(object):
         return APITransaction(channel_name).query_transaction(int(nonce), *args, **kwargs)
 
     @staticmethod
-    def batch_query_trade(channel_name, filters, *args, **kwargs):
-        return APITransaction(channel_name).batch_query_transaction({}, *args, **kwargs)
+    def batch_query_trade(channel_name, filters={}, *args, **kwargs):
+        return APITransaction(channel_name).batch_query_transaction(filters, *args, **kwargs)
 
     @staticmethod
     def add_payment(channel_name, hashcode='', rcode='', payment=0, state=EnumTradeState.confirming, **kwargs):
