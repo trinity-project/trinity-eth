@@ -215,7 +215,7 @@ class Message(object):
 
     @classmethod
     def send_error_response(cls, sender:str, receiver:str, channel_name:str, asset_type:str,
-                       nonce:int, status = None):
+                       nonce:int, status=None):
         message = cls.create_message_header(receiver, sender, cls._message_name, channel_name, asset_type, nonce)
         message = message.message_header
         message.update({'MessageBody': {}})

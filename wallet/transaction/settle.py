@@ -81,7 +81,7 @@ class SettleMessage(Message):
                 raise GoTo('Error<{}> occurred during verify message.'.format(status))
 
             checked, nonce = SettleMessage.check_nonce(self.channel_name, self.nonce)
-            if not verified:
+            if not checked:
                 status = EnumResponseStatus.RESPONSE_TRADE_INCOMPATIBLE_NONCE
                 raise GoTo('Incompatible nonce<{}>'.format(self.nonce))
 
@@ -108,17 +108,17 @@ class SettleMessage(Message):
                                          float(self.sender_balance), float(self.receiver_balance), self.commitment)
         except GoTo as error:
             LOG.error(error)
+            SettleResponseMessage.send_error_response(self.sender, self.receiver, self.channel_name, self.asset_type,
+                                                      nonce, status)
         except Exception as error:
             LOG.error(error)
             status = EnumResponseStatus.RESPONSE_EXCEPTION_HAPPENED
+            SettleResponseMessage.send_error_response(self.sender, self.receiver, self.channel_name, self.asset_type,
+                                                      nonce, status)
         else:
             # after send response OK, trigger the event
             event_machine.trigger_start_event(self.channel_name)
             return
-        finally:
-            SettleResponseMessage.send_error_response(self.sender, self.receiver, self.channel_name, self.asset_type,
-                                                      nonce, status)
-
 
     @staticmethod
     def create(wallet, receiver, channel_name, asset_type):
