@@ -86,10 +86,10 @@ class Payment(metaclass=SingletonClass):
         code = base58.b58decode(base58_code).decode()
         info = code.split("&",5)
         print(info)
-        if 5 != len(info):
+        if 6 != len(info):
             return False, None
 
-        keys=['uri', 'hashcode', 'asset_type', 'payment', 'comments']
+        keys=['uri', 'net_magic', 'hashcode', 'asset_type', 'payment', 'comments']
 
         result = dict(zip(keys, info))
         result['hashcode'] = '0x'+result['hashcode']

@@ -333,6 +333,7 @@ class UserPromptInterface(PromptInterface):
             result, info = Payment.decode_payment_code(pay_code)
             if result:
                 receiver = info.get("uri")
+                net_magic = info.get('net_magic')
                 hashcode = info.get("hashcode")
                 asset_type = info.get("asset_type")
                 asset_type = get_asset_type_name(asset_type)
