@@ -85,7 +85,7 @@ class Payment(metaclass=SingletonClass):
         base58_code = payment_code[2:]
         code = base58.b58decode(base58_code).decode()
         info = code.split("&",5)
-        print(info)
+
         if 6 != len(info):
             return False, None
 
@@ -169,7 +169,7 @@ class PaymentLink(Message):
     _message_name = 'PaymentLink'
 
     def __init__(self, message):
-        super().__init__(message)
+        super(PaymentLink, self).__init__(message)
 
         self.payment = self.message_body.get('PaymentCount')
         self.comments = self.message_body.get('Comments')

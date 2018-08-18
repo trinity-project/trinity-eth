@@ -523,7 +523,7 @@ class UserPromptInterface(PromptInterface):
             if channel_name is None:
                 console_log.error("No provide channel")
                 return None
-            tx_his = Channel.query_trade(channel_name)
+            tx_his = Channel.batch_query_trade(channel_name)
             for tx in tx_his:
                 console_log.info(tx)
             return None
@@ -533,7 +533,7 @@ class UserPromptInterface(PromptInterface):
 
     @channel_opened
     @arguments_length(1)
-    def channel_depoistlimit(self, arguments):
+    def channel_deposit_limit(self, arguments):
         """
 
         :param arguments:
@@ -543,7 +543,6 @@ class UserPromptInterface(PromptInterface):
         deposit = DepositAuth.deposit_limit()
         console_log.info("Current Deposit limit is %s TNC" % deposit)
         return None
-
 
     @wallet_opened
     def do_channel(self,arguments):
@@ -584,8 +583,8 @@ class UserPromptInterface(PromptInterface):
         elif command == "show":
             self.channel_show(arguments)
 
-        elif command == "depoist_limit":
-            self.channel_depoistlimit(arguments)
+        elif command == "deposit_limit":
+            self.channel_deposit_limit(arguments)
         else:
             return None
 
@@ -651,7 +650,7 @@ class UserPromptInterface(PromptInterface):
         #     m_instance = TestMessage(message, self.Wallet)
 
         elif message_type == "PaymentLink":
-            m_instance = PaymentLink(message, self.Wallet)
+            m_instance = PaymentLink(message)
 
         else:
             return "No Support Message Type "

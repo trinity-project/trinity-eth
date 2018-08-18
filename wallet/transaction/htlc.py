@@ -177,7 +177,8 @@ class RResponseAck(Message):
         self.wallet =wallet
 
     def handle_message(self):
-        print(json.dumps(self.message, indent=4))
+        super(RResponseAck, self).handle()
+        # print(json.dumps(self.message, indent=4))
 
     @staticmethod
     def create(sender, receiver, channel_name, nonce, asset_type, hashcode, r, payment, comments='',
