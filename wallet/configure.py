@@ -49,7 +49,7 @@ Configure = {
     },
     "Version":"v0.2.1",
     "Magic":{
-        "Block":1953787457,
+        "Block":5274657374,##binascii.b2a_hex(u"Rtest".encode("utf8"))
         "Trinity":19990331
     }
 }
