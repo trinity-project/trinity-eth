@@ -32,7 +32,7 @@ from common.exceptions import GoTo
 from wallet.channel import Channel
 from wallet.Interface.gate_way import send_message
 from .response import EnumResponseStatus
-from trinity import IS_SUPPORTED_ASSET
+from trinity import IS_SUPPORTED_ASSET_TYPE
 from model.channel_model import EnumChannelState
 
 
@@ -173,7 +173,7 @@ class Message(object):
         """
         # to validate the parameters
         try:
-            if not IS_SUPPORTED_ASSET(self.asset_type):
+            if not IS_SUPPORTED_ASSET_TYPE(self.asset_type):
                 return False, 'Unsupported Asset type: \'{}\''.format(self.asset_type)
 
             # check whether the sender and receiver are correct url or not

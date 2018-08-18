@@ -361,6 +361,10 @@ class UserPromptInterface(PromptInterface):
                 print("No support asset type %s" % asset_type)
                 return None
 
+            if 0 >= float(count):
+                console_log.info('Not support negative number or zero.')
+                return None
+
         # query channels by address
         channel_set = Channel.get_channel(self.Wallet.url, receiver, EnumChannelState.OPENED)
         if channel_set and channel_set[0]:
@@ -498,12 +502,12 @@ class UserPromptInterface(PromptInterface):
                 console_log.error("value should not be less than 0")
                 return None
         except ValueError:
-            console_log.error("value formate error")
+            console_log.error("value format error")
             return None
         comments = " ".join(arguments[3:])
         comments = comments if comments else "None"
         if len(comments) > 128:
-            console_log.error("comments length shoule be lesss than 128")
+            console_log.error("comments length should be less than 128")
             return None
         try:
             hash_r, rcode = Payment.create_hr()

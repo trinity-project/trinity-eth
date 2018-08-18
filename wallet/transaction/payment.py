@@ -32,7 +32,7 @@ from common.singleton import SingletonClass
 from .message import Message
 from .response import EnumResponseStatus
 from wallet.utils import get_asset_type_id, get_magic
-from trinity import IS_SUPPORTED_ASSET, SUPPORTED_ASSET_TYPE
+from trinity import IS_SUPPORTED_ASSET_TYPE, SUPPORTED_ASSET_TYPE
 from wallet.channel import Channel
 from wallet.channel.trade import EnumTradeState
 
@@ -47,7 +47,11 @@ class Payment(metaclass=SingletonClass):
     @classmethod
     def generate_payment_code(cls, receiver, asset_type, value, hashcode, comments='', cli=False):
         """"""
-        if not IS_SUPPORTED_ASSET(asset_type):
+        if 0 >= float(value):
+            console_log.error('Not support negative number.')
+            return
+
+        if not IS_SUPPORTED_ASSET_TYPE(asset_type):
             text = 'AssetType: {} is not supported'.format(asset_type)
             LOG.error(text)
             if cli:
