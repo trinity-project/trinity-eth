@@ -108,62 +108,15 @@ class Message(object):
         pass
 
     @classmethod
-    def negotiate_nonce(cls, channel_name, nonce, address, balance, peer_address, peer_balance):
-        # for keep compatible nonce in both peers,
-        # here we could provide a health way to deal with the nonce:
-        # 1. if the nonce is different, it may be caused by network problem or others,
-        #    we could check the balance of the channel, to keep the transaction could be continued
-        checked, new_nonce = cls.check_nonce(channel_name, nonce)
-        negotiated = True
-        if not checked:
-            # need check balance
-            negotiated = cls.check_balance(channel_name, address, balance, peer_address, peer_balance)
-
-        # add payment if negotiated successfully
-        if negotiated:
-            Channel.add_trade(channel_name, nonce=new_nonce)
-
-        return negotiated, new_nonce
-
-    @classmethod
-    def update_trade_after_negotiated(cls, channel_name, nonce):
+    def check_nonce(cls, channel_name, nonce):
         """
 
         :param channel_name:
         :param nonce:
         :return:
         """
-        try:
-            latest_trade = Channel.latest_trade(channel_name)[0]
-            latest_nonce = latest_trade.nonce
-        except Exception as error:
-            raise GoTo('Trade record with nonce<{}> not found'.format(nonce))
-        else:
-            # need add a new trade with new nonce
-            if nonce != latest_nonce:
-                Channel.add_trade(channel_name, nonce=nonce, founder=latest_trade.founder,
-                                  rsmc=latest_trade.rsmc, htlc=latest_trade.htlc, settle=latest_trade.nonce)
-
-
-    @classmethod
-    def check_nonce(cls, channel_name, nonce):
-        """
-
-        :param address:
-        :param balance:
-        :param peer_address:
-        :param peer_balance:
-        :return:
-        """
-        nonce = int(nonce)
-        try:
-            latest_trade = Channel.latest_trade(channel_name)[0]
-
-            # negotiate a new nonce
-            new_nonce = int(latest_trade.nonce) + 1
-            return nonce == new_nonce, max(nonce, new_nonce)
-        except Exception as error:
-            return cls._FOUNDER_NONCE == nonce, nonce
+        latest_nonce = Channel.new_nonce(channel_name)
+        return int(nonce) == latest_nonce, latest_nonce
 
     @classmethod
     def check_balance(cls, channel_name, address, balance, peer_address, peer_balance):
@@ -272,4 +225,8 @@ class Message(object):
             message.update({'Status': status.name})
 
         cls.send(message)
+
+    @classmethod
+    def rollback(cls):
+        pass
 

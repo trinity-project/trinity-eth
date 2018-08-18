@@ -23,6 +23,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 import hashlib
+import json
 import time
 from .trade import EnumTradeState
 from model.channel_model import APIChannel
@@ -33,7 +34,6 @@ from wallet.utils import convert_number_auto
 from wallet.Interface.gate_way import sync_channel
 from common.console import console_log
 from common.common import LOG
-import json
 
 
 class Channel(object):
@@ -173,7 +173,7 @@ class Channel(object):
         return {
             'ChannelName': self.channel_name,
             'Founder': self.founder_uri,
-            'Parterner': self.partner_uri,
+            'Partner': self.partner_uri,
             'State': self.state,
             'Deposit': self.deposit,
             'Balance': self.balance
@@ -213,6 +213,10 @@ class Channel(object):
         return APITransaction(channel_name).query_transaction(int(nonce), *args, **kwargs)
 
     @staticmethod
+    def delete_trade(channel_name, nonce:int or float):
+        return APITransaction(channel_name).delete_transaction(nonce)
+
+    @staticmethod
     def batch_query_trade(channel_name, filters={}, *args, **kwargs):
         return APITransaction(channel_name).batch_query_transaction(filters, *args, **kwargs)
 
@@ -238,6 +242,16 @@ class Channel(object):
             return None
         else:
             return trade
+
+    @classmethod
+    def new_nonce(cls, channel_name):
+        """
+
+        :param channel_name:
+        :return:
+        """
+        latest_trade = cls.latest_trade(channel_name)
+        return int(latest_trade.nonce) + 1 if latest_trade else None
 
     @classmethod
     def create(cls, wallet, founder, partner, asset_type, deposit, partner_deposit=None, comments=None,
@@ -321,17 +335,28 @@ class Channel(object):
 
     @classmethod
     def quick_close(cls, channel_name, wallet=None, cli=False, trigger=None):
+        """
+
+        :param channel_name:
+        :param wallet:
+        :param cli:
+        :param trigger:
+        :return:
+        """
         try:
             channel = cls.query_channel(channel_name)[0]
+
+            # get peer address
+            peer = channel.src_addr
+            if wallet.url == peer:
+                peer = channel.dest_addr
+
+            # start trigger to close channel quickly
+            trigger(wallet, peer, channel_name, 'TNC')
         except Exception as error:
             if cli :
-                console_log.error('Channel {} not found'.format(channel_name))
+                console_log.error('Failed to close channel: {}'.format(channel_name))
             LOG.error('Failed to close channel<{}>, Exception: {}'.format(channel_name, error))
-        else:
-            receiver = channel.src_addr
-            if wallet.url == receiver:
-                receiver = channel.dest_addr
-            trigger(wallet, channel_name, wallet.url, receiver, 'TNC')
 
     @classmethod
     def founder_or_rsmc_trade(cls, role, asset_type, payment, balance, peer_balance, commitment=None, peer_commitment=None,

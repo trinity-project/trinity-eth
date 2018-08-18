@@ -277,12 +277,23 @@ class EventMachine(object):
         self.__event_queue.update({name: event})
         self.event_lock.release()
 
+    def unregister_event(self, name):
+        self.event_lock.acquire()
+        if name in self.__event_ordered_list:
+            self.__event_ordered_list.remove(name)
+
+        if name in self.__event_queue.keys():
+            self.__event_queue.pop(name)
+
+        self.event_lock.release()
+
     def update_event(self, name, event):
         self.register_event(name, event)
 
     def trigger_start_event(self, name):
         self.event_lock.acquire()
-        self.__event_ordered_list.append(name)
+        if name not in self.__event_ordered_list:
+            self.__event_ordered_list.append(name)
         self.event_lock.release()
 
     def has_event(self, name):

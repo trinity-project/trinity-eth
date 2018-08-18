@@ -70,35 +70,30 @@ class SettleMessage(Message):
 
     def handle(self):
         super(SettleMessage, self).handle()
-        verified, status = self.verify()
+
+        status = EnumResponseStatus.RESPONSE_OK
+        nonce = self.nonce
 
         try:
+            verified, status = self.verify()
             if not verified:
-                raise GoTo('Channel<{}> is not found or not in OPENED state'.format(self.channel_name))
-
-            balance = self.channel.balance
-            sender_balance = balance.get(self.sender_address, {}).get(self.asset_type)
-            receiver_balance = balance.get(self.receiver_address, {}).get(self.asset_type)
+                status = EnumResponseStatus.RESPONSE_TRADE_VERIFIED_ERROR
+                raise GoTo('Error<{}> occurred during verify message.'.format(status))
 
             checked, nonce = SettleMessage.check_nonce(self.channel_name, self.nonce)
-            if not checked:
+            if not verified:
                 status = EnumResponseStatus.RESPONSE_TRADE_INCOMPATIBLE_NONCE
-                raise GoTo('Incompatible nonce<{}>'.format(self.nonce, nonce))
+                raise GoTo('Incompatible nonce<{}>'.format(self.nonce))
 
-            # To create settle response message
-            SettleResponseMessage.create(self.wallet, self.channel_name, nonce,
-                                         self.asset_type, self.sender, self.receiver,
-                                         float(sender_balance), float(receiver_balance), self.commitment)
 
-        except GoTo as error:
-            LOG.error(error)
-            SettleResponseMessage.send_error_response(self.sender, self.receiver, self.channel_name, self.asset_type,
-                                                      self.nonce, status)
-        except Exception as error:
-            LOG.error('Failed to handle FounderMessage. Exception: {}'.format(error))
-            SettleResponseMessage.send_error_response(self.sender, self.receiver, self.channel_name, self.asset_type,
-                                                      self.nonce, status)
-        else:
+
+            checked, _ = SettleMessage.check_balance(self.channel_name, self.sender_address,
+                                                     self.sender_balance, self.receiver_balance)
+            if not checked:
+                status = EnumResponseStatus.RESPONSE_TRADE_BALANCE_ERROR
+                raise GoTo('Balance error: {}: {}, {}: {}'.format(self.sender_address, self.sender_balance,
+                                                                  self.receiver_address, self.receiver_balance))
+
             # trigger channel event
             self.channel.update_channel(self.channel_name, state=EnumChannelState.SETTLING.name)
 
@@ -108,10 +103,26 @@ class SettleMessage(Message):
             channel_event.register_args(EnumEventAction.EVENT_TERMINATE, state=EnumChannelState.CLOSED.name,
                                         asset_type=self.asset_type)
             event_machine.register_event(self.channel_name, channel_event)
+
+            # To create settle response message
+            SettleResponseMessage.create(self.wallet, self.channel_name, self.nonce, self.asset_type, self.sender, self.receiver,
+                                         float(self.sender_balance), float(self.receiver_balance), self.commitment)
+        except GoTo as error:
+            LOG.error(error)
+        except Exception as error:
+            LOG.error(error)
+            status = EnumResponseStatus.RESPONSE_EXCEPTION_HAPPENED
+        else:
+            # after send response OK, trigger the event
             event_machine.trigger_start_event(self.channel_name)
+            return
+        finally:
+            SettleResponseMessage.send_error_response(self.sender, self.receiver, self.channel_name, self.asset_type,
+                                                      nonce, status)
+
 
     @staticmethod
-    def create(wallet, channel_name, sender, receiver, asset_type):
+    def create(wallet, receiver, channel_name, asset_type):
         """
 
         :param channel_name:
@@ -121,66 +132,58 @@ class SettleMessage(Message):
         :param asset_type:
         :return:
         """
-        # assert wallet.url == sender, 'Wallet url<{}> is not equal to founder<{}>'.format(wallet.url, sender)
-        if wallet.url != sender:
-            receiver = sender
-            sender = wallet.url
+        sender = wallet.url
+        channel = Channel(channel_name)
 
-        try:
-            channel = Channel(channel_name)
-            try:
-                latest_trade = Channel.latest_trade(channel_name)[0]
-                nonce = int(latest_trade.nonce) + 1
-            except Exception as error:
-                raise GoTo('Transaction not found for channel<{}>'.format(channel_name))
-            
-            asset_type = asset_type.upper()
-            message = SettleMessage.create_message_header(sender, receiver, SettleMessage._message_name,
-                                                          channel_name, asset_type, nonce)
-            message = message.message_header
+        nonce = Channel.new_nonce(channel_name)
+        if nonce is None:
+            LOG.error('Are you sure the channel<{}> existed?'.format(channel_name))
+            return
 
-            sender_address, _, _, = uri_parser(sender)
-            receiver_address, _, _, = uri_parser(receiver)
+        asset_type = asset_type.upper()
+        message = SettleMessage.create_message_header(sender, receiver, SettleMessage._message_name,
+                                                      channel_name, asset_type, nonce)
+        message = message.message_header
 
-            balance = channel.balance
-            sender_balance = balance.get(sender_address, {}).get(asset_type)
-            receiver_balance = balance.get(receiver_address, {}).get(asset_type)
+        sender_address, _, _, = uri_parser(sender)
+        receiver_address, _, _, = uri_parser(receiver)
 
-            commitment = contract_event_api.sign_content(
-                typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
-                valueList=[channel_name, nonce, sender_address, sender_balance, receiver_address, receiver_balance],
-                privtKey = wallet._key.private_key_string)
+        balance = channel.balance
+        sender_balance = balance.get(sender_address, {}).get(asset_type)
+        receiver_balance = balance.get(receiver_address, {}).get(asset_type)
 
-            message_body = {
-                "Commitment": commitment,
-                "SenderBalance": sender_balance,
-                "ReceiverBalance": receiver_balance
-            }
+        commitment = contract_event_api.sign_content(
+            typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
+            valueList=[channel_name, nonce, sender_address, sender_balance, receiver_address, receiver_balance],
+            privtKey = wallet._key.private_key_string)
 
-            message.update({'MessageBody': message_body})
+        message_body = {
+            "Commitment": commitment,
+            "SenderBalance": sender_balance,
+            "ReceiverBalance": receiver_balance
+        }
 
-            # update channel
-            channel.update_channel(channel_name, state=EnumChannelState.SETTLING.name)
+        message.update({'MessageBody': message_body})
 
-            # add trade to database
-            settle_trade = Channel.founder_or_rsmc_trade(
-                role=EnumTradeRole.TRADE_ROLE_FOUNDER, asset_type=asset_type, payment=0, balance=sender_balance,
-                peer_balance=receiver_balance, commitment=commitment, state=EnumTradeState.confirming
-            )
-            Channel.add_trade(channel_name, nonce=nonce, settle=settle_trade)
+        # update channel
+        channel.update_channel(channel_name, state=EnumChannelState.SETTLING.name)
 
-            # register channel event
-            channel_event = ChannelQuickSettleEvent(channel_name)
-            event_machine.register_event(channel_name, channel_event)
+        # add trade to database
+        settle_trade = Channel.founder_or_rsmc_trade(
+            role=EnumTradeRole.TRADE_ROLE_FOUNDER, asset_type=asset_type, payment=0, balance=sender_balance,
+            peer_balance=receiver_balance, commitment=commitment, state=EnumTradeState.confirming
+        )
+        Channel.add_trade(channel_name, nonce=nonce, settle=settle_trade)
 
-            Message.send(message)
-        except Exception as error:
-            LOG.error('Failed to create Settle message. Exception: {}'.format(error))
+        # register channel event
+        channel_event = ChannelQuickSettleEvent(channel_name)
+        event_machine.register_event(channel_name, channel_event)
+
+        Message.send(message)
+
+        return
 
     def verify(self):
-        if not Channel(self.channel_name).channel_set:
-            return False, EnumResponseStatus.RESPONSE_CHANNEL_NOT_FOUND
-
         return True, EnumResponseStatus.RESPONSE_OK
 
 
@@ -215,20 +218,20 @@ class SettleResponseMessage(Message):
     def handle(self):
         super(SettleResponseMessage, self).handle()
 
-        trade_state = EnumTradeState.confirmed
         try:
             verified, status = self.verify()
             if not verified:
                 raise GoTo('Verify settle response message error: {}'.format(status))
 
-            settle_trade = self.channel.query_trade(self.channel_name, nonce=str(self.nonce))[0].settle
-        except GoTo as error:
-            trade_state = EnumTradeState.failed
-            LOG.error(error)
-        except Exception as error:
-            trade_state = EnumTradeState.failed
-            LOG.error('Transaction with none<0xFFFFFFFF> not found. Error: {}'.format(error))
-        else:
+            checked, nonce = SettleResponseMessage.check_nonce(self.channel_name, int(self.nonce)+1)
+            if not checked:
+                raise GoTo('Incompatible nonce<{}:{}>'.format(nonce-1, self.nonce))
+
+            # update transaction
+            settle_trade = self.channel.query_trade(self.channel_name, nonce=int(self.nonce))[0].settle
+            settle_trade.update({'state': EnumTradeState.confirmed.name, 'peer_commitment': self.peer_commitment})
+            self.channel.update_trade(self.channel_name, int(self.nonce), settle=settle_trade)
+
             # call web3 interface to trigger transaction to on-chain
             # TODO: register monitor event to set channel closed
             channel_event = event_machine.get_registered_event(self.channel_name)
@@ -245,14 +248,23 @@ class SettleResponseMessage(Message):
                 channel_event.register_args(EnumEventAction.EVENT_TERMINATE, state=EnumChannelState.CLOSED.name,
                                             asset_type=self.asset_type)
                 event_machine.trigger_start_event(self.channel_name)
+        except GoTo as error:
+            LOG.error(error)
+        except Exception as error:
+            LOG.error('Transaction with none<{}> not found. Error: {}'.format(self.nonce, error))
+        else:
+            # successful action
+            LOG.debug('Succeed to quick-close channel<{}>'.format(self.channel_name))
+            return
         finally:
-            # update transaction
-            settle_trade.update({'state': trade_state.name, 'peer_commitment': self.peer_commitment})
-            self.channel.update_trade(self.channel_name, self.nonce, settle=settle_trade)
+            # failure action
+            if status != EnumResponseStatus.RESPONSE_OK.name:
+                self.channel.delete_trade(self.channel_name, self.nonce)
+                event_machine.unregister_event(self.channel_name)
 
     def verify(self):
         if self.status not in EnumResponseStatus.RESPONSE_OK.__dict__.values():
-            return False, self.status
+            return False, self.status.strip()
 
         return True, None
 
@@ -271,50 +283,29 @@ class SettleResponseMessage(Message):
         :param status:
         :return:
         """
-        status = EnumResponseStatus.RESPONSE_OK
-        sender_addr = sender.split("@")[0].strip()
-        receiver_addr = receiver.split("@")[0].strip()
-        trade_state = EnumTradeState.confirmed
+        sender_address, _, _ = uri_parser(sender)
+        receiver_address, _, _ = uri_parser(receiver)
         asset_type = asset_type.upper()
 
         message = SettleResponseMessage.create_message_header(receiver, sender, SettleResponseMessage._message_name,
                                                               channel_name, asset_type, nonce)
         message = message.message_header
-        self_commitment = None
 
-        try:
-            latest_trade = Channel.latest_trade(channel_name)
-            if not (latest_trade and latest_trade[0]):
-                trade_state = EnumTradeState.failed
-                raise GoTo('Transaction not found for channel<{}>'.format(channel_name))
+        # sign the contents
+        self_commitment = contract_event_api.sign_content(
+            typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
+            valueList=[channel_name, nonce, sender_address, sender_balance, receiver_address, receiver_balance],
+            privtKey = wallet._key.private_key_string)
+        message.update({"MessageBody": {"Commitment": self_commitment}})
 
-            if int(latest_trade.nonce) + 1 != nonce:
-                trade_state = EnumTradeState.failed
-                raise  GoTo('Incompatible nonce <{}:{}>'.format(latest_trade.nonce, nonce))
+        # send response OK message
+        message.update({'Status': EnumResponseStatus.RESPONSE_OK.name})
+        Message.send(message)
 
-            self_commitment = contract_event_api.sign_content(
-                typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
-                valueList=[channel_name, nonce, sender_addr, sender_balance, receiver_addr, receiver_balance],
-                privtKey = wallet._key.private_key_string)
-            message.update({"MessageBody": {"Commitment": self_commitment}})
-
-        except Exception as error:
-            LOG.error('Error occurred during create Settle response. Error: {}'.format(error))
-            status = EnumResponseStatus.RESPONSE_FAIL
-
-        if EnumResponseStatus.RESPONSE_OK != status:
-            trade_state = EnumTradeState.confirming
-
-        # add trade to database
+        # finally, add the transaction information to database
         settle_trade = Channel.founder_or_rsmc_trade(
             role=EnumTradeRole.TRADE_ROLE_PARTNER, asset_type=asset_type, payment=0, balance=receiver_balance,
             peer_balance=sender_balance, commitment=self_commitment, peer_commitment=commitment,
-            state=trade_state
+            state=EnumTradeState.confirmed
         )
         Channel.add_trade(channel_name, nonce=nonce, settle=settle_trade)
-
-        message.update({'Status': status.name})
-        Message.send(message)
-
-        # TODO: register monitor event to set channel closed
-        pass
