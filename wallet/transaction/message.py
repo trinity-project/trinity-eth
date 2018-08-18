@@ -129,7 +129,7 @@ class Message(object):
         """
         try:
             # get channel if trade has already existed
-            channel_set = Channel.query_channel(channel_name, state=EnumChannelState.OPENED.name)[0]
+            channel_set = Channel.query_channel(channel_name)[0]
 
             expected_balance = channel_set.balance.get(address)
             expected_peer_balance = channel_set.balance.get(peer_address)
