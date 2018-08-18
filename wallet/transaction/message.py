@@ -71,7 +71,6 @@ class Message(object):
 
     """
     _FOUNDER_NONCE = 0
-    _SETTLE_NONCE = 0xFFFFFFFF
     _message_name = None
 
     def __init__(self, message):

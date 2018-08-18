@@ -87,8 +87,9 @@ class SettleMessage(Message):
 
 
 
-            checked, _ = SettleMessage.check_balance(self.channel_name, self.sender_address,
-                                                     self.sender_balance, self.receiver_balance)
+            checked, _ = SettleMessage.check_balance(self.channel_name,
+                                                     self.sender_address, self.sender_balance,
+                                                     self.receiver_address, self.receiver_balance)
             if not checked:
                 status = EnumResponseStatus.RESPONSE_TRADE_BALANCE_ERROR
                 raise GoTo('Balance error: {}: {}, {}: {}'.format(self.sender_address, self.sender_balance,
