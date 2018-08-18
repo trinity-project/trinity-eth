@@ -250,8 +250,18 @@ class Channel(object):
         :param channel_name:
         :return:
         """
+        nonce = cls.latest_nonce(channel_name)
+        return int(nonce) + 1 if nonce is not None else None
+
+    @classmethod
+    def latest_nonce(cls, channel_name):
+        """
+
+        :param channel_name:
+        :return:
+        """
         latest_trade = cls.latest_trade(channel_name)
-        return int(latest_trade.nonce) + 1 if latest_trade else None
+        return int(latest_trade.nonce) if latest_trade else None
 
     @classmethod
     def create(cls, wallet, founder, partner, asset_type, deposit, partner_deposit=None, comments=None,

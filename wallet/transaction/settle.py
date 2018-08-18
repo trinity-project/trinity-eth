@@ -217,14 +217,15 @@ class SettleResponseMessage(Message):
     def handle(self):
         super(SettleResponseMessage, self).handle()
 
+        status = EnumResponseStatus.RESPONSE_OK
         try:
             verified, status = self.verify()
             if not verified:
                 raise GoTo('Verify settle response message error: {}'.format(status))
 
-            checked, nonce = SettleResponseMessage.check_nonce(self.channel_name, int(self.nonce)+1)
-            if not checked:
-                raise GoTo('Incompatible nonce<{}:{}>'.format(nonce-1, self.nonce))
+            nonce = self.channel.latest_nonce(self.channel_name)
+            if self.channel.latest_nonce(self.channel_name) != int(self.nonce):
+                raise GoTo('Incompatible nonce<{}:{}>'.format(nonce, self.nonce))
 
             # update transaction
             settle_trade = self.channel.query_trade(self.channel_name, nonce=int(self.nonce))[0].settle
@@ -257,7 +258,7 @@ class SettleResponseMessage(Message):
             return
         finally:
             # failure action
-            if status != EnumResponseStatus.RESPONSE_OK.name:
+            if self.status != EnumResponseStatus.RESPONSE_OK.name:
                 self.channel.delete_trade(self.channel_name, int(self.nonce))
                 event_machine.unregister_event(self.channel_name)
 
