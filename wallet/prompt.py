@@ -336,7 +336,7 @@ class UserPromptInterface(PromptInterface):
                 net_magic = info.get('net_magic')
                 hashcode = info.get("hashcode")
                 asset_type = info.get("asset_type")
-                asset_type = get_asset_type_name(asset_type)
+                # asset_type = get_asset_type_name(asset_type)
                 count = info.get("payment")
                 comments = info.get("comments")
                 console_log.info("will pay {} {} to {} comments {}".format(count, asset_type, receiver, comments))
@@ -363,23 +363,29 @@ class UserPromptInterface(PromptInterface):
             Channel.transfer(channel_set[0].channel, self.Wallet, receiver, asset_type, count, hashcode,
                              cli=True, trigger=RsmcMessage.create)
         else:
-            message = {"MessageType":"GetRouterInfo",
-                       "Sender":self.Wallet.url,
-                       "Receiver": receiver,
-                       "AssetType": asset_type,
-                       "NetMagic": get_magic(),
-                       "MessageBody":{
-                           "AssetType":asset_type,
-                           "Value":count
+            try:
+                message = {"MessageType":"GetRouterInfo",
+                           "Sender":self.Wallet.url,
+                           "Receiver": receiver,
+                           "AssetType": asset_type,
+                           "NetMagic": get_magic(),
+                           "MessageBody":{
+                               "AssetType":asset_type,
+                               "Value":count
+                               }
                            }
-                       }
-            result = gate_way.get_router_info(message)
-            routerinfo = json.loads(result.get("result"))
-            router=routerinfo.get("RouterInfo")
-            if not router:
-                LOG.error('Router between {} and {} was not found.'.format(self.Wallet.url, receiver))
-                console_log.error('Router not found for HTLC transfer.')
+                result = gate_way.get_router_info(message)
+                routerinfo = json.loads(result.get("result"))
+            except Exception as error:
+                LOG.error('Exception occurred during get route info. Exception: {}'.format(error))
+                console_log.info('No router was found.')
                 return
+            else:
+                router=routerinfo.get("RouterInfo")
+                if not router:
+                    LOG.error('Router between {} and {} was not found.'.format(self.Wallet.url, receiver))
+                    console_log.error('Router not found for HTLC transfer.')
+                    return
 
             if not hashcode:
                 print("NO HR in payments")
