@@ -192,7 +192,7 @@ class PromptInterface(object):
         item = get_arg(arguments)
 
         if not item:
-            print("Wallet %s " % json.dumps(self.Wallet.ToJson(), indent=4))
+            print("Wallet %s " % json.dumps(self.Wallet.ƒ(), indent=4))
 
             return
 
@@ -275,7 +275,7 @@ class PromptInterface(object):
         gasprice = int(get_arg(arguments,4)) if get_arg(arguments, 4) else None
 
         if assetId == "ETH":
-            if amount <= self.Wallet.eth_balance:
+            if amount >= self.Wallet.eth_balance:
                 console_log.error("No balance")
                 return None
 
@@ -285,7 +285,7 @@ class PromptInterface(object):
             except Exception as e:
                 print("send failed %s" %e)
         elif assetId == "TNC":
-            if amount <= self.Wallet.tnc_balance:
+            if amount > self.Wallet.tnc_balance or self.Wallet.eth_balance < 0:
                 console_log.error("No balance")
                 return None
             try:

@@ -368,9 +368,9 @@ class Wallet(object):
                "asset":asset_id,
                "sender":self.address,
                "receiver":sendto,
-               "value":value,
-               "block":nill,
-               "state":""}
+               "value":value,}
+               #"block":nill,
+               #"state":""}
         return self.history.add_history(**his)
 
     def update_history(self, tx_id, block, state):

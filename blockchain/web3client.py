@@ -34,11 +34,6 @@ class Client(object):
             'value': int(value*10**18),
             'gasPrice': self.web3.eth.gasPrice,
             'nonce': self.web3.eth.getTransactionCount(addressFrom),
-        } if gasLimit else {
-            'to': addressTo,
-            'value': int(value*10**18),
-            'gasPrice': self.web3.eth.gasPrice,
-            'nonce': self.web3.eth.getTransactionCount(addressFrom),
         }
         return tx
 
@@ -57,9 +52,6 @@ class Client(object):
     def construct_erc20_tx(self, contract,addressFrom, addressTo,value, gasLimit=None, gasprice=None):
         tx_d = {
             "gas": gasLimit,
-            'gasPrice': self.web3.eth.gasPrice * 2 if not gasprice  else gasprice,
-            'nonce': self.web3.eth.getTransactionCount(addressFrom),
-        } if gasLimit else {
             'gasPrice': self.web3.eth.gasPrice * 2 if not gasprice  else gasprice,
             'nonce': self.web3.eth.getTransactionCount(addressFrom),
         }

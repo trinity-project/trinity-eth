@@ -257,7 +257,7 @@ class Message(object):
 
     @classmethod
     def check_payment(cls, payment):
-        if 0 >= payment:
+        if 0 >= float(payment):
             return False
         return True
 
@@ -272,3 +272,4 @@ class Message(object):
             message.update({'Status': status.name})
 
         cls.send(message)
+
