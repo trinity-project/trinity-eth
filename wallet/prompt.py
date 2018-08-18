@@ -21,7 +21,7 @@ from wallet.utils import get_arg, \
     check_support_asset_type,\
     check_partner, \
     is_valid_deposit,\
-    is_correct_uri, SupportAssetType
+    is_correct_uri, SupportAssetType,check_float_decimals
 from wallet.channel import Channel, udpate_channel_when_setup
 from wallet.transaction.founder import FounderMessage, FounderResponsesMessage
 from wallet.transaction.payment import Payment, PaymentLink
@@ -498,7 +498,7 @@ class UserPromptInterface(PromptInterface):
             console_log.error("command not give the count")
             return None
         try:
-            if float(value) <=0:
+            if float(value) <=0 or not check_float_decimals(value, asset_type):
                 console_log.error("value should not be less than 0")
                 return None
         except ValueError:

@@ -325,10 +325,36 @@ def convert_number_auto(asset_type, number: int or float or str):
 
 
 def convert_float(number, asset_type="TNC"):
+    """
+
+    :param number:
+    :param asset_type:
+    :return:
+    """
     decimals = SupportAssetType.get_asset_decimals(asset_type)
     if decimals is None:
         raise Exception("NoSupportAsset")
     return round(float(number),decimals)
+
+
+def check_float_decimals(number, asset_type):
+    """
+
+    :param number:
+    :param asset_type:
+    :return:
+    """
+    decimals = SupportAssetType.get_asset_decimals(asset_type)
+    if decimals is None:
+        return False
+    num = str(number).split(".")
+    if len(num) ==1:
+        return True
+    elif len(num) == 0:
+        return False
+    elif len(num[1])> decimals:
+        return False
+    return True
 
 
 def get_magic():
