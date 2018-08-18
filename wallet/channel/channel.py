@@ -109,7 +109,6 @@ class Channel(object):
 
             try:
                 temp_channel = APIChannel.batch_query_channel(filters=filter_item)
-                print(filter_item, temp_channel)
                 channels.extend(APIChannel.batch_query_channel(filters=filter_item))
             except Exception as error:
                 LOG.debug('Batch query channels from DB error: {}'.format(error))
