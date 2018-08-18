@@ -118,7 +118,7 @@ class Message(object):
         return int(nonce) == latest_nonce, latest_nonce
 
     @classmethod
-    def check_balance(cls, channel_name, address, balance, peer_address, peer_balance):
+    def check_balance(cls, channel_name, asset_type, address, balance, peer_address, peer_balance):
         """
 
         :param address:
@@ -131,8 +131,8 @@ class Message(object):
             # get channel if trade has already existed
             channel_set = Channel.query_channel(channel_name)[0]
 
-            expected_balance = channel_set.balance.get(address)
-            expected_peer_balance = channel_set.balance.get(peer_address)
+            expected_balance = channel_set.balance.get(address).get(asset_type)
+            expected_peer_balance = channel_set.balance.get(peer_address).get(asset_type)
 
             return float(balance) == float(expected_balance) and float(peer_balance) == float(expected_peer_balance)
         except Exception as error:

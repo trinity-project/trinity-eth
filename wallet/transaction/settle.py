@@ -85,7 +85,7 @@ class SettleMessage(Message):
                 status = EnumResponseStatus.RESPONSE_TRADE_INCOMPATIBLE_NONCE
                 raise GoTo('Incompatible nonce<{}>'.format(self.nonce))
 
-            checked = SettleMessage.check_balance(self.channel_name,
+            checked = SettleMessage.check_balance(self.channel_name, self.asset_type,
                                                   self.sender_address, self.sender_balance,
                                                   self.receiver_address, self.receiver_balance)
             if not checked:
@@ -258,7 +258,7 @@ class SettleResponseMessage(Message):
         finally:
             # failure action
             if status != EnumResponseStatus.RESPONSE_OK.name:
-                self.channel.delete_trade(self.channel_name, self.nonce)
+                self.channel.delete_trade(self.channel_name, int(self.nonce))
                 event_machine.unregister_event(self.channel_name)
 
     def verify(self):
