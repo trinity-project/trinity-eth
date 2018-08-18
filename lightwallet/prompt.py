@@ -263,10 +263,21 @@ class PromptInterface(object):
         assetId = get_arg(arguments).upper()
         address_to = get_arg(arguments, 1)
         amount = float(get_arg(arguments, 2))
-        gaslimit = int(get_arg(arguments,3)) if get_arg(arguments,3) else 25600
+        if amount <=0:
+            console_log.error("value can not less then 0")
+            return None
+
+        if not assetId in self.Wallet.SupportAssert:
+            console_log.error("No support assert")
+            return None
+
+        gaslimit = int(get_arg(arguments,3)) if get_arg(arguments,3) else None
         gasprice = int(get_arg(arguments,4)) if get_arg(arguments, 4) else None
 
         if assetId == "ETH":
+            if amount <= self.Wallet.eth_balance:
+                console_log.error("No balance")
+                return None
 
             try:
                 res = self.Wallet.send_eth(address_to, amount, gaslimit)
@@ -274,7 +285,9 @@ class PromptInterface(object):
             except Exception as e:
                 print("send failed %s" %e)
         elif assetId == "TNC":
-
+            if amount <= self.Wallet.tnc_balance:
+                console_log.error("No balance")
+                return None
             try:
                 res = self.Wallet.send_erc20(assetId, address_to, amount, gaslimit, gasprice)
                 print("txid: 0x" +res)
@@ -353,7 +366,7 @@ class PromptInterface(object):
         :return:
         """
         if result.strip():
-            commandParts =  result.strip().split()
+            commandParts = result.strip().split()
             return commandParts[0], commandParts[1:]
         return None, None
 

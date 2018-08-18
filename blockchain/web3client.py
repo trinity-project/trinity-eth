@@ -27,9 +27,14 @@ class Client(object):
     def __init__(self, eth_url):
         self.web3 = Web3(HTTPProvider(eth_url))
 
-    def construct_common_tx(self, addressFrom, addressTo, value, gasLimit=25600):
+    def construct_common_tx(self, addressFrom, addressTo, value, gasLimit=None):
         tx = {
             'gas': gasLimit,
+            'to': addressTo,
+            'value': int(value*10**18),
+            'gasPrice': self.web3.eth.gasPrice,
+            'nonce': self.web3.eth.getTransactionCount(addressFrom),
+        } if gasLimit else {
             'to': addressTo,
             'value': int(value*10**18),
             'gasPrice': self.web3.eth.gasPrice,
@@ -49,15 +54,20 @@ class Client(object):
         return self.web3.eth.contract(address=contract_address, abi=abi)
 
 
-    def construct_erc20_tx(self, contract,addressFrom, addressTo,value, gasLimit=25600, gasprice=None):
-        tx = contract.functions.transfer(
-            addressTo,
-            int(value)
-        ).buildTransaction({
+    def construct_erc20_tx(self, contract,addressFrom, addressTo,value, gasLimit=None, gasprice=None):
+        tx_d = {
             "gas": gasLimit,
             'gasPrice': self.web3.eth.gasPrice * 2 if not gasprice  else gasprice,
             'nonce': self.web3.eth.getTransactionCount(addressFrom),
-        })
+        } if gasLimit else {
+            'gasPrice': self.web3.eth.gasPrice * 2 if not gasprice  else gasprice,
+            'nonce': self.web3.eth.getTransactionCount(addressFrom),
+        }
+
+        tx = contract.functions.transfer(
+            addressTo,
+            int(value)
+        ).buildTransaction(tx_d)
         return tx
 
     def invoke_contract(self, invoker, contract, method, args):
