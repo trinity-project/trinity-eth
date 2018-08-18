@@ -221,8 +221,6 @@ class SettleResponseMessage(Message):
             if not verified:
                 raise GoTo('Verify settle response message error: {}'.format(status))
 
-            SettleResponseMessage.update_trade_after_negotiated(self.channel_name, self.nonce)
-
             settle_trade = self.channel.query_trade(self.channel_name, nonce=str(self.nonce))[0].settle
         except GoTo as error:
             trade_state = EnumTradeState.failed
