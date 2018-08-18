@@ -16,7 +16,10 @@ import sys
 import re
 pythonpath = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(pythonpath)
-from lightwallet.Utils import get_arg,get_asset_id
+
+from common.log import LOG
+from common.console import console_log
+from lightwallet.Utils import get_arg, get_asset_id
 from lightwallet.Settings import settings
 from lightwallet.wallet import Wallet
 from model.base_enum import EnumStatusCode
@@ -25,6 +28,20 @@ from lightwallet.UserPreferences import preferences
 import binascii
 
 FILENAME_PROMPT_HISTORY = os.path.join(settings.DIR_CURRENT, '.prompt.py.history')
+
+
+def command_wapper(command):
+    def handler(callback):
+        def wrapper(*args, **kwargs):
+            try:
+                callback(*args, **kwargs)
+            except Exception as error:
+                console_log.error('Error occurred to run command: {}. Please check logs for details.'.format(command))
+                LOG.error('Error occurred to run command: {}. Exception: {}'.format(command, error))
+
+        return wrapper
+    return handler
+
 
 class PromptInterface(object):
     """

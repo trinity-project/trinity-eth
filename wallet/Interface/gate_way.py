@@ -64,6 +64,8 @@ def sync_channel(message_type, channel_name, founder, receiver, balance, asset_t
 
 def sync_channel_list(channel_list):
     message = {"MessageType":"SyncChannelList",
+               "AssetType": 'TNC',
+               "NetMagic": get_magic(),
                "MessageBody":{
                    channel_list
                }}
@@ -80,8 +82,12 @@ def sync_channel_list(channel_list):
 def join_gateway(publickey):
     LOG.info("JoinGateway {}".format(publickey))
     messagebody = get_wallet_info(publickey)
-    message = {"MessageType": "SyncWallet",
-    "MessageBody": messagebody}
+    message = {
+        "MessageType": "SyncWallet",
+        "AssetType": 'TNC',
+        "NetMagic": get_magic(),
+        "MessageBody": messagebody
+    }
     request = {
         "jsonrpc": "2.0",
         "method": "SyncWalletData",

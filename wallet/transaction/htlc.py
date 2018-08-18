@@ -266,6 +266,8 @@ class HtlcMessage(Message):
         if not verified:
             return verified, error
 
+        self.check_payment(self.payment)
+
         return True, None
 
     def check_if_the_last_router(self):
@@ -377,8 +379,8 @@ class HtlcMessage(Message):
             receiver_address, _, _ = uri_parser(receiver)
             asset_type = asset_type.upper()
 
+            HtlcMessage.check_payment(payment)
             balance = channel.balance
-            console_log.info(balance)
             sender_balance = float(balance.get(sender_address, {}).get(asset_type, 0))
             assert sender_balance >= payment, 'No enough balance<{}> for payment<{}>'.format(sender_balance, payment)
 
@@ -552,8 +554,8 @@ class HtlcResponsesMessage(Message):
             receiver_address, _, _ = uri_parser(receiver)
             asset_type = asset_type.upper()
 
+            HtlcResponsesMessage.check_payment(payment)
             balance = channel.balance
-            console_log.info(balance)
             sender_balance = HtlcResponsesMessage.float_calculate(
                 balance.get(sender_address, {}).get(asset_type, 0), payment, False)
             if 0 > sender_balance:

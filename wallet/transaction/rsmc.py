@@ -75,6 +75,8 @@ class RsmcMessage(Message):
             if not verified:
                 raise GoTo('Handle RsmcMessage error: {}'.format(error))
 
+            RsmcMessage.check_payment(self.payment)
+
             verified, error = self.verify_channel_balance(self.sender_balance+self.payment,
                                                           self.receiver_balance-self.payment)
             if not verified:
@@ -134,10 +136,12 @@ class RsmcMessage(Message):
             receiver_address, _, _ = uri_parser(receiver)
             asset_type = asset_type.upper()
             payment = float(payment)
+            RsmcMessage.check_payment(payment)
 
             sender_balance = RsmcMessage.float_calculate(balance.get(sender_address, {}).get(asset_type, 0), payment, False)
             if sender_balance < 0:
-                raise GoTo('Sender balance is not enough for payment.'.format(payment))
+                raise GoTo('Sender balance is not enough for payment {}. sender_balance: {}'.format(payment,
+                                                                                                    balance.get(sender_address)))
 
             receiver_balance = RsmcMessage.float_calculate(balance.get(receiver_address, {}).get(asset_type, 0), payment)
 
@@ -237,6 +241,8 @@ class RsmcResponsesMessage(Message):
             verified, error = self.verify()
             if not verified:
                 raise GoTo(error)
+
+            RsmcResponsesMessage.check_payment(self.payment)
             
             if 0 == self.role_index:
                 status = self.create(self.channel_name, self.wallet, self.sender, self.receiver, self.payment,

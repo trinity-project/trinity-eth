@@ -28,6 +28,7 @@ SOFTWARE."""
 from wallet.utils import get_magic
 from common.common import uri_parser
 from common.log import LOG
+from common.exceptions import GoTo
 from wallet.channel import Channel
 from wallet.Interface.gate_way import send_message
 from .response import EnumResponseStatus
@@ -232,3 +233,8 @@ class Message(object):
         peer = channel_set.src_addr
 
         return peer if peer != source else channel_set.dest_addr
+
+    @classmethod
+    def check_payment(cls, payment):
+        if 0 >= payment:
+            raise GoTo('Payment<{}> should not be negative number'.format(payment))
