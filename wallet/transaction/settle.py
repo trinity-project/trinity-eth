@@ -90,7 +90,7 @@ class SettleMessage(Message):
             # To create settle response message
             SettleResponseMessage.create(self.wallet, self.channel_name, nonce,
                                          self.asset_type, self.sender, self.receiver,
-                                         int(sender_balance), int(receiver_balance), self.commitment)
+                                         float(sender_balance), float(receiver_balance), self.commitment)
 
         except GoTo as error:
             LOG.error(error)
@@ -225,7 +225,7 @@ class SettleResponseMessage(Message):
             trade_state = EnumTradeState.failed
             LOG.error(error)
         except Exception as error:
-            trade_state = EnumTradeState.confirming
+            trade_state = EnumTradeState.failed
             LOG.error('Transaction with none<0xFFFFFFFF> not found. Error: {}'.format(error))
         else:
             # call web3 interface to trigger transaction to on-chain
