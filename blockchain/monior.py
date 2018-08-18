@@ -363,6 +363,8 @@ def monitorblock():
                         blockheight += 1
                         if blockheight <= blockheight_onchain:
                             need_update = True
+                        else:
+                            need_update = False
                 elif 2010 <= block_delta and not trigger_per_block:
                     # use magic number
                     blockheight = int(blockheight_onchain) - 2000
