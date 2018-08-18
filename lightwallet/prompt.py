@@ -423,7 +423,6 @@ class PromptInterface(object):
     def get_completer(self):
         standard_completions =[]
         for i in self.commands:
-            print(i)
             sub_c = re.match(r"([^{\[]*).*",i)
             if sub_c:
                 standard_completions.append(sub_c.groups()[0].strip())
