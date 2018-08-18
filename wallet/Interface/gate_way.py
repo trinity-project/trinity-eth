@@ -43,7 +43,7 @@ class GatewayInfo(object):
 def sync_channel(message_type, channel_name, founder, receiver, balance, asset_type):
     message = {"MessageType": message_type,
                "AssetType": asset_type.upper(),
-               "Magic": get_magic(),
+               "NetMagic": get_magic(),
                "MessageBody": {
                    "ChannelName": channel_name,
                    "Founder": founder,
@@ -124,7 +124,7 @@ def send_message(message, method="TransactionMessage" ):
 def close_wallet():
     message = {
         "MessageType": "CloseWallet",
-        "Magic":get_magic(),
+        "NetMagic":get_magic(),
         "Ip": "{}:{}".format(Configure.get("NetAddress"), Configure.get("NetPort"))
     }
     request= {
