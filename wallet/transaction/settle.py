@@ -128,7 +128,12 @@ class SettleMessage(Message):
 
         try:
             channel = Channel(channel_name)
-            nonce = SettleMessage._SETTLE_NONCE
+            try:
+                latest_trade = Channel.latest_trade(channel_name)[0]
+                nonce = int(latest_trade.nonce) + 1
+            except Exception as error:
+                raise GoTo('Transaction not found for channel<{}>'.format(channel_name))
+            
             asset_type = asset_type.upper()
             message = SettleMessage.create_message_header(sender, receiver, SettleMessage._message_name,
                                                           channel_name, asset_type, nonce)
@@ -280,11 +285,21 @@ class SettleResponseMessage(Message):
         self_commitment = None
 
         try:
+            latest_trade = Channel.latest_trade(channel_name)
+            if not (latest_trade and latest_trade[0]):
+                trade_state = EnumTradeState.failed
+                raise GoTo('Transaction not found for channel<{}>'.format(channel_name))
+
+            if int(latest_trade.nonce) + 1 != nonce:
+                trade_state = EnumTradeState.failed
+                raise  GoTo('Incompatible nonce <{}:{}>'.format(latest_trade.nonce, nonce))
+
             self_commitment = contract_event_api.sign_content(
                 typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
                 valueList=[channel_name, nonce, sender_addr, sender_balance, receiver_addr, receiver_balance],
                 privtKey = wallet._key.private_key_string)
             message.update({"MessageBody": {"Commitment": self_commitment}})
+
         except Exception as error:
             LOG.error('Error occurred during create Settle response. Error: {}'.format(error))
             status = EnumResponseStatus.RESPONSE_FAIL
@@ -298,7 +313,7 @@ class SettleResponseMessage(Message):
             peer_balance=sender_balance, commitment=self_commitment, peer_commitment=commitment,
             state=trade_state
         )
-        Channel.update_trade(channel_name, nonce=nonce, settle=settle_trade)
+        Channel.add_trade(channel_name, nonce=nonce, settle=settle_trade)
 
         message.update({'Status': status.name})
         Message.send(message)
