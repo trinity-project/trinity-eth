@@ -80,12 +80,10 @@ class SettleMessage(Message):
             sender_balance = balance.get(self.sender_address, {}).get(self.asset_type)
             receiver_balance = balance.get(self.receiver_address, {}).get(self.asset_type)
 
-            negotiated, nonce = SettleMessage.negotiate_nonce(self.channel_name, self.nonce, self.sender_address,
-                                                              self.sender_balance, self.receiver_address,
-                                                              self.receiver_balance)
-            if not negotiated:
+            checked, nonce = SettleMessage.check_nonce(self.channel_name, self.nonce)
+            if not checked:
                 status = EnumResponseStatus.RESPONSE_TRADE_INCOMPATIBLE_NONCE
-                raise GoTo('Incompatible nonce between peers.')
+                raise GoTo('Incompatible nonce<{}>'.format(self.nonce, nonce))
 
             # To create settle response message
             SettleResponseMessage.create(self.wallet, self.channel_name, nonce,

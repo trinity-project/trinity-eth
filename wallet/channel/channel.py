@@ -189,7 +189,7 @@ class Channel(object):
 
     @staticmethod
     def query_channel(channel_name, *args, **kwargs):
-        return APIChannel.query_channel(channel_name, *args, **kwargs)
+        return APIChannel.query_channel(channel=channel_name, *args, **kwargs)
 
     @staticmethod
     def update_channel(channel_name, **kwargs):
