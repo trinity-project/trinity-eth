@@ -493,8 +493,18 @@ class UserPromptInterface(PromptInterface):
         if not value:
             console_log.error("command not give the count")
             return None
+        try:
+            if float(value) <=0:
+                console_log.error("value should not be less than 0")
+                return None
+        except ValueError:
+            console_log.error("value formate error")
+            return None
         comments = " ".join(arguments[3:])
         comments = comments if comments else "None"
+        if len(comments) > 128:
+            console_log.error("comments length shoule be lesss than 128")
+            return None
         try:
             hash_r, rcode = Payment.create_hr()
             Channel.add_payment(None, hash_r, rcode, value)
