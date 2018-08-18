@@ -32,6 +32,7 @@ from wallet.channel import Channel
 from wallet.Interface.gate_way import send_message
 from .response import EnumResponseStatus
 from trinity import IS_SUPPORTED_ASSET
+from model.channel_model import EnumChannelState
 
 
 class MessageHeader(object):
@@ -104,6 +105,66 @@ class Message(object):
         LOG.info('Received Message<{}>'.format(self.message_type))
         pass
 
+    @classmethod
+    def negotiate_nonce(cls, channel_name, nonce, address, balance, peer_address, peer_balance):
+        # for keep compatible nonce in both peers,
+        # here we could provide a health way to deal with the nonce:
+        # 1. if the nonce is different, it may be caused by network problem or others,
+        #    we could check the balance of the channel, to keep the transaction could be continued
+        checked, new_nonce = cls.check_nonce(channel_name, nonce)
+        negotiated = True
+        if not checked:
+            # need check balance
+            negotiated = cls.check_balance(channel_name, address, balance, peer_address, peer_balance)
+
+        # add payment if negotiated successfully
+        if negotiated:
+            Channel.add_trade(channel_name, nonce=new_nonce)
+
+        return negotiated, nonce
+
+    @classmethod
+    def check_nonce(cls, channel_name, nonce):
+        """
+
+        :param address:
+        :param balance:
+        :param peer_address:
+        :param peer_balance:
+        :return:
+        """
+        nonce = int(nonce)
+        try:
+            latest_trade = Channel.latest_trade(channel_name)[0]
+
+            # negotiate a new nonce
+            new_nonce = int(latest_trade.nonce) + 1
+            return nonce == new_nonce, max(nonce, new_nonce)
+        except Exception as error:
+            return cls._FOUNDER_NONCE == nonce, nonce
+
+    @classmethod
+    def check_balance(cls, channel_name, address, balance, peer_address, peer_balance):
+        """
+
+        :param address:
+        :param balance:
+        :param peer_address:
+        :param peer_balance:
+        :return:
+        """
+        try:
+            # get channel if trade has already existed
+            channel_set = Channel.query_channel(channel_name, state=EnumChannelState.OPENED.name)[0]
+
+            expected_balance = channel_set.balance.get(address)
+            expected_peer_balance = channel_set.balance.get(peer_address)
+
+            return float(balance) == float(expected_balance) and float(peer_balance) == float(expected_peer_balance)
+        except Exception as error:
+            LOG.exception('Channel<{}> was not found. Exception: {}'.format(channel_name, error))
+            return False
+
     def verify(self):
         """
 
@@ -171,4 +232,3 @@ class Message(object):
         peer = channel_set.src_addr
 
         return peer if peer != source else channel_set.dest_addr
-

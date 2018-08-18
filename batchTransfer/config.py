@@ -1,4 +1,5 @@
 import json
+from trinity import SUPPORTED_ASSET_TYPE
 
 csv_file = "value.csv"
 
@@ -7,7 +8,7 @@ account_address = "0x3aE88fe370c39384FC16dA2C9e768Cf5d2495b48"
 account_private_key = "095e53c9c20e23fd01eaad953c01da9e9d3ed9bebcfed8e5b2c2fce94037d963"
 eth_rpc = "http://47.254.31.231:8545"   #Ropsten test network
 
-token_address = "0x65096f2B7A8dc1592479F1911cd2B98dae4d2218"
+token_address = SUPPORTED_ASSET_TYPE['TNC']
 
 BATCH_ABI = json.loads(
     """

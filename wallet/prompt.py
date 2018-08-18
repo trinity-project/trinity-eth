@@ -11,7 +11,7 @@ import traceback
 import signal
 from functools import wraps, reduce
 from twisted.internet import reactor, endpoints, protocol
-from common.log import LOG
+from common.log import LOG, init_logger
 from common.console import console_log
 from lightwallet.Settings import settings
 from wallet.utils import get_arg, \
@@ -487,7 +487,7 @@ class UserPromptInterface(PromptInterface):
         try:
             hash_r, rcode = Payment.create_hr()
             Channel.add_payment(None, hash_r, rcode, value)
-            paycode = Payment.generate_payment_code(self.Wallet.url, asset_type, value, hash_r, comments)
+            paycode = Payment.generate_payment_code(self.Wallet.url, asset_type, value, hash_r, comments, True)
         except Exception as e:
             LOG.error(e)
             console_log.error("Get payment link error, please check the log")
@@ -669,6 +669,9 @@ def main():
         settings.setup_privnet()
     else:
         settings.setup_testnet()
+
+    # initialize the loggers
+    init_logger(file_name='wallet.log')
 
     UserPrompt = UserPromptInterface()
     port = Configure.get("NetPort")

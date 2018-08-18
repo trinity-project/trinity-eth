@@ -27,11 +27,12 @@ from Crypto import Random
 from eth_hash.backends.pysha3 import keccak256
 
 from common.log import LOG
+from common.console import console_log
 from common.singleton import SingletonClass
 from .message import Message
 from .response import EnumResponseStatus
-from wallet.utils import get_asset_type_id
-from trinity import IS_SUPPORTED_ASSET
+from wallet.utils import get_asset_type_id, get_magic
+from trinity import IS_SUPPORTED_ASSET, SUPPORTED_ASSET_TYPE
 from wallet.channel import Channel
 from wallet.channel.trade import EnumTradeState
 
@@ -44,22 +45,27 @@ class Payment(metaclass=SingletonClass):
         pass
 
     @classmethod
-    def generate_payment_code(cls, receiver, asset_type, value, hashcode, comments=''):
+    def generate_payment_code(cls, receiver, asset_type, value, hashcode, comments='', cli=False):
+        """"""
         if not IS_SUPPORTED_ASSET(asset_type):
-            return None
-        asset_type = asset_type.upper()
+            text = 'AssetType: {} is not supported'.format(asset_type)
+            LOG.error(text)
+            if cli:
+                console_log.error(text)
 
-        asset_id = get_asset_type_id(asset_type)
-        if not asset_id:
             return None
 
-        asset_id = asset_id.strip()
-        asset_id = asset_id.replace('0x', '').strip()
+        asset_type = asset_type.replace('0x', '')
 
         hashcode = hashcode.strip()
         hashcode = hashcode.replace('0x', '')
 
-        code = "{0}&{1}&{2}&{3}&{4}".format(receiver, hashcode, asset_id, value, comments)
+        code = "{uri}&{net_magic}&{hashcode}&{asset_type}&{payment}&{comments}".format(uri=receiver,
+                                                                                       net_magic=get_magic(),
+                                                                                       hashcode=hashcode,
+                                                                                       asset_type=asset_type,
+                                                                                       payment=value,
+                                                                                       comments=comments)
         base58_code = base58.b58encode(code.encode())
         try:
             return "TN{}".format(base58_code.decode())

@@ -24,16 +24,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 import os
 import logging.config
-from trinity import __os_platform__, __running_mode__, Console_log
-LogDataDir = os.path.join(os.path.dirname(__file__),"common.log")
-if not os.path.exists(LogDataDir):
-    os.makedirs(LogDataDir)
+from trinity import __running_mode__, Console_log, TRINITY_LOG_PATH
 LOG = logging.getLogger('logger')
-# common.log configuration parts
-if __os_platform__ in ['LINUX', 'DARWIN']:
-    TRINITY_LOG_PATH = os.path.join(LogDataDir,"trinity.common.log")
-else:
-    TRINITY_LOG_PATH = os.getcwd().split(os.sep)[0]+os.sep+'temp'
+
 
 log_settings = {
     'version': 1,
@@ -81,5 +74,3 @@ def init_logger(log_path = None, file_name=None):
     # load logger configuration
     log_settings['handlers']['file']['filename'] = '{}{}{}'.format(init_log_path, os.sep, init_filename)
     logging.config.dictConfig(log_settings)
-
-init_logger()

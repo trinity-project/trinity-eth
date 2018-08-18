@@ -1,6 +1,7 @@
 
 import os
 from blockchain.web3client import Client
+from trinity import SUPPORTED_ASSET_TYPE
 
 
 class SettingsHolder:
@@ -30,7 +31,7 @@ class SettingsHolder:
     def setup_testnet(self):
         self.NET_NAME = "TestNet"
         self.NODEURL = "https://ropsten.infura.io"
-        self.TNC = "0x65096f2B7A8dc1592479F1911cd2B98dae4d2218"
+        self.TNC = SUPPORTED_ASSET_TYPE['TNC']
         self.TNC_abi = erc20_asset_abi
         self.Eth_Contract_address = "0x1002D9FE1afD4DDB629E3fcdB578297EFf380106" #"0x47EFb4f6F40837973fD41657c44F04903f5E8De9"
         self.Eth_Contract_abi = eth_contract_abi

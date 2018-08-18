@@ -145,35 +145,27 @@ class FounderMessage(Message):
         if comments:
             message.update({"Comments": comments})
 
-        # authorized the deposit to the contract
-        try:
-            # contract_event_api.approve(founder_address, founder_deposit, wallet._key.private_key_string)
-            pass
-        except Exception as error:
-            LOG.error('Error occurred during approve asset to contract. Exception: {}'.format(error))
-            print(error)
-        else:
-            # add channel
-            deposit = {founder_address: {asset_type.upper(): founder_deposit},
-                       partner_address: {asset_type.upper(): partner_deposit}}
-            Channel.add_channel(channel=channel_name, src_addr=founder, dest_addr=partner,
-                                state=EnumChannelState.INIT.name, deposit=deposit, balance=deposit)
+        # add channel
+        deposit = {founder_address: {asset_type.upper(): founder_deposit},
+                   partner_address: {asset_type.upper(): partner_deposit}}
+        Channel.add_channel(channel=channel_name, src_addr=founder, dest_addr=partner,
+                            state=EnumChannelState.INIT.name, deposit=deposit, balance=deposit)
 
-            # TODO: currently, register event
-            channel_event = ChannelDepositEvent(channel_name)
-            channel_event.register_args(EnumEventAction.EVENT_PREPARE, founder_address, founder_deposit,
-                                        wallet._key.private_key_string)
+        # TODO: currently, register event
+        channel_event = ChannelDepositEvent(channel_name)
+        channel_event.register_args(EnumEventAction.EVENT_PREPARE, founder_address, founder_deposit,
+                                    wallet._key.private_key_string)
 
-            event_machine.register_event(channel_name, channel_event)
+        event_machine.register_event(channel_name, channel_event)
 
-            # add trade to database
-            founder_trade = Channel.founder_or_rsmc_trade(
-                role=EnumTradeRole.TRADE_ROLE_FOUNDER, asset_type=asset_type, payment=0, balance=founder_deposit,
-                peer_balance=partner_deposit, commitment=commitment, state=EnumTradeState.confirming
-            )
-            Channel.add_trade(channel_name, nonce=nonce, founder=founder_trade)
+        # add trade to database
+        founder_trade = Channel.founder_or_rsmc_trade(
+            role=EnumTradeRole.TRADE_ROLE_FOUNDER, asset_type=asset_type, payment=0, balance=founder_deposit,
+            peer_balance=partner_deposit, commitment=commitment, state=EnumTradeState.confirming
+        )
+        Channel.add_trade(channel_name, nonce=nonce, founder=founder_trade)
 
-            FounderMessage.send(message)
+        FounderMessage.send(message)
 
     def verify(self):
         verified, error = super(FounderMessage, self).verify()
