@@ -10,6 +10,7 @@ import json
 import traceback
 import signal
 from functools import wraps, reduce
+from prompt_toolkit import prompt
 from twisted.internet import reactor, endpoints, protocol
 from common.log import LOG, init_logger
 from common.console import console_log
