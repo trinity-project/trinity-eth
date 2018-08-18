@@ -28,12 +28,11 @@ SOFTWARE."""
 from wallet.utils import get_magic
 from common.common import uri_parser
 from common.log import LOG
-from common.exceptions import GoTo
 from wallet.channel import Channel
 from wallet.Interface.gate_way import send_message
 from .response import EnumResponseStatus
 from trinity import IS_SUPPORTED_ASSET_TYPE
-from model.channel_model import EnumChannelState
+from wallet.event import event_machine
 
 
 class MessageHeader(object):
@@ -226,6 +225,17 @@ class Message(object):
         cls.send(message)
 
     @classmethod
-    def rollback(cls):
-        pass
+    def rollback_resource(cls, channel_name, nonce, payment=None):
+        """
 
+        :param channel_name:
+        :param nonce:
+        :param payment:
+        :return:
+        """
+        # failure action
+        if cls.status == EnumResponseStatus.RESPONSE_TRADE_INCOMPATIBLE_NONCE.name:
+            Channel.delete_trade(channel_name, nonce)
+
+        if cls.status is not None and cls.status != EnumResponseStatus.RESPONSE_OK.name:
+            event_machine.unregister_event(channel_name)

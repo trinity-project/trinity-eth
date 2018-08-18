@@ -260,12 +260,7 @@ class SettleResponseMessage(Message):
             LOG.debug('Succeed to quick-close channel<{}>'.format(self.channel_name))
             return
         finally:
-            # failure action
-            if status == EnumResponseStatus.RESPONSE_TRADE_INCOMPATIBLE_NONCE.name:
-                self.channel.delete_trade(self.channel_name, int(nonce))
-
-            if status != EnumResponseStatus.RESPONSE_OK.name:
-                event_machine.unregister_event(self.channel_name)
+            self.rollback_resource(self.channel_name, nonce)
 
     def verify(self):
         if self.status not in EnumResponseStatus.RESPONSE_OK.__dict__.values():
