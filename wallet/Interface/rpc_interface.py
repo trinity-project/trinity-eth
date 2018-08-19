@@ -215,6 +215,7 @@ class RpcInteraceApi(object):
                 try:
                     channel_list = query_channel_list(CurrentLiveWallet.Wallet.url)
                 except Exception as e:
+                    channel_list= None
                     LOG.error(e)
                 wallet_info = get_wallet_info(CurrentLiveWallet.Wallet)
 
