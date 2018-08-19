@@ -210,6 +210,7 @@ class RpcInteraceApi(object):
             # return rsmc_message
 
         elif method == "GetChannelList":
+            LOG.debug("GetChannelList")
             from wallet.utils import get_wallet_info
             if CurrentLiveWallet.Wallet:
                 try:
