@@ -212,7 +212,10 @@ class RpcInteraceApi(object):
         elif method == "GetChannelList":
             from wallet.utils import get_wallet_info
             if CurrentLiveWallet.Wallet:
-                channel_list = query_channel_list(CurrentLiveWallet.Wallet.url)
+                try:
+                    channel_list = query_channel_list(CurrentLiveWallet.Wallet.url)
+                except Exception as e:
+                    LOG.error(e)
                 wallet_info = get_wallet_info(CurrentLiveWallet.Wallet)
 
                 return {"MessageType":"GetChannelList",
