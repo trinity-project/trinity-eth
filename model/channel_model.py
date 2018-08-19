@@ -97,7 +97,7 @@ class TBLChannel(DBManager):
 
     @property
     def required_item(self):
-        return ['channel', 'src_addr', 'dest_addr', 'state', 'alive_block', 'deposit', 'balance']
+        return ['channel', 'src_addr', 'dest_addr', 'state', 'alive_block', 'deposit', 'balance', 'magic']
 
 
 class APIChannel(object):
