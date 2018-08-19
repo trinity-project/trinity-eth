@@ -33,7 +33,7 @@ class SettingsHolder:
         self.NODEURL = "https://ropsten.infura.io"
         self.TNC = SUPPORTED_ASSET_TYPE['TNC']
         self.TNC_abi = erc20_asset_abi
-        self.Eth_Contract_address = "0x4800c9e1c164c87579c0a6580ff172d24ad08c09" #"0x1002D9FE1afD4DDB629E3fcdB578297EFf380106"
+        self.Eth_Contract_address = "0x4800C9E1c164c87579c0a6580fF172d24ad08c09" #"0x1002D9FE1afD4DDB629E3fcdB578297EFf380106"
         self.Eth_Contract_abi = eth_contract_abi
         self.create_client()
     def setup_privnet(self):
