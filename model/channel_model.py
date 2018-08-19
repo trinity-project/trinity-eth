@@ -34,7 +34,7 @@ class TBLChannel(DBManager):
         Modified        : 2018-03-21
     """
     def add_one(self, channel: str, src_addr: str, dest_addr: str, state: str, alive_block: int,
-                deposit:dict, balance={}):
+                deposit:dict, magic:str, balance={}):
         """
 
         :param channel:
