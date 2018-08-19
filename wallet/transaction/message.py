@@ -208,13 +208,11 @@ class Message(object):
 
     @classmethod
     def check_payment(cls, payment):
-        if 0 >= float(payment):
-            return False
-        return True
+        return 0 < float(payment)
 
     @classmethod
     def send_error_response(cls, sender:str, receiver:str, channel_name:str, asset_type:str,
-                       nonce:int, status=None):
+                       nonce:int, status=EnumResponseStatus.RESPONSE_FAIL):
         message = cls.create_message_header(receiver, sender, cls._message_name, channel_name, asset_type, nonce)
         message = message.message_header
         message.update({'MessageBody': {}})
@@ -225,7 +223,7 @@ class Message(object):
         cls.send(message)
 
     @classmethod
-    def rollback_resource(cls, channel_name, nonce, payment=None):
+    def rollback_resource(cls, channel_name, nonce, payment=None, status=None):
         """
 
         :param channel_name:
@@ -234,8 +232,8 @@ class Message(object):
         :return:
         """
         # failure action
-        if cls.status == EnumResponseStatus.RESPONSE_TRADE_INCOMPATIBLE_NONCE.name:
+        if status == EnumResponseStatus.RESPONSE_TRADE_INCOMPATIBLE_NONCE.name:
             Channel.delete_trade(channel_name, nonce)
 
-        if cls.status is not None and cls.status != EnumResponseStatus.RESPONSE_OK.name:
+        if status is not None and status != EnumResponseStatus.RESPONSE_OK.name:
             event_machine.unregister_event(channel_name)

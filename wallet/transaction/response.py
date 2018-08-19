@@ -49,6 +49,7 @@ class EnumResponseStatus(IntEnum):
 
     # Channel related error
     RESPONSE_CHANNEL_NOT_FOUND = 0x80
+    RESPONSE_CHANNEL_NOT_OPENED = 0x81
 
     # Trade related error
     RESPONSE_TRADE_NOT_FOUND = 0xa0

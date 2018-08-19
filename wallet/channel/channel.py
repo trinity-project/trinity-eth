@@ -151,6 +151,10 @@ class Channel(object):
         return self.channel_set.state
 
     @property
+    def is_opened(self):
+        return self.state == EnumChannelState.OPENED.name
+
+    @property
     def founder_uri(self):
         return self.channel_set.src_addr
 

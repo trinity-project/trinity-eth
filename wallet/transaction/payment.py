@@ -126,6 +126,8 @@ class Payment(metaclass=SingletonClass):
                 #
                 # update the payment to confirm
                 Channel.update_payment(channel_name, hashcode, state=EnumTradeState.confirmed.name)
+
+            return
         except Exception as error:
             LOG.error('Payment for channel<{}> with HashR<{}> Not found from the DB'.format(channel_name, hashcode),
                           'Exception: {}'.format(error))

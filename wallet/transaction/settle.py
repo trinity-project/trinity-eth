@@ -260,7 +260,7 @@ class SettleResponseMessage(Message):
             LOG.debug('Succeed to quick-close channel<{}>'.format(self.channel_name))
             return
         finally:
-            self.rollback_resource(self.channel_name, nonce)
+            self.rollback_resource(self.channel_name, nonce, status=self.status)
 
     def verify(self):
         if self.status not in EnumResponseStatus.RESPONSE_OK.__dict__.values():
