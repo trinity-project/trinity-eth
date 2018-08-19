@@ -450,3 +450,25 @@ def udpate_channel_when_setup(address):
         if ch.state == EnumChannelState.OPENED.name:
             sync_channel_info_to_gateway(ch.channel, "UpdateChannel")
 
+
+def query_channel_list(address):
+    channels = APIChannel.batch_query_channel(filters={"src_addr": address, "state": EnumChannelState.OPENED.name})
+    channel_list = []
+    if channels.get("content"):
+        for ch in channels["content"]:
+            channel_info = {"ChannelName": ch.channel,
+                            "Founder": ch.src_addr,
+                            "Receiver": ch.dest_addr,
+                            "Balance": ch.balance,
+                            "Magic": ch.__dict__.get('magic')}
+            channel_list.append(channel_info)
+    channeld = APIChannel.batch_query_channel(filters={"dest_addr": address, "state": EnumChannelState.OPENED.name})
+    if channeld.get("content"):
+        for ch in channeld["content"]:
+            channel_info = {"ChannelName": ch.channel,
+                            "Founder": ch.src_addr,
+                            "Receiver": ch.dest_addr,
+                            "Balance": ch.balance,
+                            "Magic": ch.__dict__.get('magic')}
+            channel_list.append(channel_info)
+    return channel_list

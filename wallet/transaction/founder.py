@@ -34,6 +34,7 @@ from wallet.channel import EnumTradeType, EnumTradeRole, EnumTradeState
 from wallet.event.contract_event import contract_event_api
 from wallet.event.channel_event import ChannelDepositEvent
 from wallet.event.event import EnumEventAction, event_machine
+from wallet.utils import get_magic
 
 
 class FounderMessage(Message):
@@ -152,7 +153,7 @@ class FounderMessage(Message):
         deposit = {founder_address: {asset_type.upper(): founder_deposit},
                    partner_address: {asset_type.upper(): partner_deposit}}
         Channel.add_channel(channel=channel_name, src_addr=founder, dest_addr=partner,
-                            state=EnumChannelState.INIT.name, deposit=deposit, balance=deposit)
+                            state=EnumChannelState.INIT.name, deposit=deposit, balance=deposit, magic=get_magic())
 
         # TODO: currently, register event
         channel_event = ChannelDepositEvent(channel_name)
@@ -354,7 +355,7 @@ class FounderResponsesMessage(Message):
                    partner_address: {asset_type: partner_deposit}}
         Channel.add_channel(
             channel=channel_name, src_addr=founder, dest_addr=partner, state=EnumChannelState.OPENING.name,
-            deposit=deposit, balance=deposit
+            deposit=deposit, balance=deposit, magic=get_magic()
         )
         LOG.info('Channel<{}> in opening state.'.format(channel_name))
 
