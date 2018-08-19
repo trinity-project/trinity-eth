@@ -177,6 +177,7 @@ class PromptInterface(object):
             print("closed wallet %s " % path)
 
 
+    @command_wapper("wallet")
     def show_wallet(self, arguments):
         """
 
@@ -199,6 +200,7 @@ class PromptInterface(object):
         else:
             print("wallet: '{}' is an invalid parameter".format(item))
 
+    @command_wapper("import")
     def do_import(self, arguments):
         """
 
@@ -215,6 +217,7 @@ class PromptInterface(object):
             print("Import of '%s' not implemented" % item)
 
 
+    @command_wapper("export")
     def do_export(self, arguments):
         """
 
@@ -245,6 +248,7 @@ class PromptInterface(object):
         print("Command export %s not found" % item)
 
 
+    @command_wapper("send")
     def do_send(self, arguments):
         """
 
@@ -298,6 +302,7 @@ class PromptInterface(object):
             pass
         return
 
+    @command_wapper("unlock")
     def unlock(self, args):
         """
 
@@ -322,6 +327,7 @@ class PromptInterface(object):
             print("please spacify unlock item [cli]")
         return None
 
+    @command_wapper("lock")
     def do_lock(self, args):
         """
 
@@ -344,6 +350,7 @@ class PromptInterface(object):
             print("please spacify lock item [cli]")
         return None
 
+    @command_wapper("history")
     def show_tx(self, args):
         """
 

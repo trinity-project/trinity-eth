@@ -147,8 +147,7 @@ class UserPromptInterface(PromptInterface):
                 else:
                     super().handle_commands(command,arguments)
         except Exception as error:
-            console_log.error('Error occurred to execute wallet command. Please check log for details')
-            LOG.error('Exception: {}'.format(error))
+            pass
 
 
     def get_bottom_toolbar(self, cli=None):
@@ -323,7 +322,7 @@ class UserPromptInterface(PromptInterface):
                        trigger=FounderMessage.create)
 
     @channel_opened
-    @arguments_length([2,4])
+    @arguments_length([2,4,5])
     def channel_trans(self, arguments):
         """
 
@@ -339,6 +338,9 @@ class UserPromptInterface(PromptInterface):
             if result:
                 receiver = info.get("uri")
                 net_magic = info.get('net_magic')
+                if not net_magic or net_magic != str(get_magic()):
+                    console_log.error("No correct net magic")
+                    return None
                 hashcode = info.get("hashcode")
                 asset_type = info.get("asset_type")
                 # asset_type = get_asset_type_name(asset_type)
@@ -352,7 +354,7 @@ class UserPromptInterface(PromptInterface):
             receiver = get_arg(arguments, 1)
             asset_type = get_arg(arguments, 2)
             count = get_arg(arguments, 3)
-            hashcode = None
+            hashcode = get_arg(arguments, 4)
             if not receiver or not asset_type or not count:
                 self.help()
                 return None
@@ -372,6 +374,9 @@ class UserPromptInterface(PromptInterface):
             Channel.transfer(channel_set[0].channel, self.Wallet, receiver, asset_type, count, hashcode,
                              cli=True, trigger=RsmcMessage.create)
         else:
+            if not hashcode:
+                console_log.error("No hashcode")
+                return None
             try:
                 message = {"MessageType":"GetRouterInfo",
                            "Sender":self.Wallet.url,
@@ -395,10 +400,6 @@ class UserPromptInterface(PromptInterface):
                     LOG.error('Router between {} and {} was not found.'.format(self.Wallet.url, receiver))
                     console_log.error('Router not found for HTLC transfer.')
                     return
-
-            if not hashcode:
-                print("NO HR in payments")
-                return
 
             full_path = router.get("FullPath")
             LOG.info("Get Router {}".format(str(full_path)))
