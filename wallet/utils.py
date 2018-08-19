@@ -291,18 +291,20 @@ def check_partner(wallet, partner):
         return False
 
 
-def get_wallet_info(pubkey):
+def get_wallet_info(wallet):
     """
 
-    :param pubkey:
+    :param wallet:
     :return: message dict
     """
     balance = {}
-    for i in Configure["AssetType"].keys():
-        b = get_balance(pubkey, i.upper(), settings.TNC, settings.TNC)
-        balance[i] = b
+    # for i in Configure["AssetType"].keys():
+    #     b = get_balance(wallet.address, i.upper(), settings.TNC, settings.TNC)
+    #     balance[i] = b
+    balance["ETH"] = wallet.eth_balance
+    balance["TNC"] = wallet.tnc_balance
     message = {
-                   "Publickey": pubkey,
+                   "Publickey": wallet.address,
                     "alias": Configure["alias"],
                     "AutoCreate": Configure["AutoCreate"],
                     "Ip": "{}:{}".format(Configure.get("NetAddress"),

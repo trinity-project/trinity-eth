@@ -40,7 +40,19 @@ class GatewayInfo(object):
     def get_spv_port(cls):
         return cls.Spv_port
 
+
 def sync_channel(message_type, channel_name, founder, receiver, balance, asset_type):
+    """
+
+    :param message_type:
+    :param channel_name:
+    :param founder:
+    :param receiver:
+    :param balance:
+    :param asset_type:
+    :return:
+    """
+
     message = {"MessageType": message_type,
                "AssetType": asset_type.upper(),
                "NetMagic": get_magic(),
@@ -79,9 +91,15 @@ def sync_channel_list(channel_list):
     return result.json()
 
 
-def join_gateway(publickey):
-    LOG.info("JoinGateway {}".format(publickey))
-    messagebody = get_wallet_info(publickey)
+def join_gateway(wallet):
+    """
+
+    :param wallet:
+    :return:
+    """
+
+    LOG.info("JoinGateway {}".format(wallet.address))
+    messagebody = get_wallet_info(wallet)
     message = {
         "MessageType": "SyncWallet",
         "AssetType": 'TNC',

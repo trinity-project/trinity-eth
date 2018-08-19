@@ -233,7 +233,7 @@ class UserPromptInterface(PromptInterface):
 
     def enable_channel(self):
         try:
-            result = gate_way.join_gateway(self.Wallet.address).get("result")
+            result = gate_way.join_gateway(self.Wallet).get("result")
             if result:
                 self.Wallet.url = json.loads(result).get("MessageBody").get("Url")
 

@@ -2,6 +2,7 @@ import binascii
 import requests
 from ethereum.utils import ecsign, normalize_key, int_to_big_endian, checksum_encode
 from web3 import Web3, HTTPProvider
+from ethereum.utils import sha3, is_string, encode_hex, checksum_encode
 
 def get_privtKey_from_keystore(filename,password):
     with open(filename) as keyfile:
@@ -181,8 +182,6 @@ class Client(object):
     def get_transaction_receipt(self, hashString):
         return self.web3.eth.getTransactionReceipt(hashString)
 
-
-'''
 if __name__ == "__main__":
     myclient = Client("https://ropsten.infura.io")
     print(myclient.get_block_count())
@@ -245,9 +244,9 @@ if __name__ == "__main__":
                                                          {"indexed":True,"name":"_spender","type":"address"},
                                                          {"indexed":False,"name":"_value","type":"uint256"}],
                                                "name":"Approval","type":"event"}]
-    c = myclient.get_contract_instance("0x4c7A0D54ec5CbFFE4Ebe263F1F25aa53611521cB",abi=abi)
+    #c = myclient.get_contract_instance("0x65096f2b7a8dc1592479f1911cd2b98dae4d2218",abi=abi)
 
-    balance = myclient.get_balance_of_erc20(c,"0xed630C05336D07787B1DAbC5dA1aD963cE47FC50")
+    balance = myclient.get_balance_of_erc20(checksum_encode("0x65096f2b7a8dc1592479f1911cd2b98dae4d2218"),abi,checksum_encode("0xed630C05336D07787B1DAbC5dA1aD963cE47FC50"))
     print(balance)
 
 
@@ -362,4 +361,4 @@ if __name__ == "__main__":
     # # print(c)
     # # print(d)
     # pass
-    '''
+
