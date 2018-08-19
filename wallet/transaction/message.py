@@ -113,8 +113,8 @@ class Message(object):
         :param nonce:
         :return:
         """
-        latest_nonce = Channel.new_nonce(channel_name)
-        return int(nonce) == latest_nonce, latest_nonce
+        new_nonce = Channel.new_nonce(channel_name)
+        return int(nonce) == new_nonce, new_nonce
 
     @classmethod
     def check_balance(cls, channel_name, asset_type, address, balance, peer_address, peer_balance):
@@ -233,7 +233,7 @@ class Message(object):
         """
         # failure action
         if status == EnumResponseStatus.RESPONSE_TRADE_INCOMPATIBLE_NONCE.name:
-            Channel.delete_trade(channel_name, nonce)
+            Channel.delete_trade(channel_name, int(nonce))
 
         if status is not None and status != EnumResponseStatus.RESPONSE_OK.name:
             event_machine.unregister_event(channel_name)

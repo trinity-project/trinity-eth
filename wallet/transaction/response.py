@@ -51,6 +51,9 @@ class EnumResponseStatus(IntEnum):
     RESPONSE_CHANNEL_NOT_FOUND = 0x80
     RESPONSE_CHANNEL_NOT_OPENED = 0x81
 
+    # payment related error
+    RESPONSE_PAYMENT_NOT_FOUND = 0x9F
+
     # Trade related error
     RESPONSE_TRADE_NOT_FOUND = 0xa0
     RESPONSE_TRADE_NOT_ENOUGH_BALANCE = 0xa1

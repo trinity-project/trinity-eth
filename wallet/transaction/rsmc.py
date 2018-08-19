@@ -389,9 +389,10 @@ class RsmcResponsesMessage(Message):
                 valueList=[channel_name, nonce, sender_address, sender_balance, receiver_address, receiver_balance],
                 privtKey = wallet._key.private_key_string)
 
-            # just record the payment for the partner
-            if RsmcResponsesMessage.hashr_is_valid_format(comments):
-                channel.add_payment(channel_name, hashcode=comments, payment=payment, state=EnumTradeState.confirming)
+            # # just record the payment for the partner
+            # # ToDo: uncomment here if needed.
+            # if RsmcResponsesMessage.hashr_is_valid_format(comments):
+            #     channel.add_payment(channel_name, hashcode=comments, payment=payment, state=EnumTradeState.confirming)
 
             # add trade to database
             # ToDo: need re-sign all unconfirmed htlc message later

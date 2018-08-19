@@ -26,6 +26,7 @@ from .message import Message
 from .response import EnumResponseStatus
 
 from common.log import LOG
+from common.console import console_log
 from common.common import uri_parser
 from common.exceptions import GoTo
 from model.channel_model import EnumChannelState
@@ -95,7 +96,8 @@ class FounderMessage(Message):
             pass
 
         if status != EnumResponseStatus.RESPONSE_OK:
-            self.send_error_response(self.sender, self.receiver, self.channel_name, self.asset_type, self.nonce, status)
+            FounderResponsesMessage.send_error_response(self.sender, self.receiver, self.channel_name,
+                                                        self.asset_type, self.nonce, status)
 
         return
 
@@ -249,6 +251,7 @@ class FounderResponsesMessage(Message):
             # change channel state to OPENING
             Channel.update_channel(self.channel_name, state=EnumChannelState.OPENING.name)
             LOG.info('Channel<{}> in opening state.'.format(self.channel_name))
+            console_log.info('Channel<{}> is opening'.format(self.channel_name))
 
             channel_event.register_args(EnumEventAction.EVENT_TERMINATE, state=EnumChannelState.OPENED.name,
                                         asset_type=self.asset_type)
@@ -358,6 +361,7 @@ class FounderResponsesMessage(Message):
             deposit=deposit, balance=deposit, magic=get_magic()
         )
         LOG.info('Channel<{}> in opening state.'.format(channel_name))
+        console_log.info('Channel<{}> is opening'.format(channel_name))
 
         # add trade to database
         founder_trade = Channel.founder_or_rsmc_trade(

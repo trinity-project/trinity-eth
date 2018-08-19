@@ -148,6 +148,7 @@ class UserPromptInterface(PromptInterface):
                     super().handle_commands(command,arguments)
         except Exception as error:
             console_log.error('Error occurred to execute wallet command. Please check log for details')
+            LOG.error('Exception: {}'.format(error))
 
 
     def get_bottom_toolbar(self, cli=None):

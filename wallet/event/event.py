@@ -143,7 +143,6 @@ class EventBase(object):
         assert EnumEventAction.__contains__(action_type), 'Invalid action_type<{}>'.format(action_type)
 
     def prepare(self, block_height, *args, **kwargs):
-        print('prepare')
         LOG.debug('{} stage of event<{}-{}> at block-{}'.format(self.stage_action, self.event_name,
                                                                 self.event_type_name, block_height))
         self.set_event_start_time(int(block_height))
