@@ -454,8 +454,8 @@ def udpate_channel_when_setup(address):
 def query_channel_list(address):
     channels = APIChannel.batch_query_channel(filters={"src_addr": address, "state": EnumChannelState.OPENED.name})
     channel_list = []
-    if channels.get("content"):
-        for ch in channels["content"]:
+    if channels:
+        for ch in channels:
             channel_info = {"ChannelName": ch.channel,
                             "Founder": ch.src_addr,
                             "Receiver": ch.dest_addr,
@@ -463,8 +463,8 @@ def query_channel_list(address):
                             "Magic": ch.__dict__.get('magic')}
             channel_list.append(channel_info)
     channeld = APIChannel.batch_query_channel(filters={"dest_addr": address, "state": EnumChannelState.OPENED.name})
-    if channeld.get("content"):
-        for ch in channeld["content"]:
+    if channeld:
+        for ch in channeld:
             channel_info = {"ChannelName": ch.channel,
                             "Founder": ch.src_addr,
                             "Receiver": ch.dest_addr,
