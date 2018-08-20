@@ -3,9 +3,10 @@ import argparse
 import json
 import pprint
 import traceback
+from prompt_toolkit import print_formatted_text, PromptSession, ANSI
 from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.history import FileHistory
-from prompt_toolkit.shortcuts import print_formatted_text, PromptSession
+# from prompt_toolkit.shortcuts import print_formatted_text, PromptSession, ANSI
 from prompt_toolkit.formatted_text import FormattedText
 from prompt_toolkit.styles import Style
 from prompt_toolkit import prompt
@@ -448,6 +449,8 @@ class PromptInterface(object):
 
         print_formatted_text(FormattedText(tokens), style=self.token_style)
         print('\n')
+
+        print_formatted_text(ANSI('\x1b[31mhello \x1b[32mworld'))
 
 
         while self.go_on:

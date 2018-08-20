@@ -24,7 +24,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 import os
 import logging.config
-from trinity import __running_mode__, Console_log, TRINITY_LOG_PATH
+from trinity import __running_mode__, LOG_TO_CONSOLE, TRINITY_LOG_PATH
 LOG = logging.getLogger('logger')
 
 
@@ -48,7 +48,7 @@ log_settings = {
         'file': {
             'level': 'DEBUG',
             'class': 'logging.handlers.RotatingFileHandler',
-            'filename': '{}{}{}'.format(TRINITY_LOG_PATH, os.sep, 'trinity.common.log'),
+            'filename': '{}{}{}'.format(TRINITY_LOG_PATH, os.sep, 'trinity.log'),
             'formatter': 'release',
             'maxBytes': 5 * 1024 * 1024,
             'backupCount': 10
@@ -56,7 +56,7 @@ log_settings = {
     },
     'loggers': {
         'logger': {
-            'handlers': ['file', 'console'] if Console_log else ['file'],#if __running_mode__ else ,
+            'handlers': ['file', 'console'] if LOG_TO_CONSOLE else ['file'],#if __running_mode__ else ,
             'level': 'INFO' if __running_mode__ else 'DEBUG',
         }
     },
@@ -65,7 +65,7 @@ log_settings = {
 
 def init_logger(log_path = None, file_name=None):
     init_log_path = log_path if log_path else TRINITY_LOG_PATH
-    init_filename = file_name if file_name else 'trinity.common.log'
+    init_filename = file_name if file_name else 'trinity.log'
 
     # create the common.log path
     if not os.path.exists(init_log_path):
