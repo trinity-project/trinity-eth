@@ -37,6 +37,9 @@ class ConsoleLog(object):
 
         pass
 
+    def console(self, *args):
+        print(*args)
+
     def error(self, *args):
         print_formatted_text(ANSI(self._fg_red.format(self.text(*args))))
 
