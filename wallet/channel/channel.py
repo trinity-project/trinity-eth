@@ -30,7 +30,7 @@ from model.channel_model import APIChannel
 from model.base_enum import EnumChannelState
 from model.transaction_model import APITransaction
 from model.payment_model import APIPayment
-from wallet.utils import convert_number_auto
+from wallet.utils import convert_number_auto, get_magic
 from wallet.Interface.gate_way import sync_channel
 from common.console import console_log
 from common.common import LOG
@@ -123,8 +123,10 @@ class Channel(object):
         :param kwargs:
         :return:
         """
-        filter_src = {'src_addr':address}
-        filter_dest = {'dest_addr':address}
+        filter_src = {'src_addr':address,
+                      'magic':get_magic()}
+        filter_dest = {'dest_addr':address,
+                       'magic':get_magic()}
 
         output_text = ''
         for key, value in kwargs.items():
@@ -440,19 +442,23 @@ def sync_channel_info_to_gateway(channel_name, type, asset_type='TNC'):
 
 
 def udpate_channel_when_setup(address):
-    channels = APIChannel.batch_query_channel(filters={"src_addr": address})
+    channels = APIChannel.batch_query_channel(filters={"src_addr": address,
+                                                       "magic":get_magic()})
     for ch in channels:
         if ch.state == EnumChannelState.OPENED.name:
             sync_channel_info_to_gateway(ch.channel, "UpdateChannel")
 
-    channeld = APIChannel.batch_query_channel(filters={"dest_addr": address})
+    channeld = APIChannel.batch_query_channel(filters={"dest_addr": address,
+                                                       "magic":get_magic()})
     for ch in channeld:
         if ch.state == EnumChannelState.OPENED.name:
             sync_channel_info_to_gateway(ch.channel, "UpdateChannel")
 
 
 def query_channel_list(address):
-    channels = APIChannel.batch_query_channel(filters={"src_addr": address, "state": EnumChannelState.OPENED.name})
+    channels = APIChannel.batch_query_channel(filters={"src_addr": address,
+                                                       "state": EnumChannelState.OPENED.name,
+                                                       "magic":get_magic()})
     channel_list = []
     if channels:
         for ch in channels:
@@ -462,7 +468,9 @@ def query_channel_list(address):
                             "Balance": ch.balance,
                             "Magic": ch.__dict__.get('magic')}
             channel_list.append(channel_info)
-    channeld = APIChannel.batch_query_channel(filters={"dest_addr": address, "state": EnumChannelState.OPENED.name})
+    channeld = APIChannel.batch_query_channel(filters={"dest_addr": address,
+                                                       "state": EnumChannelState.OPENED.name,
+                                                       "magic":get_magic()})
     if channeld:
         for ch in channeld:
             channel_info = {"ChannelName": ch.channel,

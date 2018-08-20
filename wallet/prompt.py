@@ -302,8 +302,11 @@ class UserPromptInterface(PromptInterface):
         try:
             deposit = float(get_arg(arguments, 3).strip())
             partner_deposit = float(get_arg(arguments, 4).strip()) if get_arg(arguments, 4) else deposit
+            if deposit <= 0 or 0 > partner_deposit or partner_deposit > deposit:
+                console_log.error("No correct deposit value")
+                return None
         except ValueError:
-            console_log.error("No correct depoist value")
+            console_log.error("No correct deposit value")
             return None
 
         if not check_onchain_balance(self.Wallet.address, asset_type, deposit):
