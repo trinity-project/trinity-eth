@@ -47,20 +47,20 @@ class Client(object):
         :param abi:
         :return:
         """
-        return self.web3.eth.contract(address=contract_address, abi=abi)
+        return self.web3.eth.contract(address=checksum_encode(contract_address), abi=abi)
 
 
     def construct_erc20_tx(self, contract,addressFrom, addressTo,value, gasLimit=None, gasprice=None):
         tx_d = {
 
             'gasPrice': self.web3.eth.gasPrice * 2 if not gasprice  else gasprice,
-            'nonce': self.web3.eth.getTransactionCount(addressFrom),
+            'nonce': self.web3.eth.getTransactionCount(checksum_encode(addressFrom)),
         }
         if gasLimit:
             tx_d.update({"gas": gasLimit})
 
         tx = contract.functions.transfer(
-            addressTo,
+            checksum_encode(addressTo),
             int(value)
         ).buildTransaction(tx_d)
         return tx
@@ -114,7 +114,7 @@ class Client(object):
         :param address:
         :return:
         """
-        return self.web3.eth.getBalance(address)/(10**18)
+        return self.web3.eth.getBalance(checksum_encode(address))/(10**18)
 
     def get_balance_of_erc20(self,contract_address, abi, address):
         """
@@ -124,8 +124,8 @@ class Client(object):
         :param address:
         :return:
         """
-        contract = self.get_contract_instance(contract_address, abi)
-        return contract.functions.balanceOf(address).call()/(10**8)
+        contract = self.get_contract_instance(checksum_encode(contract_address), abi)
+        return contract.functions.balanceOf(checksum_encode(address)).call()/(10**8)
 
     def get_approved_asset(self, contract_address, abi, approver, spender):
         """
@@ -135,7 +135,7 @@ class Client(object):
         :param spender: the address be authorized to spend
         :return:
         """
-        contract = self.get_contract_instance(contract_address, abi)
+        contract = self.get_contract_instance(checksum_encode(contract_address), abi)
         return contract.functions.allowance(approver, spender).call()/(10**8)
 
     def get_block_count(self):
