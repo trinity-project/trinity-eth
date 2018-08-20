@@ -31,9 +31,9 @@ class ConsoleLog(object):
     for Linux or MacOS
     """
     def __init__(self):
-        self._fg_red = r'\x1b[31m{}'
-        self._fg_green = r'\x1b[32m{}'
-        self._fg_yellow = r'\x1b[33m{}'
+        self._fg_red = '\x1b[31m{}'
+        self._fg_green = '\x1b[32m{}'
+        self._fg_yellow = '\x1b[33m{}'
 
         pass
 
