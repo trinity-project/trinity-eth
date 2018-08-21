@@ -151,17 +151,8 @@ class UserPromptInterface(PromptInterface):
 
 
     def get_bottom_toolbar(self, cli=None):
-        out = []
-        try:
-            out = [
-                ("class:default", "[%s]" % (settings.NET_NAME if not PromptInterface.locked else settings.NET_NAME + "(Locked)")),
-                ("class:number", str(EventMonitor.get_wallet_block_height())),
-                ("class:default", '/'),
-                ("class:number", str(EventMonitor.get_block_height()))]
-
-        except Exception as e:
-            pass
-        return out
+        return "[{}]{}/{}".format(settings.NET_NAME if not PromptInterface.locked else settings.NET_NAME + "(Locked)",
+        str(EventMonitor.get_wallet_block_height()),str(EventMonitor.get_block_height()))
 
 
     #faucet for test tnc

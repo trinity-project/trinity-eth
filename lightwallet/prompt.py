@@ -450,8 +450,6 @@ class PromptInterface(object):
         print_formatted_text(FormattedText(tokens), style=self.token_style)
         print('\n')
 
-        print_formatted_text(ANSI('\x1b[31mhello \x1b[32mworld'))
-
 
         while self.go_on:
             session = PromptSession("trinity> ",
