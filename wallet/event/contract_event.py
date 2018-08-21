@@ -67,7 +67,7 @@ class ContractEventInterface(metaclass=SingletonClass):
 
         if float(approved_asset) >= float(deposit):
             LOG.info('Has been approved asset count: {}'.format(approved_asset))
-            return None
+            return True
 
         try:
             # return tx_id
@@ -86,6 +86,17 @@ class ContractEventInterface(metaclass=SingletonClass):
         except Exception as error:
             LOG.error('get_approved_asset error: {}'.format(error))
             return 0
+
+    @classmethod
+    def get_transaction_receipt(cls, tx_id):
+        try:
+            result = cls._eth_interface.get_transaction_receipt(tx_id)
+            if result:
+                print(result)
+            return
+        except Exception as error:
+            LOG.error('get_approved_asset error: {}'.format(error))
+            return None
 
     @classmethod
     def approve_deposit(cls, address, channel_id, nonce, founder, founder_amount, partner, partner_amount,
