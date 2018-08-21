@@ -386,7 +386,7 @@ class UserPromptInterface(PromptInterface):
                 routerinfo = json.loads(result.get("result"))
             except Exception as error:
                 LOG.error('Exception occurred during get route info. Exception: {}'.format(error))
-                console_log.info('No router was found.')
+                console_log.warning('No router was found.')
                 return
             else:
                 router=routerinfo.get("RouterInfo")

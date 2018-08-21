@@ -140,12 +140,12 @@ class Channel(object):
 
         channels = APIChannel.batch_query_channel(filters=filter_src)
         for ch in channels:
-            console_log.info('=='*10,'\nChannelName:', ch.channel, '\nState:', ch.state, '\nPeer:', ch.dest_addr,
+            console_log.console('=='*10,'\nChannelName:', ch.channel, '\nState:', ch.state, '\nPeer:', ch.dest_addr,
                   '\nBalance:', json.dumps(ch.balance, indent=1))
 
         channels = APIChannel.batch_query_channel(filters=filter_dest)
         for ch in channels:
-            console_log.info('=='*10,'\nChannelName:', ch.channel, '\nState:', ch.state, '\nPeer:', ch.src_addr,
+            console_log.console('=='*10,'\nChannelName:', ch.channel, '\nState:', ch.state, '\nPeer:', ch.src_addr,
                   '\nBalance:', json.dumps(ch.balance, indent=1))
 
     @property
