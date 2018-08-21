@@ -33,7 +33,7 @@ class SettingsHolder:
         self.NODEURL = "https://ropsten.infura.io"
         self.TNC = SUPPORTED_ASSET_TYPE['TNC']
         self.TNC_abi = erc20_asset_abi
-        self.Eth_Contract_address = "0x4800C9E1c164c87579c0a6580fF172d24ad08c09" #"0x1002D9FE1afD4DDB629E3fcdB578297EFf380106"
+        self.Eth_Contract_address = "0xdE5909c60f90b79a23ecF812a65dc649191dBafC" #"0x1002D9FE1afD4DDB629E3fcdB578297EFf380106"
         self.Eth_Contract_abi = eth_contract_abi
         self.create_client()
     def setup_privnet(self):
@@ -618,6 +618,20 @@ eth_contract_abi = [
         "type": "function"
     },
     {
+        "constant": True,
+        "inputs": [],
+        "name": "debugInfo",
+        "outputs": [
+            {
+                "name": "",
+                "type": "string"
+            }
+        ],
+        "payable": False,
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
         "constant": False,
         "inputs": [
             {
@@ -857,6 +871,25 @@ eth_contract_abi = [
             {
                 "name": "",
                 "type": "address"
+            }
+        ],
+        "payable": False,
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "constant": True,
+        "inputs": [
+            {
+                "name": "channelId",
+                "type": "bytes32"
+            }
+        ],
+        "name": "getChannelStatus",
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint8"
             }
         ],
         "payable": False,
