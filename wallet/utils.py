@@ -65,7 +65,7 @@ class DepositAuth(object):
     DateSource = "https://api.coinmarketcap.com/v2/ticker/2443/?convert=USD"
 
     @classmethod
-    def query_depoist(cls):
+    def query_deposit(cls):
         """
 
         :return:
@@ -80,7 +80,7 @@ class DepositAuth(object):
             return None
 
     @classmethod
-    def caculate_depoistusd(cls):
+    def caculate_depositusd(cls):
         """
 
         :return:
@@ -88,17 +88,17 @@ class DepositAuth(object):
         return 800*1.03**(abs((datetime.date.today()-datetime.date(2018,1,15)).days)//365)
 
     @classmethod
-    def caculate_depoist(cls):
+    def caculate_deposit(cls):
         """
 
         :return:
         """
 
-        depoist_info = cls.query_depoist()
+        deposit_info = cls.query_deposit()
         try:
-            tnc_price_usdt = depoist_info["quotes"]["USD"]["price"]
-            depoist_limit = int(cls.caculate_depoistusd()/tnc_price_usdt)
-            return depoist_limit if depoist_limit >0 else 1
+            tnc_price_usdt = deposit_info["quotes"]["USD"]["price"]
+            deposit_limit = int(cls.caculate_depositusd()/tnc_price_usdt)
+            return deposit_limit if deposit_limit >0 else 1
         except Exception as e:
             LOG.error(str(e))
             return cls.DefaultDeposit
@@ -111,7 +111,7 @@ class DepositAuth(object):
         :return:
         """
 
-        deposit = cls.caculate_depoist()
+        deposit = cls.caculate_deposit()
         cls.DefaultDeposit = deposit
         cls.LastGetTime = datetime.date.today()
 
@@ -214,17 +214,17 @@ def check_support_asset_type(asset_type):
         return False
 
 
-def check_onchain_balance(pubkey, asset_type, depoist):
+def check_onchain_balance(pubkey, asset_type, deposit):
     """
 
     :param wallet:
     :param asset_type: eg TNC
-    :param depoist:
+    :param deposit:
     :return:
     """
     asset_symbol, asset_abi = SupportAssetType.get_asset(asset_type)
     balance = get_balance(pubkey, asset_type, asset_symbol, asset_abi)
-    if float(depoist) <= float(balance):
+    if float(deposit) <= float(balance):
         return True
     else:
         return False

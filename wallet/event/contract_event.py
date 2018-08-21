@@ -116,7 +116,7 @@ class ContractEventInterface(metaclass=SingletonClass):
 
     @classmethod
     def quick_settle(cls, invoker, channel_id, nonce, founder, founder_balance,
-                     partner, partner_balance, founder_signature, partner_signature, invoker_key):
+                     partner, partner_balance, founder_signature, partner_signature, invoker_key, gwei_coef=1):
         """
 
         :param invoker:
@@ -135,7 +135,8 @@ class ContractEventInterface(metaclass=SingletonClass):
             return cls._eth_interface.quick_close_channel(invoker, channel_id, nonce,
                                                    founder, cls.multiply(founder_balance),
                                                    partner, cls.multiply(partner_balance),
-                                                   founder_signature, partner_signature, invoker_key)
+                                                   founder_signature, partner_signature, invoker_key,
+                                                          gwei_coef=gwei_coef)
         except Exception as error:
             LOG.error('quick_settle error: {}'.format(error))
             return None

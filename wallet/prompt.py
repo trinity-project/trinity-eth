@@ -116,7 +116,7 @@ class UserPromptInterface(PromptInterface):
                               "channel qrcode {on/off}",
                               "channel show uri",
 							  "channel show trans_history {channel}",
-                              "channel depoist_limit",
+                              "channel deposit_limit",
                               # "contract approve {count}",
                               # "contract check-approved"
                               ]
@@ -158,7 +158,7 @@ class UserPromptInterface(PromptInterface):
     #faucet for test tnc
     @wallet_opened
     def do_faucet(self):
-        console_log.info(self.Wallet.address)
+        console_log.console(self.Wallet.address)
         request = {
                 "jsonrpc": "2.0",
                 "method": "transferTnc",
@@ -359,7 +359,7 @@ class UserPromptInterface(PromptInterface):
                 return None
 
             if 0 >= float(count):
-                console_log.info('Not support negative number or zero.')
+                console_log.warn('Not support negative number or zero.')
                 return None
 
         # query channels by address
@@ -434,7 +434,7 @@ class UserPromptInterface(PromptInterface):
         if enable.upper() not in ["ON", "OFF"]:
             console_log.error("should be on or off")
         self.qrcode = True if enable.upper() == "ON" else False
-        console_log.info("Qrcode opened") if self.qrcode else console_log.info("Qrcode closed")
+        console_log.console("Qrcode opened") if self.qrcode else console_log.info("Qrcode closed")
         return None
 
     @channel_opened
@@ -447,7 +447,7 @@ class UserPromptInterface(PromptInterface):
         """
         channel_name = get_arg(arguments, 1)
 
-        console_log.info("Closing channel {}".format(channel_name))
+        console_log.console("Closing channel {}".format(channel_name))
         if channel_name:
             Channel.quick_close(channel_name, wallet=self.Wallet, cli=True, trigger=SettleMessage.create)
         else:
@@ -515,7 +515,7 @@ class UserPromptInterface(PromptInterface):
             return None
         if self.qrcode:
             qrcode_terminal.draw(paycode, version=4)
-        console_log.info(paycode)
+        console_log.console(paycode)
         return None
 
     @channel_opened
@@ -530,7 +530,7 @@ class UserPromptInterface(PromptInterface):
             self.help()
             return None
         if subcommand.upper() == "URI":
-            console_log.info(self.Wallet.url)
+            console_log.console(self.Wallet.url)
         elif subcommand.upper() == "TRANS_HISTORY":
             channel_name = get_arg(arguments, 2)
             if channel_name is None:
@@ -538,7 +538,7 @@ class UserPromptInterface(PromptInterface):
                 return None
             tx_his = Channel.batch_query_trade(channel_name)
             for tx in tx_his:
-                console_log.info(tx)
+                console_log.console(tx)
             return None
         else:
             self.help()

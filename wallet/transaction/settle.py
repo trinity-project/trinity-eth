@@ -215,7 +215,7 @@ class SettleResponseMessage(Message):
         super(SettleResponseMessage, self).handle()
 
         verified, status = self.verify()
-        nonce = self.channel.latest_nonce(self.channel_name)
+        nonce = SettleResponseMessage._SETTLE_NONCE
 
         try:
             # check verified message
@@ -224,7 +224,6 @@ class SettleResponseMessage(Message):
 
             # check the nonce
             if nonce != int(self.nonce):
-                incompatible_nonce = True
                 raise GoTo('Incompatible nonce<{}:{}>'.format(nonce, self.nonce))
 
             # update transaction
