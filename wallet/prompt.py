@@ -296,7 +296,7 @@ class UserPromptInterface(PromptInterface):
         asset_type = get_arg(arguments, 2)
         asset_type = asset_type.upper() if check_support_asset_type(asset_type) else None
         if not asset_type:
-            console_log.error("No support asset type %s" % asset_type)
+            console_log.error("No support asset, current just support {}".format(str(SupportAssetType.SupportAssetType)))
             return None
 
         try:
@@ -351,7 +351,7 @@ class UserPromptInterface(PromptInterface):
                 comments = info.get("comments")
                 console_log.info("will pay {} {} to {} comments {}".format(count, asset_type, receiver, comments))
             else:
-                print("The payment code is not correct")
+                console_log.error("The payment code is not correct")
                 return
         else:
             receiver = get_arg(arguments, 1)
@@ -364,7 +364,7 @@ class UserPromptInterface(PromptInterface):
 
             asset_type = asset_type.upper() if check_support_asset_type(asset_type) else None
             if not asset_type:
-                print("No support asset type %s" % asset_type)
+                console_log.error("No support asset, current just support {}".format(str(SupportAssetType.SupportAssetType)))
                 return None
 
             if 0 >= float(count):
