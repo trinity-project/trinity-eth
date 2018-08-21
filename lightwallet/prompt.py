@@ -393,8 +393,8 @@ class PromptInterface(object):
             return False
 
         if subcommand == 'configure':
-            coef = get_arg(arguments, 1)
-            if not coef:
+            coef = get_arg(arguments, 1, True)
+            if coef is None or 0 >= coef:
                 console_log.warn('Please use number. Attention: much larger, much more expensive charge.')
                 return False
             Client.set_gas_price(coef)
