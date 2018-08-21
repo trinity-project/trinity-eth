@@ -107,19 +107,20 @@ class UserPromptInterface(PromptInterface):
 
     def __init__(self):
         super().__init__()
-        self.user_commands = ["channel enable",
-                              "channel create {partner} {asset_type} {deposit}",
-                              "channel tx {payment_link}/{receiver} {asset_type} {count}",
-                              "channel close {channel}",
-                              "channel peer [state=]|[peer=]|[channel=]",
-                              "channel payment {asset}, {count}, [{comments}]",
-                              "channel qrcode {on/off}",
-                              "channel show uri",
-							  "channel show trans_history {channel}",
-                              "channel deposit_limit",
-                              # "contract approve {count}",
-                              # "contract check-approved"
-                              ]
+        self.user_commands = [
+            "channel enable",
+            "channel create {partner} {asset_type} {deposit}",
+            "channel tx {payment_link}/{receiver} {asset_type} {count}",
+            "channel close {channel}",
+            "channel peer [state=]|[peer=]|[channel=]",
+            "channel payment {asset}, {count}, [{comments}]",
+            "channel qrcode {on/off}",
+            "channel show uri",
+            "channel show trans_history {channel}",
+            "channel deposit_limit",
+            # "contract approve {count}",
+            # "contract check-approved"
+        ]
         self.commands.extend(self.user_commands)
         self.qrcode = False
 
@@ -294,10 +295,10 @@ class UserPromptInterface(PromptInterface):
             deposit = float(get_arg(arguments, 3).strip())
             partner_deposit = float(get_arg(arguments, 4).strip()) if get_arg(arguments, 4) else deposit
             if deposit <= 0 or 0 > partner_deposit or partner_deposit > deposit:
-                console_log.error("No correct deposit value")
+                console_log.error("Founder's Deposit should not be less than Partner's")
                 return None
         except ValueError:
-            console_log.error("No correct deposit value")
+            console_log.error("Founder's Deposit should not be less than Partner'")
             return None
 
         if not check_onchain_balance(self.Wallet.address, asset_type, deposit):

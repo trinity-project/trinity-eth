@@ -24,7 +24,7 @@ from lightwallet.Utils import get_arg, get_asset_id
 from lightwallet.Settings import settings
 from lightwallet.wallet import Wallet
 from model.base_enum import EnumStatusCode
-
+from blockchain.web3client import Client
 from lightwallet.UserPreferences import preferences
 import binascii
 
@@ -51,17 +51,19 @@ class PromptInterface(object):
     """
 
     commands = [
-                'help',
-                'quit',
-                'create wallet {path}',
-                'open wallet {path}',
-                'close',
-                'wallet',
-                'send {asset} {address} {amount}',
-                'history',
-                'lock cli',
-                'unlock cli'
-                ]
+        'help',
+        'quit',
+        'create wallet {path}',
+        'open wallet {path}',
+        'close',
+        'wallet',
+        'send {asset} {address} {amount}',
+        'history',
+        'lock cli',
+        'unlock cli',
+        'gas configure {amount}',
+        'gas query'
+    ]
     go_on = True
     Wallet=None
     history = FileHistory(FILENAME_PROMPT_HISTORY)
@@ -378,6 +380,35 @@ class PromptInterface(object):
             return commandParts[0], commandParts[1:]
         return None, None
 
+    @command_wapper("gas")
+    def configure_gas(self, arguments):
+        """
+
+        :param arguments:
+        :return:
+        """
+        if len(arguments) < 1:
+            print("Not enough arguments")
+            return False
+
+        subcommand = get_arg(arguments)
+        if not subcommand:
+            self.help()
+            return False
+
+        if subcommand == 'configure':
+            coef = get_arg(arguments, 1)
+            if not coef:
+                console_log.warn('Please use number. Attention: much larger, much more expensive charge.')
+                return False
+            Client.set_gas_price(coef)
+        elif subcommand == 'query':
+            console_log.info('Current use {} GWEI'.format(Client.get_gas_price()))
+        else:
+            self.help()
+        
+        return
+
     def handle_commands(self,command, arguments):
         """
 
@@ -411,6 +442,8 @@ class PromptInterface(object):
             self.show_tx(arguments)
         elif command == "lock":
             self.do_lock(arguments)
+        elif command == "gas":
+
         else:
             print("command %s not found" % command)
 

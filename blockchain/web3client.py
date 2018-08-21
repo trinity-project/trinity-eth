@@ -4,6 +4,7 @@ from ethereum.utils import ecsign, normalize_key, int_to_big_endian, checksum_en
 from web3 import Web3, HTTPProvider
 from ethereum.utils import sha3, is_string, encode_hex, checksum_encode
 
+
 def get_privtKey_from_keystore(filename,password):
     with open(filename) as keyfile:
         encrypted_key = keyfile.read()
@@ -24,6 +25,8 @@ def get_price_from_coincapmarket(asset_type):
 
 
 class Client(object):
+
+    _gwei_coeficient = 1
 
     def __init__(self, eth_url):
         self.web3 = Web3(HTTPProvider(eth_url))
@@ -166,9 +169,9 @@ class Client(object):
     def call_contract(self,contract,method,args):
         return contract.functions[method](*args).call()
 
-
-    def contruct_Transaction(self, invoker, contract, method, args, key, gwei_coef = 1, gasLimit=4600000):
+    def contruct_Transaction(self, invoker, contract, method, args, key, gwei_coef=1, gasLimit=4600000):
         # gas_price = self.web3.eth.gasPrice*10
+        gwei_coef = Client._gwei_coeficient
         tx_dict = contract.functions[method](*args).buildTransaction({
             'gas':gasLimit,
             'gasPrice': pow(10, 9) * gwei_coef,
@@ -181,6 +184,14 @@ class Client(object):
 
     def get_transaction_receipt(self, hashString):
         return self.web3.eth.getTransactionReceipt(hashString)
+
+    @classmethod
+    def set_gas_price(cls, coef=1):
+        cls._gwei_coeficient = coef
+
+    @classmethod
+    def get_gas_price(cls):
+        return cls._gwei_coeficient
 
 if __name__ == "__main__":
     myclient = Client("https://ropsten.infura.io")
