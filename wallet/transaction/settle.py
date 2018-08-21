@@ -26,6 +26,7 @@ from .message import Message
 from .response import EnumResponseStatus
 
 from common.log import LOG
+from common.console import console_log
 from common.common import uri_parser
 from common.exceptions import GoTo
 from model.channel_model import EnumChannelState
@@ -118,6 +119,7 @@ class SettleMessage(Message):
         else:
             # after send response OK, trigger the event
             event_machine.trigger_start_event(self.channel_name)
+            console_log.info('Channel {} is closing'.format(self.channel_name))
             return
 
     @staticmethod
@@ -247,6 +249,7 @@ class SettleResponseMessage(Message):
                 channel_event.register_args(EnumEventAction.EVENT_TERMINATE, state=EnumChannelState.CLOSED.name,
                                             asset_type=self.asset_type)
                 event_machine.trigger_start_event(self.channel_name)
+                console_log.info('Channel {} is closing'.format(self.channel_name))
         except GoTo as error:
             LOG.error(error)
         except Exception as error:
