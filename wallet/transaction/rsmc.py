@@ -285,7 +285,7 @@ class RsmcResponsesMessage(Message):
             Channel.update_trade(self.channel_name, self.nonce, rsmc=trade_rsmc)
 
             # update the channel balance
-            if int(self.sender_balance) >= 0 and int(self.receiver_balance) >= 0:
+            if float(self.sender_balance) >= 0 and float(self.receiver_balance) >= 0:
                 Channel.update_channel(self.channel_name,
                                        balance={self.sender_address: {self.asset_type: self.sender_balance},
                                                 self.receiver_address: {self.asset_type: self.receiver_balance}})
