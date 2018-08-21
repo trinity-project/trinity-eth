@@ -208,8 +208,15 @@ class Message(object):
         return peer if peer != source else channel_set.dest_addr
 
     @classmethod
-    def check_payment(cls, payment):
-        return 0 < float(payment)
+    def check_payment(cls, channel_name, address, asset_type, payment):
+        try:
+            channel_balance = Channel(channel_name).balance
+            balance = channel_balance.get(address).get(asset_type.upper())
+            return 0 < float(payment) <= float(balance), float(balance)
+        except Exception as error:
+            LOG.error('check payment error: {}.'.format(error),
+                      'Parameters: address<{}>, asset_type<{}>, payment<{}>'.format(address, asset_type, payment))
+            return False, None
 
     @classmethod
     def send_error_response(cls, sender:str, receiver:str, channel_name:str, asset_type:str,
@@ -238,3 +245,9 @@ class Message(object):
 
         if status is not None and status != EnumResponseStatus.RESPONSE_OK.name:
             event_machine.unregister_event(channel_name)
+
+    @classmethod
+    def check_channel_state(cls, channel_name):
+        channel = Channel(channel_name)
+        assert channel.is_opened, 'Channel is not OPENED. State<{}>'.format(channel.state)
+        return channel.is_opened

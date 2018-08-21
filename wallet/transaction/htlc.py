@@ -115,8 +115,9 @@ class RResponse(Message):
 
         status = EnumResponseStatus.RESPONSE_FAIL
         try:
-            verified, error = self.verify()
+            self.check_channel_state(self.channel_name)
 
+            verified, error = self.verify()
             if not verified:
                 status = EnumResponseStatus.RESPONSE_TRADE_VERIFIED_ERROR
                 raise GoTo('{}'.format(error))
@@ -273,10 +274,11 @@ class HtlcMessage(Message):
         if not verified:
             return verified, error
 
-        verified = self.check_payment(self.payment)
+        verified, balance = self.check_payment(self.channel_name, self.sender_address, self.asset_type, self.payment)
         if not verified:
-            return verified, 'Payment should not be negative number.'
-
+            return verified, \
+                   'HtlcMessage::verify: Payment<{}> should be satisfied 0 < payment <= {}'.format(self.payment,
+                                                                                                   balance)
         return True, None
 
     def check_if_the_last_router(self):
@@ -289,6 +291,8 @@ class HtlcMessage(Message):
         nonce = Channel.latest_nonce(self.channel_name)
 
         try:
+            self.check_channel_state(self.channel_name)
+
             verified, error = self.verify()
             # check verified message
             if not verified:
@@ -391,8 +395,6 @@ class HtlcMessage(Message):
         :param comments:
         :return:
         """
-        channel = Channel(channel_name)
-
         if not router:
             raise GoTo('Router should not be none for HTLC transaction. Channel: {}'.format(channel_name))
 
@@ -405,18 +407,17 @@ class HtlcMessage(Message):
         sender_address, _, _ = uri_parser(sender)
         receiver_address, _, _ = uri_parser(receiver)
         asset_type = asset_type.upper()
-        payment = float(payment)
-
-        verified = HtlcMessage.check_payment(payment)
-        if not verified:
-            raise GoTo('Payment<{}> should not be negative number'.format(payment))
 
         # check whether the balance is enough or not
+        payment = float(payment)
+        channel = Channel(channel_name)
         balance = channel.balance
-        sender_balance = float(balance.get(sender_address, {}).get(asset_type, 0))
-        if sender_balance < payment:
-            raise GoTo('No enough balance<{}> for payment<{}>'.format(sender_balance, payment))
+        verified, sender_balance = HtlcMessage.check_payment(channel_name, sender_address, asset_type, payment)
+        if not verified:
+            raise GoTo('HtlcMessage::create: Payment<{}> should be satisfied 0 < payment <= {}'.format(payment,
+                                                                                                       sender_balance))
 
+        # calculate the balance after payment
         sender_balance = HtlcMessage.float_calculate(sender_balance, payment, False)
         receiver_balance = balance.get(receiver_address, {}).get(asset_type)
         if receiver_balance is None:
@@ -539,11 +540,12 @@ class HtlcResponsesMessage(Message):
 
     def handle(self):
         super(HtlcResponsesMessage, self).handle()
-
-        verified, error = self.verify()
         nonce = Channel.latest_nonce(self.channel_name)
 
         try:
+            self.check_channel_state(self.channel_name)
+
+            verified, error = self.verify()
             # check verified message
             if not verified:
                 raise GoTo('Verify HTLC response message error: {}'.format(error))
@@ -602,11 +604,6 @@ class HtlcResponsesMessage(Message):
         :param comments:
         :return:
         """
-        # check payment
-        checked = RsmcMessage.check_payment(payment)
-        if not checked:
-            raise GoTo('Payment<{}> should not be negative number'.format(payment))
-
         # get nonce from latest trade
         nonce = Channel.new_nonce(channel_name)
         if HtlcResponsesMessage._FOUNDER_NONCE < nonce != int(tx_nonce):
@@ -619,9 +616,11 @@ class HtlcResponsesMessage(Message):
 
         channel = Channel(channel_name)
         balance = channel.balance
-        sender_balance = balance.get(sender_address, {}).get(asset_type, 0)
-        if float(payment) > float(sender_balance):
-            raise GoTo('Sender balance<{}> is not enough for payment<{}>.'.format(sender_balance, payment))
+        # check payment
+        checked, sender_balance = HtlcResponsesMessage.check_payment(channel_name, sender_address, asset_type, payment)
+        if not checked:
+            raise GoTo('HtlcResponse::create: Payment<{}> should be satisfied 0 < payment <= {}'.format(payment,
+                                                                                                        sender_balance))
 
         # update balance
         sender_balance = HtlcResponsesMessage.float_calculate(sender_balance, payment, False)
@@ -642,7 +641,7 @@ class HtlcResponsesMessage(Message):
             privtKey = wallet._key.private_key_string)
 
         # record the payment
-        channel.add_payment(channel_name, hashcode=hashcode, payment=payment, state=EnumTradeState.confirming)
+        Channel.add_payment(channel_name, hashcode=hashcode, payment=payment, state=EnumTradeState.confirming)
 
         # # ToDo: need re-sign all unconfirmed htlc message later
         rsmc_trade = Channel.founder_or_rsmc_trade(
@@ -686,6 +685,12 @@ class HtlcResponsesMessage(Message):
         verified, error = super(HtlcResponsesMessage, self).verify()
         if not verified:
             return verified, None
+
+        # verified, balance = self.check_payment(self.channel_name, self.receiver_address, self.asset_type, self.payment)
+        # if not verified:
+        #     return verified, \
+        #            'HtlcResponse::verify: Payment<{}> should be satisfied 0 < payment <= {}'.format(self.payment,
+        #                                                                                             balance)
 
         if self.status not in [EnumResponseStatus.RESPONSE_OK.name, EnumResponseStatus.RESPONSE_OK.value]:
             return False, 'Response status error: <{}>'.format(self.status)

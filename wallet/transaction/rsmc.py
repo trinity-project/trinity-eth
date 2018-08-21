@@ -72,15 +72,12 @@ class RsmcMessage(Message):
 
         status = EnumResponseStatus.RESPONSE_FAIL
         try:
+            self.check_channel_state(self.channel_name)
+
             verified, error = self.verify()
             if not verified:
                 status = EnumResponseStatus.RESPONSE_TRADE_VERIFIED_ERROR
-                raise GoTo('Handle RsmcMessage error: {}'.format(error))
-
-            verified = RsmcMessage.check_payment(self.payment)
-            if not verified:
-                status = EnumResponseStatus.RESPONSE_TRADE_PAYMENT_IS_NEGATIVE
-                raise GoTo('Payment<{}> should not be negative number'.format(self.payment))
+                raise GoTo('Verify RsmcMessage error: {}'.format(error))
 
             verified, error = self.verify_channel_balance(self.sender_balance+self.payment,
                                                           self.receiver_balance-self.payment)
@@ -125,12 +122,6 @@ class RsmcMessage(Message):
         :param comments:
         :return:
         """
-        payment = float(payment)
-        # payment should not be negative number
-        checked = RsmcMessage.check_payment(payment)
-        if not checked:
-            raise GoTo('Payment<{}> should not be negative number'.format(payment))
-
         # get nonce in the offline account book
         nonce = Channel.new_nonce(channel_name)
         if not nonce:
@@ -147,16 +138,17 @@ class RsmcMessage(Message):
             raise GoTo('Void balance<{}> for asset <{}>.'.format(channel.balance, asset_type))
         balance = channel.balance
 
+        payment = float(payment)
         sender_address, _, _ = uri_parser(sender)
         receiver_address, _, _ = uri_parser(receiver)
         asset_type = asset_type.upper()
 
         # check balance is enough
-        original_balance = balance.get(sender_address, {}).get(asset_type, 0)
-        sender_balance = RsmcMessage.float_calculate(original_balance, payment, False)
-        if sender_balance < 0:
-            raise GoTo('Balance<{}> is not enough for this payment<{}>'.format(payment, original_balance))
-
+        checked, sender_balance = RsmcMessage.check_payment(channel_name, sender_address, asset_type, payment)
+        if not checked:
+            raise GoTo('RsmcMessage::create: Payment<{}> should be satisfied 0 < payment <= {}'.format(payment,
+                                                                                                       sender_balance))
+        sender_balance = RsmcMessage.float_calculate(sender_balance, payment, False)
         receiver_balance = RsmcMessage.float_calculate(balance.get(receiver_address, {}).get(asset_type, 0), payment)
 
         # sender sign
@@ -202,6 +194,13 @@ class RsmcMessage(Message):
 
         if Message._FOUNDER_NONCE >= int(self.nonce):
             return False, 'Nonce MUST be larger than zero'
+
+        verified, balance = self.check_payment(self.channel_name, self.sender_address, self.asset_type, self.payment)
+        if not verified:
+            return verified, \
+                   'RsmcMessage::verify: Payment<{}> should be satisfied 0 < payment <= {}'.format(self.payment,
+                                                                                                   balance)
+
         return True, None
 
 
@@ -249,25 +248,32 @@ class RsmcResponsesMessage(Message):
 
         status = EnumResponseStatus.RESPONSE_FAIL
         try:
+            self.check_channel_state(self.channel_name)
+
             verified, error = self.verify()
             if not verified:
                 status = EnumResponseStatus.RESPONSE_TRADE_VERIFIED_ERROR
                 raise GoTo(error)
 
-            if not self.channel.is_opened:
-                status = EnumResponseStatus.RESPONSE_CHANNEL_NOT_OPENED
-                raise GoTo('Channel is not OPENED. State<{}>'.format(self.channel.state))
-
-            checked = RsmcMessage.check_payment(self.payment)
-            if not checked:
-                status = EnumResponseStatus.RESPONSE_TRADE_PAYMENT_IS_NEGATIVE
-                raise GoTo('Payment<{}> should not be negative number'.format(self.payment))
-            
             if 0 == self.role_index:
+                checked, sender_balance = self.check_payment(self.channel_name, self.receiver_address,
+                                                             self.asset_type, self.payment)
+                if not checked:
+                    status = EnumResponseStatus.RESPONSE_TRADE_INCORRECT_PAYMENT
+                    raise GoTo('RsmcMessage::create: Payment<{}> should be satisfied 0 < payment <= {}'.format(self.payment,
+                                                                                                               sender_balance))
+
                 self.create(self.channel_name, self.wallet, self.sender, self.receiver, self.payment,
                             self.sender_balance, self.receiver_balance, self.nonce, role_index=1,
                             asset_type=self.asset_type)
             else:
+                checked, sender_balance = self.check_payment(self.channel_name, self.sender_address,
+                                                             self.asset_type, self.payment)
+                if not checked:
+                    status = EnumResponseStatus.RESPONSE_TRADE_INCORRECT_PAYMENT
+                    raise GoTo('RsmcMessage::create: Payment<{}> should be satisfied 0 < payment <= {}'.format(self.payment,
+                                                                                                               sender_balance))
+
                 # check nonce here for role index = 1
                 nonce = Channel.latest_nonce(self.channel_name)
                 if Message._FOUNDER_NONCE < nonce != self.nonce:
