@@ -46,19 +46,9 @@ class Interface(object):
         :param invoker_key: sender's key
         :return: transaction id
         """
-        try:
-            tx_id = self.eth_client.contruct_Transaction(invoker, self.asset_contract, "approve",
-                                                         [self.contract_address, asset_amount],
-                                                         invoker_key, gwei_coef=gwei_coef)
-            tx_msg = 'success'
-        except Exception as e:
-            tx_id = 'none'
-            tx_msg = e
-
-        return {
-            "txData":tx_id,
-            "txMessage":tx_msg
-        }
+        return self.eth_client.contruct_Transaction(invoker, self.asset_contract, "approve",
+                                                    [self.contract_address, asset_amount],
+                                                    invoker_key, gwei_coef=gwei_coef)
 
     def get_approved_asset(self, contract_address, abi, approver, spender):
         """
@@ -131,22 +121,13 @@ class Interface(object):
         """
         founder = checksum_encode(founder)
         partner = checksum_encode(partner)
-        try:
-            tx_id = self.eth_client.contruct_Transaction(invoker, self.contract,"deposit",
-                                                         [channel_id, nonce,
-                                                         founder, founder_amount,
-                                                         partner, partner_amount,
-                                                         founder_signature, partner_signature], invoker_key,
-                                                         gwei_coef=gwei_coef)
-            tx_msg = 'success'
-        except Exception as e:
-            tx_id = 'none'
-            tx_msg = e
 
-        return {
-            "txData":tx_id,
-            "txMessage":tx_msg
-        }
+        return self.eth_client.contruct_Transaction(invoker, self.contract,"deposit",
+                                                    [channel_id, nonce,
+                                                     founder, founder_amount,
+                                                     partner, partner_amount,
+                                                     founder_signature, partner_signature], invoker_key,
+                                                    gwei_coef=gwei_coef)
 
     def update_deposit(self, invoker, channel_id, nonce, founder, founder_amount,
                        partner, partner_amount, founder_signature, partner_signature, invoker_key):
@@ -190,22 +171,12 @@ class Interface(object):
         """
         founder = checksum_encode(founder)
         partner = checksum_encode(partner)
-        try:
-            tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "quickCloseChannel",
-                                                         [channel_id, nonce,
-                                                         founder, founder_balance,
-                                                         partner, partner_balance,
-                                                         founder_signature, partner_signature], invoker_key,
-                                                         gwei_coef=gwei_coef)
-            tx_msg = 'success'
-        except Exception as e:
-            tx_id = 'none'
-            tx_msg = e
-
-        return {
-            "txData":tx_id,
-            "txMessage":tx_msg
-        }
+        return self.eth_client.contruct_Transaction(invoker, self.contract, "quickCloseChannel",
+                                                    [channel_id, nonce,
+                                                     founder, founder_balance,
+                                                     partner, partner_balance,
+                                                     founder_signature, partner_signature], invoker_key,
+                                                     gwei_coef=gwei_coef)
 
     def close_channel(self, invoker, channel_id, nonce, founder, founder_balance,
                       partner, partner_balance, founder_signature, partner_signature, invoker_key):

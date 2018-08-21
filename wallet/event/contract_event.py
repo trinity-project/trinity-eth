@@ -67,15 +67,15 @@ class ContractEventInterface(metaclass=SingletonClass):
 
         if float(approved_asset) >= float(deposit):
             LOG.info('Has been approved asset count: {}'.format(approved_asset))
-            return True
+            return None
 
-        result = cls._eth_interface.approve(address, cls.multiply(deposit), private_key, gwei_coef=gwei_coef)
-        if result.get('txMessage') in ['success']:
-            return True
-        else:
-            LOG.error('Approve asset error: {}'.format(result))
+        try:
+            # return tx_id
+            return cls._eth_interface.approve(address, cls.multiply(deposit), private_key, gwei_coef=gwei_coef)
+        except Exception as error:
+            LOG.error('authorized deposit error: {}'.format(error))
 
-        return False
+        return None
 
     @classmethod
     def get_approved_asset(cls, address):
@@ -85,18 +85,19 @@ class ContractEventInterface(metaclass=SingletonClass):
             return float(result) if result else 0
         except Exception as error:
             LOG.error('get_approved_asset error: {}'.format(error))
-            return float(0)
+            return 0
 
     @classmethod
     def approve_deposit(cls, address, channel_id, nonce, founder, founder_amount, partner, partner_amount,
                         founder_sign, partner_sign, private_key, gwei_coef=1):
         try:
-            cls._eth_interface.deposit(address,channel_id, nonce,
+            return cls._eth_interface.deposit(address,channel_id, nonce,
                                        founder, cls.multiply(founder_amount),
                                        partner, cls.multiply(partner_amount),
                                        founder_sign, partner_sign, private_key, gwei_coef=gwei_coef)
         except Exception as error:
             LOG.error('approve_deposit error: {}'.format(error))
+            return None
 
     @classmethod
     def get_channel_total_balance(cls, channel_id):
@@ -105,14 +106,28 @@ class ContractEventInterface(metaclass=SingletonClass):
     @classmethod
     def quick_settle(cls, invoker, channel_id, nonce, founder, founder_balance,
                      partner, partner_balance, founder_signature, partner_signature, invoker_key):
+        """
 
+        :param invoker:
+        :param channel_id:
+        :param nonce:
+        :param founder:
+        :param founder_balance:
+        :param partner:
+        :param partner_balance:
+        :param founder_signature:
+        :param partner_signature:
+        :param invoker_key:
+        :return:
+        """
         try:
-            cls._eth_interface.quick_close_channel(invoker, channel_id, nonce,
+            return cls._eth_interface.quick_close_channel(invoker, channel_id, nonce,
                                                    founder, cls.multiply(founder_balance),
                                                    partner, cls.multiply(partner_balance),
                                                    founder_signature, partner_signature, invoker_key)
         except Exception as error:
             LOG.error('quick_settle error: {}'.format(error))
+            return None
 
     @classmethod
     def sign_content(cls, start=3, *args, **kwargs):
