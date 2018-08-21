@@ -72,6 +72,7 @@ class Message(object):
     _SETTLE_NONCE = 0
     _FOUNDER_NONCE = 1
     _message_name = None
+    _contract_event_api = None
 
     def __init__(self, message):
         self.message = message
