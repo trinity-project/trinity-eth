@@ -609,7 +609,7 @@ class HtlcResponsesMessage(Message):
 
         # get nonce from latest trade
         nonce = Channel.new_nonce(channel_name)
-        if nonce != int(tx_nonce):
+        if HtlcResponsesMessage._FOUNDER_NONCE < nonce != int(tx_nonce):
             raise GoTo('Incompatible nonce<self: {}, peer{}> for HTLC transaction.'.format(nonce, tx_nonce))
 
         # start to verify balance

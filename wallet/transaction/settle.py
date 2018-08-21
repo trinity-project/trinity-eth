@@ -80,10 +80,9 @@ class SettleMessage(Message):
                 status = EnumResponseStatus.RESPONSE_TRADE_VERIFIED_ERROR
                 raise GoTo('Error<{}> occurred during verify message.'.format(status))
 
-            checked, nonce = SettleMessage.check_nonce(self.channel_name, self.nonce)
-            if not checked:
+            if int(self.nonce) != SettleMessage._SETTLE_NONCE :
                 status = EnumResponseStatus.RESPONSE_TRADE_INCOMPATIBLE_NONCE
-                raise GoTo('Incompatible nonce<{}>'.format(self.nonce))
+                raise GoTo('Incompatible nonce<{}>. Nonce must be zero'.format(self.nonce))
 
             checked = SettleMessage.check_balance(self.channel_name, self.asset_type,
                                                   self.sender_address, self.sender_balance,
@@ -96,16 +95,17 @@ class SettleMessage(Message):
             # trigger channel event
             self.channel.update_channel(self.channel_name, state=EnumChannelState.SETTLING.name)
 
+            # To create settle response message
+            SettleResponseMessage.create(self.wallet, self.channel_name, self.nonce,
+                                         self.asset_type, self.sender, self.receiver,
+                                         float(self.sender_balance), float(self.receiver_balance), self.commitment)
+
             # TODO: monitor event to set channel closed state
             channel_event = ChannelQuickSettleEvent(self.channel_name, False)
             channel_event.register_args(EnumEventAction.EVENT_EXECUTE)
             channel_event.register_args(EnumEventAction.EVENT_TERMINATE, state=EnumChannelState.CLOSED.name,
                                         asset_type=self.asset_type)
             event_machine.register_event(self.channel_name, channel_event)
-
-            # To create settle response message
-            SettleResponseMessage.create(self.wallet, self.channel_name, self.nonce, self.asset_type, self.sender, self.receiver,
-                                         float(self.sender_balance), float(self.receiver_balance), self.commitment)
         except GoTo as error:
             LOG.error(error)
             SettleResponseMessage.send_error_response(self.sender, self.receiver, self.channel_name, self.asset_type,
@@ -134,10 +134,7 @@ class SettleMessage(Message):
         sender = wallet.url
         channel = Channel(channel_name)
 
-        nonce = Channel.new_nonce(channel_name)
-        if nonce is None:
-            LOG.error('Are you sure the channel<{}> existed?'.format(channel_name))
-            return
+        nonce = SettleMessage._SETTLE_NONCE
 
         asset_type = asset_type.upper()
         message = SettleMessage.create_message_header(sender, receiver, SettleMessage._message_name,
@@ -286,6 +283,9 @@ class SettleResponseMessage(Message):
         sender_address, _, _ = uri_parser(sender)
         receiver_address, _, _ = uri_parser(receiver)
         asset_type = asset_type.upper()
+
+        if int(nonce) != SettleResponseMessage._SETTLE_NONCE:
+            raise GoTo('Settle response nonce<{}> must be zero.'.format(nonce))
 
         message = SettleResponseMessage.create_message_header(receiver, sender, SettleResponseMessage._message_name,
                                                               channel_name, asset_type, nonce)

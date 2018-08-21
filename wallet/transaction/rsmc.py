@@ -200,8 +200,8 @@ class RsmcMessage(Message):
         if not verified:
             return verified, error
 
-        # if 0 >= int(self.nonce):
-        #     return False, 'Nonce MUST be larger than zero'
+        if Message._FOUNDER_NONCE >= int(self.nonce):
+            return False, 'Nonce MUST be larger than zero'
         return True, None
 
 
@@ -270,7 +270,7 @@ class RsmcResponsesMessage(Message):
             else:
                 # check nonce here for role index = 1
                 nonce = Channel.latest_nonce(self.channel_name)
-                if nonce != self.nonce:
+                if Message._FOUNDER_NONCE < nonce != self.nonce:
                     status = EnumResponseStatus.RESPONSE_TRADE_INCOMPATIBLE_NONCE
                     raise GoTo('Incompatible nonce. self:<{}>, peer<{}>'.format(nonce, self.nonce))
 
@@ -349,7 +349,7 @@ class RsmcResponsesMessage(Message):
 
         # to get the data to organize the RSMC response message for role index = 1
         if 1 == int(role_index):
-            if nonce != int(tx_nonce):
+            if Message._FOUNDER_NONCE < nonce != int(tx_nonce):
                 raise GoTo('Incompatible nonce<self: {}, peer: {}> for channel<{}>. row_index<{}>'.format(nonce,
                                                                                                           tx_nonce,
                                                                                                           channel_name,

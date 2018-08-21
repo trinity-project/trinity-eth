@@ -180,7 +180,7 @@ class FounderMessage(Message):
             return verified, error
 
         if FounderMessage._FOUNDER_NONCE != int(self.nonce):
-            return False, 'Invalid nonce<{}>. Must be zero'.format(self.nonce)
+            return False, 'Invalid nonce<{}>. Must be one'.format(self.nonce)
 
         return True, None
 
@@ -273,8 +273,8 @@ class FounderResponsesMessage(Message):
         # if not verified:
         #     return verified, error
         #
-        # if 0 != self.nonce:
-        #     return False, 'Invalid nonce<{}>. Must be zero'.format(self.nonce)
+        if FounderResponsesMessage._FOUNDER_NONCE != self.nonce:
+            return False, 'Invalid nonce<{}>. Must be one'.format(self.nonce)
         #
         # if self.sender == self.receiver:
         #     return False, "Not Support Sender is Receiver"

@@ -69,7 +69,8 @@ class Message(object):
     }
 
     """
-    _FOUNDER_NONCE = 0
+    _SETTLE_NONCE = 0
+    _FOUNDER_NONCE = 1
     _message_name = None
 
     def __init__(self, message):
@@ -114,7 +115,7 @@ class Message(object):
         :return:
         """
         new_nonce = Channel.new_nonce(channel_name)
-        return int(nonce) == new_nonce, new_nonce
+        return Message._FOUNDER_NONCE < int(nonce) == new_nonce, new_nonce
 
     @classmethod
     def check_balance(cls, channel_name, asset_type, address, balance, peer_address, peer_balance):
