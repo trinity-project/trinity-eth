@@ -85,7 +85,7 @@ class EventBase(object):
         self.need_websocket = False
 
         self.contract_event_api = ContractEventInterface()
-        self.gwei_coef = self.contract_event_api.get_gwei()
+        self.gwei_coef = self.contract_event_api.gwei_coefficient
 
     def retry_event(self):
         self.retry = True
