@@ -32,7 +32,6 @@ from common.exceptions import GoTo
 from model.channel_model import EnumChannelState
 from wallet.channel import Channel
 from wallet.channel import EnumTradeType, EnumTradeRole, EnumTradeState
-from wallet.event.contract_event import contract_event_api
 from wallet.event.channel_event import ChannelQuickSettleEvent
 from wallet.event.event import EnumEventAction, event_machine
 
@@ -150,7 +149,7 @@ class SettleMessage(Message):
         sender_balance = balance.get(sender_address, {}).get(asset_type)
         receiver_balance = balance.get(receiver_address, {}).get(asset_type)
 
-        commitment = contract_event_api.sign_content(
+        commitment = SettleMessage.sign_content(
             typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
             valueList=[channel_name, nonce, sender_address, sender_balance, receiver_address, receiver_balance],
             privtKey = wallet._key.private_key_string)
@@ -294,7 +293,7 @@ class SettleResponseMessage(Message):
         message = message.message_header
 
         # sign the contents
-        self_commitment = contract_event_api.sign_content(
+        self_commitment = SettleResponseMessage.sign_content(
             typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
             valueList=[channel_name, nonce, sender_address, sender_balance, receiver_address, receiver_balance],
             privtKey = wallet._key.private_key_string)

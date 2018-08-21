@@ -34,7 +34,6 @@ from common.common import uri_parser
 from common.exceptions import GoTo, GotoIgnore
 from wallet.channel import Channel
 from wallet.channel import EnumTradeType, EnumTradeRole, EnumTradeState
-from wallet.event.contract_event import contract_event_api
 from model.channel_model import EnumChannelState
 from wallet.channel import EnumTradeType, EnumTradeRole, EnumTradeState
 from wallet.event.event import EnumEventAction, event_machine
@@ -400,8 +399,8 @@ class HtlcMessage(Message):
 
             # get nonce
         nonce = Channel.new_nonce(channel_name)
-        if nonce is None:
-            raise GoTo('No trade records in this channel<{}>'.format(channel_name))
+        if HtlcMessage._FOUNDER_NONCE > nonce:
+            raise GoTo('HtlcMessage::create: Incorrect nonce<{}> for channel<{}>'.format(nonce, channel_name))
 
         # get sender & receiver address from sender or receiver
         sender_address, _, _ = uri_parser(sender)
@@ -432,13 +431,13 @@ class HtlcMessage(Message):
 
         # 2 parts in htlc message: conclusive and inconclusive part
         # ToDo:
-        conclusive_commitment = contract_event_api.sign_content(
+        conclusive_commitment = HtlcMessage.sign_content(
             typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
             valueList=[channel_name, nonce, sender_address, sender_balance, receiver_address, receiver_balance],
             privtKey = wallet._key.private_key_string)
 
         # inconclusive part
-        inconclusive_commitment = contract_event_api.sign_content(
+        inconclusive_commitment = HtlcMessage.sign_content(
             start=5,
             typeList=['bytes32', 'uint256', 'address', 'address', 'uint256', 'uint256', 'bytes32'],
             valueList=[channel_name, nonce, sender_address, receiver_address,
@@ -605,8 +604,8 @@ class HtlcResponsesMessage(Message):
         :return:
         """
         # get nonce from latest trade
-        nonce = Channel.new_nonce(channel_name)
-        if HtlcResponsesMessage._FOUNDER_NONCE < nonce != int(tx_nonce):
+        checked, nonce = HtlcResponsesMessage.check_nonce(channel_name, tx_nonce)
+        if not checked:
             raise GoTo('Incompatible nonce<self: {}, peer{}> for HTLC transaction.'.format(nonce, tx_nonce))
 
         # start to verify balance
@@ -628,12 +627,12 @@ class HtlcResponsesMessage(Message):
 
         # 2 parts in htlc message: conclusive and inconclusive part
         # ToDo:
-        conclusive_commitment = contract_event_api.sign_content(
+        conclusive_commitment = HtlcResponsesMessage.sign_content(
             typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
             valueList=[channel_name, nonce, sender_address, sender_balance, receiver_address, receiver_balance],
             privtKey = wallet._key.private_key_string)
 
-        inconclusive_commitment = contract_event_api.sign_content(
+        inconclusive_commitment = HtlcResponsesMessage.sign_content(
             start=5,
             typeList=['bytes32', 'uint256', 'address', 'address', 'uint256', 'uint256', 'bytes32'],
             valueList=[channel_name, nonce, sender_address, receiver_address,

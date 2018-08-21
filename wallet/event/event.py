@@ -26,6 +26,7 @@ from threading import Lock
 from enum import Enum, IntEnum
 from common.coroutine import ucoro
 from common.log import LOG
+from .contract_event import ContractEventInterface
 
 
 class EnumEventAction(Enum):
@@ -83,15 +84,32 @@ class EventBase(object):
         self.start_time = 0
         self.need_websocket = False
 
-        self.gwei_coef = 6
+        self.contract_event_api = ContractEventInterface()
+        self.gwei_coef = self.contract_event_api.get_gwei()
 
     def retry_event(self):
         self.retry = True
-        self.gwei_coef = 8
+        self.gwei_coef = self.gwei_for_retry
         self._event_timeout += 20       # retry timeout: extra 20 block height. it's about 5 minutes
         self.is_event_ready = False
         self.event_stage_iterator = iter(self.event_stage_list)
         self.event_stage = self.next_stage()
+
+    @property
+    def gwei_for_retry(self):
+        auto_adaptive_list = [2, 5, 8, 10]
+
+        # gwei_coef in the adaptor
+        if self.gwei_coef not in auto_adaptive_list:
+            auto_adaptive_list.append(self.gwei_coef)
+            auto_adaptive_list.sort()
+
+        # get the index of the gwei_coef
+        coef_index = auto_adaptive_list.index(self.gwei_coef)
+        try:
+            return auto_adaptive_list[coef_index+1]
+        except Exception as error:
+            return self.gwei_coef + 1
 
     @property
     def event_timeout(self):

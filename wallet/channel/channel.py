@@ -257,7 +257,7 @@ class Channel(object):
         :return:
         """
         nonce = cls.latest_nonce(channel_name)
-        return int(nonce) + 1 if nonce is not None else None
+        return int(nonce) + 1 if nonce is not None else 0
 
     @classmethod
     def latest_nonce(cls, channel_name):

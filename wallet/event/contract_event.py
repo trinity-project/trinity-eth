@@ -28,7 +28,6 @@ from blockchain.ethInterface import Interface as EthInterface
 from blockchain.web3client import Client as EthWebClient
 from lightwallet.Settings import settings
 
-settings.setup_testnet()
 
 class ContractEventInterface(metaclass=SingletonClass):
     """
@@ -43,6 +42,10 @@ class ContractEventInterface(metaclass=SingletonClass):
                                                              settings.Eth_Contract_abi,
                                                              settings.TNC, settings.TNC_abi)
         ContractEventInterface._eth_client = EthWebClient(settings.NODEURL)
+
+    @property
+    def gwei_coefficient(self):
+        return EthWebClient.get_gas_price()
 
     @classmethod
     def sign_content(cls, start=3, *args, **kwargs):
@@ -165,6 +168,3 @@ class ContractEventInterface(metaclass=SingletonClass):
     @classmethod
     def divide(cls, asset_count):
         return float(asset_count) / cls._trinity_coef
-
-
-contract_event_api = ContractEventInterface()

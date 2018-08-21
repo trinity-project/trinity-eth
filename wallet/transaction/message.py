@@ -33,7 +33,7 @@ from wallet.Interface.gate_way import send_message
 from .response import EnumResponseStatus
 from trinity import IS_SUPPORTED_ASSET_TYPE
 from wallet.event import event_machine
-
+from wallet.event.contract_event import ContractEventInterface
 
 class MessageHeader(object):
     """
@@ -72,6 +72,7 @@ class Message(object):
     _SETTLE_NONCE = 0
     _FOUNDER_NONCE = 1
     _message_name = None
+    _contract_event_api = ContractEventInterface()
 
     def __init__(self, message):
         self.message = message
@@ -116,6 +117,10 @@ class Message(object):
         """
         new_nonce = Channel.new_nonce(channel_name)
         return Message._FOUNDER_NONCE < int(nonce) == new_nonce, new_nonce
+
+    @classmethod
+    def sign_content(cls, start=3, *args, **kwargs):
+        return cls._contract_event_api.sign_content(start, *args, **kwargs)
 
     @classmethod
     def check_balance(cls, channel_name, asset_type, address, balance, peer_address, peer_balance):
@@ -177,7 +182,8 @@ class Message(object):
             receiver_balance = channel.balance.get(self.receiver_address)
 
             if sender_balance != balance or receiver_balance != peer_balance:
-                return False, 'Balances of peers DO NOT matched'
+                return False, 'Balances of peers DO NOT matched. sender<self: {}, peer {}>, receiver<self: {}, peer {}>'\
+                    .format(sender_balance, balance, receiver_balance, peer_balance)
             pass
         except Exception as error:
             return False, 'Error to verify balance. Exception{}'.format(error)

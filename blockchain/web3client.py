@@ -170,8 +170,7 @@ class Client(object):
         return contract.functions[method](*args).call()
 
     def contruct_Transaction(self, invoker, contract, method, args, key, gwei_coef=1, gasLimit=4600000):
-        # gas_price = self.web3.eth.gasPrice*10
-        gwei_coef = Client._gwei_coeficient
+        """"""
         tx_dict = contract.functions[method](*args).buildTransaction({
             'gas':gasLimit,
             'gasPrice': pow(10, 9) * gwei_coef,

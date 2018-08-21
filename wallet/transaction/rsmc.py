@@ -31,7 +31,6 @@ from common.common import uri_parser
 from common.exceptions import GoTo, GotoIgnore
 from wallet.channel import Channel
 from wallet.channel import EnumTradeType, EnumTradeRole, EnumTradeState
-from wallet.event.contract_event import contract_event_api
 
 
 class RsmcMessage(Message):
@@ -122,16 +121,16 @@ class RsmcMessage(Message):
         :param comments:
         :return:
         """
-        # get nonce in the offline account book
-        nonce = Channel.new_nonce(channel_name)
-        if not nonce:
-            raise GoTo('Could not find the any trade history for channel<{}>. Why!'.format(channel_name))
-
         # channel
         channel = Channel(channel_name)
         # check state
         if not channel.is_opened:
             raise GoTo('Channel<{}> is not OPENED. State: {}.'.format(channel_name, channel.state))
+
+        # get nonce in the offline account book
+        nonce = Channel.new_nonce(channel_name)
+        if RsmcMessage._FOUNDER_NONCE > nonce:
+            raise GoTo('RsmcMessage::create: Incorrect nonce<{}> for channel<{}>'.format(nonce, channel_name))
 
         # to get channel balance
         if not channel.balance:
@@ -151,28 +150,27 @@ class RsmcMessage(Message):
         sender_balance = RsmcMessage.float_calculate(sender_balance, payment, False)
         receiver_balance = RsmcMessage.float_calculate(balance.get(receiver_address, {}).get(asset_type, 0), payment)
 
-        # sender sign
-        commitment = contract_event_api.sign_content(
-            typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
-            valueList=[channel_name, nonce, sender_address, sender_balance, receiver_address, receiver_balance],
-            privtKey = wallet._key.private_key_string)
-
-        # TODO: MUST record this commitment and balance info
-        # add trade to database
-        # ToDo: need re-sign all unconfirmed htlc message later
-        rsmc_trade = Channel.founder_or_rsmc_trade(
-            role=EnumTradeRole.TRADE_ROLE_FOUNDER, asset_type=asset_type, payment=payment,
-            balance=sender_balance, peer_balance=receiver_balance,
-            commitment=commitment, state=EnumTradeState.confirming
-        )
-        Channel.add_trade(channel_name, nonce=nonce, rsmc=rsmc_trade)
+        # # sender sign
+        # commitment = RsmcMessage.sign_content(
+        #     typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
+        #     valueList=[channel_name, nonce, sender_address, sender_balance, receiver_address, receiver_balance],
+        #     privtKey = wallet._key.private_key_string)
+        #
+        # # TODO: MUST record this commitment and balance info
+        # # add trade to database
+        # # ToDo: need re-sign all unconfirmed htlc message later
+        # rsmc_trade = Channel.founder_or_rsmc_trade(
+        #     role=EnumTradeRole.TRADE_ROLE_FOUNDER, asset_type=asset_type, payment=payment,
+        #     balance=sender_balance, peer_balance=receiver_balance,
+        #     commitment=commitment, state=EnumTradeState.confirming
+        # )
+        # Channel.add_trade(channel_name, nonce=nonce, rsmc=rsmc_trade)
 
         message_body = {
             "AssetType":asset_type.upper(),
             "PaymentCount": payment,
             "SenderBalance": sender_balance,
             "ReceiverBalance": receiver_balance,
-            "Commitment": commitment
         }
 
         # start to create message
@@ -256,13 +254,6 @@ class RsmcResponsesMessage(Message):
                 raise GoTo(error)
 
             if 0 == self.role_index:
-                checked, sender_balance = self.check_payment(self.channel_name, self.receiver_address,
-                                                             self.asset_type, self.payment)
-                if not checked:
-                    status = EnumResponseStatus.RESPONSE_TRADE_INCORRECT_PAYMENT
-                    raise GoTo('RsmcMessage::create: Payment<{}> should be satisfied 0 < payment <= {}'.format(self.payment,
-                                                                                                               sender_balance))
-
                 self.create(self.channel_name, self.wallet, self.sender, self.receiver, self.payment,
                             self.sender_balance, self.receiver_balance, self.nonce, role_index=1,
                             asset_type=self.asset_type)
@@ -271,7 +262,7 @@ class RsmcResponsesMessage(Message):
                                                              self.asset_type, self.payment)
                 if not checked:
                     status = EnumResponseStatus.RESPONSE_TRADE_INCORRECT_PAYMENT
-                    raise GoTo('RsmcMessage::create: Payment<{}> should be satisfied 0 < payment <= {}'.format(self.payment,
+                    raise GoTo('RsmcResponsesMessage::handle: Payment<{}> should be satisfied 0 < payment <= {}'.format(self.payment,
                                                                                                                sender_balance))
 
                 # check nonce here for role index = 1
@@ -294,7 +285,7 @@ class RsmcResponsesMessage(Message):
             Channel.update_trade(self.channel_name, self.nonce, rsmc=trade_rsmc)
 
             # update the channel balance
-            if self.sender_balance and self.receiver_balance:
+            if int(self.sender_balance) >= 0 and int(self.receiver_balance) >= 0:
                 Channel.update_channel(self.channel_name,
                                        balance={self.sender_address: {self.asset_type: self.sender_balance},
                                                 self.receiver_address: {self.asset_type: self.receiver_balance}})
@@ -339,85 +330,77 @@ class RsmcResponsesMessage(Message):
         :param comments:
         :return:
         """
-        # generate the message header
-        message = RsmcResponsesMessage.create_message_header(receiver, sender, RsmcResponsesMessage._message_name,
-                                                             channel_name, asset_type, tx_nonce)
-        message = message.message_header
-
         # get channel by channel name
         channel = Channel(channel_name)
-        # get transaction history
-        transaction = channel.latest_trade(channel_name)
-        # get nonce in the offline account book
-        if not transaction:
-            raise GoTo('No trade was recorded for channel<{}>'.format(channel_name))
-        nonce = transaction.nonce
+        if not channel.is_opened:
+            raise GoTo('RsmcResponsesMessage::create: Channel<{}> is not OPENED. State: {}.'.format(channel_name, channel.state))
 
-        # to get the data to organize the RSMC response message for role index = 1
-        if 1 == int(role_index):
-            if Message._FOUNDER_NONCE < nonce != int(tx_nonce):
-                raise GoTo('Incompatible nonce<self: {}, peer: {}> for channel<{}>. row_index<{}>'.format(nonce,
-                                                                                                          tx_nonce,
-                                                                                                          channel_name,
-                                                                                                          role_index))
+        # get latest nonce
+        checked, nonce = RsmcResponsesMessage.check_nonce(channel_name, tx_nonce)
+        if not checked:
+            raise GoTo('RsmcResponsesMessage::create: channel<{}>'.format(channel_name),
+                       'Incompatible nonce! self<{}>, peer<{}> for role index<{}>'.format(nonce, tx_nonce, role_index))
 
-            rsmc_trade = transaction.rsmc
-            if EnumTradeRole.TRADE_ROLE_FOUNDER.name !=  rsmc_trade.get('role'):
-                raise GoTo('Trade role is error in the database for channel<{}> in side {}'.format(channel_name, receiver))
-
-            message_body = {
-                "AssetType": rsmc_trade.get('asset_type'),
-                "PaymentCount": rsmc_trade.get('payment'),
-                "SenderBalance": rsmc_trade.get('balance'),
-                "ReceiverBalance": rsmc_trade.get('peer_balance'),
-                "Commitment": rsmc_trade.get('commitment'),
-                "RoleIndex": role_index
-            }
+        # different ROLE by role index
+        trade_role = None
+        role_index = int(role_index)
+        if 0 == role_index:
+            trade_role = EnumTradeRole.TRADE_ROLE_PARTNER
+        elif 1 == role_index:
+            trade_role = EnumTradeRole.TRADE_ROLE_FOUNDER
         else:
-            nonce = int(transaction.nonce) + 1
-            message.update({'TxNonce': nonce})
-            # check the validity of the nonce
-            if nonce != int(tx_nonce):
-                status = EnumResponseStatus.RESPONSE_TRADE_INCOMPATIBLE_NONCE
-                raise GoTo('Incompatible nonce<self: {}, peer: {}> for channel<{}>. row_index<{}>'.format(transaction.nonce,
-                                                                                                          tx_nonce,
-                                                                                                          channel_name,
-                                                                                                          role_index))
+            raise GoTo('Incorrect role index<{}>'.format(role_index))
 
-            # get address from uri
-            sender_address, _, _ = uri_parser(sender)
-            receiver_address, _, _ = uri_parser(receiver)
-            asset_type = asset_type.upper()
+        # get address from uri
+        sender_address, _, _ = uri_parser(sender)
+        receiver_address, _, _ = uri_parser(receiver)
+        asset_type = asset_type.upper()
 
-            # sign the trade
-            commitment = contract_event_api.sign_content(
-                typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
-                valueList=[channel_name, nonce, sender_address, sender_balance, receiver_address, receiver_balance],
-                privtKey = wallet._key.private_key_string)
+        # check balance is enough
+        checked, sender_balance = RsmcResponsesMessage.check_payment(channel_name, sender_address, asset_type, payment)
+        if not checked:
+            raise GoTo('RsmcResponsesMessage::create: Payment<{}> should be satisfied 0 < payment <= {}'.format(payment,
+                                                                                                                sender_balance))
 
-            # # just record the payment for the partner
-            # # ToDo: uncomment here if needed.
-            # if RsmcResponsesMessage.hashr_is_valid_format(comments):
-            #     channel.add_payment(channel_name, hashcode=comments, payment=payment, state=EnumTradeState.confirming)
+        # calculate the balance
+        balance = channel.balance
+        sender_balance = RsmcMessage.float_calculate(sender_balance, payment, False)
+        receiver_balance = RsmcMessage.float_calculate(balance.get(receiver_address, {}).get(asset_type, 0), payment)
 
-            # add trade to database
-            # ToDo: need re-sign all unconfirmed htlc message later
-            rsmc_trade = Channel.founder_or_rsmc_trade(
-                role=EnumTradeRole.TRADE_ROLE_PARTNER, asset_type=asset_type, payment=payment,
-                balance=receiver_balance, peer_balance=sender_balance,
-                commitment=commitment, state=EnumTradeState.confirming
-            )
-            Channel.add_trade(channel_name, nonce=nonce, rsmc=rsmc_trade)
+        # sign the trade
+        commitment = RsmcResponsesMessage.sign_content(
+            typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
+            valueList=[channel_name, nonce, sender_address, sender_balance, receiver_address, receiver_balance],
+            privtKey = wallet._key.private_key_string)
 
-            # update message body
-            message_body = {
-                "AssetType": asset_type.upper(),
-                "PaymentCount": str(payment),
-                "SenderBalance": str(receiver_balance),
-                "ReceiverBalance": str(sender_balance),
-                "Commitment": commitment,
-                "RoleIndex": str(role_index),
-            }
+        # # just record the payment for the partner
+        # # ToDo: uncomment here if needed.
+        # if RsmcResponsesMessage.hashr_is_valid_format(comments):
+        #     channel.add_payment(channel_name, hashcode=comments, payment=payment, state=EnumTradeState.confirming)
+
+        # add trade to database
+        # ToDo: need re-sign all unconfirmed htlc message later
+        rsmc_trade = Channel.founder_or_rsmc_trade(
+            role=EnumTradeRole.TRADE_ROLE_PARTNER, asset_type=asset_type, payment=payment,
+            balance=receiver_balance, peer_balance=sender_balance,
+            commitment=commitment, state=EnumTradeState.confirming
+        )
+        Channel.add_trade(channel_name, nonce=nonce, rsmc=rsmc_trade)
+
+        # update message body
+        message_body = {
+            "AssetType": asset_type.upper(),
+            "PaymentCount": str(payment),
+            "SenderBalance": str(receiver_balance),
+            "ReceiverBalance": str(sender_balance),
+            "Commitment": commitment,
+            "RoleIndex": str(role_index),
+        }
+
+        # generate the message header
+        message = RsmcResponsesMessage.create_message_header(receiver, sender, RsmcResponsesMessage._message_name,
+                                                             channel_name, asset_type, nonce)
+        message = message.message_header
 
         # to send response OK messsage
         message.update({'MessageBody': message_body})

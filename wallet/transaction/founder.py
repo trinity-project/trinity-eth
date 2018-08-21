@@ -32,7 +32,6 @@ from common.exceptions import GoTo
 from model.channel_model import EnumChannelState
 from wallet.channel import Channel
 from wallet.channel import EnumTradeType, EnumTradeRole, EnumTradeState
-from wallet.event.contract_event import contract_event_api
 from wallet.event.channel_event import ChannelDepositEvent
 from wallet.event.event import EnumEventAction, event_machine
 from wallet.utils import get_magic
@@ -134,7 +133,7 @@ class FounderMessage(Message):
         partner_address, _, _ = uri_parser(partner)
 
         # Sign this data to the
-        commitment = contract_event_api.sign_content(
+        commitment = FounderMessage.sign_content(
             typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
             valueList=[channel_name, nonce, founder_address, founder_deposit, partner_address, partner_deposit],
             privtKey = wallet._key.private_key_string )
@@ -322,7 +321,7 @@ class FounderResponsesMessage(Message):
         founder_address, _, _ = uri_parser(founder)
         partner_address, _, _ = uri_parser(partner)
         # Sign this data to the
-        commitment = contract_event_api.sign_content(
+        commitment = FounderResponsesMessage.sign_content(
             typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
             valueList=[channel_name, nonce, founder_address, founder_deposit, partner_address, partner_deposit],
             privtKey = wallet._key.private_key_string )
