@@ -72,7 +72,6 @@ class Message(object):
     _SETTLE_NONCE = 0
     _FOUNDER_NONCE = 1
     _message_name = None
-    _contract_event_api = ContractEventInterface()
 
     def __init__(self, message):
         self.message = message
@@ -119,8 +118,15 @@ class Message(object):
         return Message._FOUNDER_NONCE < int(nonce) == new_nonce, new_nonce
 
     @classmethod
+    def contract_event_api(cls):
+        if not cls._contract_event_api:
+            cls._contract_event_api = ContractEventInterface()
+
+        return cls._contract_event_api
+
+    @classmethod
     def sign_content(cls, start=3, *args, **kwargs):
-        return cls._contract_event_api.sign_content(start, *args, **kwargs)
+        return cls.contract_event_api().sign_content(start, *args, **kwargs)
 
     @classmethod
     def check_balance(cls, channel_name, asset_type, address, balance, peer_address, peer_balance):
