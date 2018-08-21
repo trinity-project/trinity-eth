@@ -387,10 +387,6 @@ class PromptInterface(object):
         :param arguments:
         :return:
         """
-        if len(arguments) < 1:
-            print("Not enough arguments")
-            return False
-
         subcommand = get_arg(arguments)
         if not subcommand:
             self.help()
@@ -406,7 +402,7 @@ class PromptInterface(object):
             console_log.info('Current use {} GWEI'.format(Client.get_gas_price()))
         else:
             self.help()
-        
+
         return
 
     def handle_commands(self,command, arguments):
@@ -443,7 +439,7 @@ class PromptInterface(object):
         elif command == "lock":
             self.do_lock(arguments)
         elif command == "gas":
-
+            self.configure_gas(arguments)
         else:
             print("command %s not found" % command)
 
