@@ -271,7 +271,7 @@ class Message(object):
 
         try:
             asset_type = asset_type.upper()
-            payment = int(payment)
+            payment = float(payment)
             channel_balance = channel.balance
             payer_balance = channel_balance.get(payer_address).get(asset_type)
             payee_balance = channel_balance.get(payee_address).get(asset_type)
