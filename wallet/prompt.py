@@ -148,6 +148,7 @@ class UserPromptInterface(PromptInterface):
                 else:
                     super().handle_commands(command,arguments)
         except Exception as error:
+            LOG.error(error)
             pass
 
 

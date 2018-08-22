@@ -23,11 +23,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 # system and 3rd party libs
+import math
 
 # self modules import
 from wallet.utils import get_magic
 from common.common import uri_parser
 from common.log import LOG
+from common.exceptions import GoTo
 from wallet.channel import Channel
 from wallet.Interface.gate_way import send_message
 from .response import EnumResponseStatus
@@ -198,20 +200,30 @@ class Message(object):
             return True, None
 
     @classmethod
-    def float_calculate(cls, balance, payment, add=True):
-        trinity_coef = 100000000 # pow(10, 8)
-        fragment_coef = 10000000
-        balance_list = float(balance).__str__().split('.')
-        payment_list = float(payment).__str__().split('.')
+    def float_to_int(cls, number:str):
+        coef = 8
+        if number.__contains__('e'):
+            number_list = number.split('e')
+            return math.ceil(float(number_list[0]) * pow(10, int(number_list[1]+coef)))
+        elif number.__contains__('.'):
+            number_list = number.split('.')
+            integer = int(number_list[0]) * pow(10, coef)
+            fragment = int(number_list[1]) * pow(10, 8 - len(number_list[1]))
+            return integer + fragment
+        else:
+            return int(number) * pow(10, 8)
 
-        int_balance = int(balance_list[0]) * trinity_coef + int(balance_list[1])*fragment_coef
-        int_payment = int(payment_list[0]) * trinity_coef + int(payment_list[1])*fragment_coef
+    @classmethod
+    def float_calculate(cls, balance, payment, add=True):
+        trinity_coef = 100000000   # pow(10, 8)
+        balance = cls.float_to_int(balance.__str__())
+        payment = cls.float_to_int(payment.__str__())
 
         # calculate
         if add:
-            result = int_balance + int_payment
+            result = balance + payment
         else:
-            result = int_balance - int_payment
+            result = balance - payment
 
         return result/trinity_coef
 
@@ -232,7 +244,11 @@ class Message(object):
         try:
             channel_balance = Channel(channel_name).balance
             balance = channel_balance.get(address).get(asset_type.upper())
-            return 0 < float(payment) <= float(balance), float(balance)
+
+            if not 0 < float(payment) <= float(balance):
+                raise GoTo('Invalid payment')
+
+            return True, float(balance)
         except Exception as error:
             LOG.error('check payment error: {}.'.format(error))
             LOG.error('Parameters: channel<{}>, address<{}>, asset_type<{}>, payment<{}>'.format(channel_name,
