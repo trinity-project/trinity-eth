@@ -257,7 +257,7 @@ class RsmcResponsesMessage(Message):
                             self.sender_balance, self.receiver_balance, self.nonce, role_index=1,
                             asset_type=self.asset_type)
             else:
-                checked, sender_balance = self.check_payment(self.channel_name, self.receiver_address,
+                checked, sender_balance = self.check_payment(self.channel_name, self.sender_address,
                                                              self.asset_type, self.payment)
                 if not checked:
                     status = EnumResponseStatus.RESPONSE_TRADE_INCORRECT_PAYMENT
