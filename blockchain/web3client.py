@@ -3,6 +3,7 @@ import requests
 from ethereum.utils import ecsign, normalize_key, int_to_big_endian, checksum_encode
 from web3 import Web3, HTTPProvider
 from ethereum.utils import sha3, is_string, encode_hex, checksum_encode
+from trinity import GWEI_COEFFICIENT
 
 
 def get_privtKey_from_keystore(filename,password):
@@ -26,7 +27,7 @@ def get_price_from_coincapmarket(asset_type):
 
 class Client(object):
 
-    _gwei_coeficient = 3
+    _gwei_coeficient = GWEI_COEFFICIENT
 
     def __init__(self, eth_url):
         self.web3 = Web3(HTTPProvider(eth_url))

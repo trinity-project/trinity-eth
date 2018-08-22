@@ -46,6 +46,9 @@ DATABASE_CONFIG = {
 }
 
 
+# local gas settings
+GWEI_COEFFICIENT = 100
+
 # Asset Type configuration
 SUPPORTED_ASSET_TYPE = {'TNC': '0x65096f2B7A8dc1592479F1911cd2B98dae4d2218'}
 IS_SUPPORTED_ASSET_TYPE = lambda asset_type: \
@@ -60,3 +63,4 @@ if __os_platform__ in ['LINUX', 'DARWIN']:
     TRINITY_LOG_PATH = os.path.join(r'/var/log', r'trinity')
 else:
     TRINITY_LOG_PATH = os.getcwd().split(os.sep)[0]+os.sep+r'temp'
+
