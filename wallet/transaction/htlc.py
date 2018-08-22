@@ -575,7 +575,7 @@ class HtlcResponsesMessage(Message):
             LOG.error('Transaction with none<{}> not found. Error: {}'.format(self.nonce, error))
         else:
             # successful action
-            LOG.debug('Succeed to quick-close channel<{}>'.format(self.channel_name))
+            LOG.debug('Succeed to htlc for channel<{}>'.format(self.channel_name))
             return
         finally:
             # rollback the resources

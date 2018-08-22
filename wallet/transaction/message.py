@@ -234,8 +234,11 @@ class Message(object):
             balance = channel_balance.get(address).get(asset_type.upper())
             return 0 < float(payment) <= float(balance), float(balance)
         except Exception as error:
-            LOG.error('check payment error: {}.'.format(error),
-                      'Parameters: address<{}>, asset_type<{}>, payment<{}>'.format(address, asset_type, payment))
+            LOG.error('check payment error: {}.'.format(error))
+            LOG.error('Parameters: channel<{}>, address<{}>, asset_type<{}>, payment<{}>'.format(channel_name,
+                                                                                                 address,
+                                                                                                 asset_type,
+                                                                                                 payment))
             return False, None
 
     @classmethod

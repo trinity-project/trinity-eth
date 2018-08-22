@@ -149,22 +149,7 @@ class RsmcMessage(Message):
         sender_balance = RsmcMessage.float_calculate(sender_balance, payment, False)
         receiver_balance = RsmcMessage.float_calculate(balance.get(receiver_address, {}).get(asset_type, 0), payment)
 
-        # # sender sign
-        # commitment = RsmcMessage.sign_content(
-        #     typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
-        #     valueList=[channel_name, nonce, sender_address, sender_balance, receiver_address, receiver_balance],
-        #     privtKey = wallet._key.private_key_string)
-        #
-        # # TODO: MUST record this commitment and balance info
-        # # add trade to database
-        # # ToDo: need re-sign all unconfirmed htlc message later
-        # rsmc_trade = Channel.founder_or_rsmc_trade(
-        #     role=EnumTradeRole.TRADE_ROLE_FOUNDER, asset_type=asset_type, payment=payment,
-        #     balance=sender_balance, peer_balance=receiver_balance,
-        #     commitment=commitment, state=EnumTradeState.confirming
-        # )
-        # Channel.add_trade(channel_name, nonce=nonce, rsmc=rsmc_trade)
-
+        # create message
         message_body = {
             "AssetType":asset_type.upper(),
             "PaymentCount": payment,
