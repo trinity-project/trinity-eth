@@ -381,6 +381,8 @@ class RsmcResponsesMessage(Message):
             balance=self_balance, peer_balance=peer_balance,
             commitment=commitment, state=EnumTradeState.confirming
         )
+        if 1 == role_index:
+            rsmc_trade.update({'balance': peer_balance, 'peer_balance': self_balance})
         Channel.add_trade(channel_name, nonce=nonce, rsmc=rsmc_trade)
 
         # update message body
