@@ -258,7 +258,7 @@ class RsmcResponsesMessage(Message):
                             self.sender_balance, self.receiver_balance, self.nonce, role_index=1,
                             asset_type=self.asset_type)
             else:
-                checked, sender_balance = self.check_payment(self.channel_name, self.sender_address,
+                checked, sender_balance = self.check_payment(self.channel_name, self.receiver_address,
                                                              self.asset_type, self.payment)
                 if not checked:
                     status = EnumResponseStatus.RESPONSE_TRADE_INCORRECT_PAYMENT
@@ -359,21 +359,21 @@ class RsmcResponsesMessage(Message):
             raise GoTo('Incorrect role index<{}>'.format(role_index))
 
         # check balance is enough
-        checked, sender_balance = RsmcResponsesMessage.check_payment(channel_name, sender_address, asset_type, payment)
+        checked, self_balance = RsmcResponsesMessage.check_payment(channel_name, sender_address, asset_type, payment)
         if not checked:
             raise GoTo('RsmcResponsesMessage::create: Payment<{}> should be satisfied 0 < payment <= {}'.format(payment,
-                                                                                                                sender_balance))
+                                                                                                                self_balance))
 
         # calculate the balance
         balance = channel.balance
-        sender_balance = RsmcMessage.float_calculate(sender_balance, payment, False)
-        receiver_balance = RsmcMessage.float_calculate(balance.get(receiver_address, {}).get(asset_type, 0), payment)
-        LOG.debug('balance: self<{}>, receiver<{}>'.format(sender_balance, receiver_balance))
+        self_balance = RsmcResponsesMessage.float_calculate(self_balance, payment, False)
+        peer_balance = RsmcResponsesMessage.float_calculate(balance.get(receiver_address, {}).get(asset_type, 0), payment)
+        LOG.debug('#################balance: self<{}>, receiver<{}>'.format(self_balance, peer_balance))
 
         # sign the trade
         commitment = RsmcResponsesMessage.sign_content(
             typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
-            valueList=[channel_name, nonce, sender_address, sender_balance, receiver_address, receiver_balance],
+            valueList=[channel_name, nonce, sender_address, self_balance, receiver_address, peer_balance],
             privtKey = wallet._key.private_key_string)
 
         # # just record the payment for the partner
@@ -385,7 +385,7 @@ class RsmcResponsesMessage(Message):
         # ToDo: need re-sign all unconfirmed htlc message later
         rsmc_trade = Channel.founder_or_rsmc_trade(
             role=trade_role, asset_type=asset_type, payment=payment,
-            balance=receiver_balance, peer_balance=sender_balance,
+            balance=self_balance, peer_balance=peer_balance,
             commitment=commitment, state=EnumTradeState.confirming
         )
         Channel.add_trade(channel_name, nonce=nonce, rsmc=rsmc_trade)
@@ -394,8 +394,8 @@ class RsmcResponsesMessage(Message):
         message_body = {
             "AssetType": asset_type.upper(),
             "PaymentCount": str(payment),
-            "SenderBalance": str(receiver_balance),
-            "ReceiverBalance": str(sender_balance),
+            "SenderBalance": str(self_balance),
+            "ReceiverBalance": str(peer_balance),
             "Commitment": commitment,
             "RoleIndex": str(role_index),
         }
