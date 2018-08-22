@@ -264,3 +264,27 @@ class Message(object):
         channel = Channel(channel_name)
         assert channel.is_opened, 'Channel is not OPENED. State<{}>'.format(channel.state)
         return channel.is_opened
+
+    @classmethod
+    def update_balance_for_channel(cls, channel_name, payer_address, payee_address, asset_type, payment):
+        channel = Channel(channel_name)
+
+        try:
+            asset_type = asset_type.upper()
+            payment = int(payment)
+            channel_balance = channel.balance
+            payer_balance = channel_balance.get(payer_address).get(asset_type)
+            payee_balance = channel_balance.get(payee_address).get(asset_type)
+
+            payer_balance = cls.float_calculate(payer_balance, payment, False)
+            payee_balance = cls.float_calculate(payee_balance, payment)
+
+            if payer_balance >= 0 and payee_balance >= 0:
+                Channel.update_channel(channel_name,
+                                       balance={payer_address: {asset_type: payer_balance},
+                                                payee_address: {asset_type: payee_balance}})
+            else:
+                raise Exception('Payer has not enough balance for this payment<{}>'.format(payment))
+
+        except Exception as error:
+            LOG.error('Update channel<{}> balance error. payment<{}>. Exception: {}'.format(channel_name, payment, error))

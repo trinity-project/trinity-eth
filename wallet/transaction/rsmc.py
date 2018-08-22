@@ -236,6 +236,7 @@ class RsmcResponsesMessage(Message):
         self.wallet = wallet
 
         self.rsmc_sign_role = 1
+        self.payer, self.payee = self.reverse_address(self.role_index, self.sender_address, self.receiver_address)
 
     def handle_message(self):
         self.handle()
@@ -247,6 +248,7 @@ class RsmcResponsesMessage(Message):
         try:
             self.check_channel_state(self.channel_name)
 
+            # get founder and partner address
             verified, error = self.verify()
             if not verified:
                 status = EnumResponseStatus.RESPONSE_TRADE_VERIFIED_ERROR
@@ -254,10 +256,10 @@ class RsmcResponsesMessage(Message):
 
             if 0 == self.role_index:
                 self.create(self.channel_name, self.wallet, self.sender, self.receiver, self.payment,
-                            self.sender_balance, self.receiver_balance, self.nonce, role_index=1,
+                            self.sender_balance, self.receiver_balance, self.nonce, role_index=self.rsmc_sign_role,
                             asset_type=self.asset_type)
             else:
-                checked, sender_balance = self.check_payment(self.channel_name, self.sender_address,
+                checked, sender_balance = self.check_payment(self.channel_name, self.payer,
                                                              self.asset_type, self.payment)
                 if not checked:
                     status = EnumResponseStatus.RESPONSE_TRADE_INCORRECT_PAYMENT
@@ -284,10 +286,7 @@ class RsmcResponsesMessage(Message):
             Channel.update_trade(self.channel_name, self.nonce, rsmc=trade_rsmc)
 
             # update the channel balance
-            if float(self.sender_balance) >= 0 and float(self.receiver_balance) >= 0:
-                Channel.update_channel(self.channel_name,
-                                       balance={self.sender_address: {self.asset_type: self.sender_balance},
-                                                self.receiver_address: {self.asset_type: self.receiver_balance}})
+            self.update_balance_for_channel(self.channel_name, self.payer, self.payee, self.asset_type, self.payment)
 
             status = EnumResponseStatus.RESPONSE_OK
 
@@ -312,6 +311,15 @@ class RsmcResponsesMessage(Message):
                 self.rollback_resource(self.channel_name, self.nonce, status=self.status)
 
         return
+
+    @classmethod
+    def reverse_address(self, role_index, sender_address, receiver_addrees):
+        if 0 == int(role_index):
+            return receiver_addrees, sender_address
+        elif 1 == int(role_index):
+            return sender_address, receiver_addrees
+        else:
+            return None, None
 
     @staticmethod
     def create(channel_name, wallet, sender, receiver, payment, sender_balance, receiver_balance, tx_nonce,
@@ -421,9 +429,15 @@ class RsmcResponsesMessage(Message):
         if not verified:
             return verified, error
 
+        # RsmcResponse verification
         if EnumResponseStatus.RESPONSE_OK.name != self.status:
             return False, self.status
 
+        # row index related check
         if self.role_index not in [0, 1]:
             return False, 'RsmcSign with illegal role index<{}>'.format(self.role_index)
+
+        if not (self.payer, self.payee):
+            return False, 'Not support role index<{}>'.format(self.role_index)
+
         return True, None
