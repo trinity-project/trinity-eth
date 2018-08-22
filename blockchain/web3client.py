@@ -26,7 +26,7 @@ def get_price_from_coincapmarket(asset_type):
 
 class Client(object):
 
-    _gwei_coeficient = 1
+    _gwei_coeficient = 3
 
     def __init__(self, eth_url):
         self.web3 = Web3(HTTPProvider(eth_url))
