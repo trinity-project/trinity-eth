@@ -204,7 +204,7 @@ class Message(object):
         coef = 8
         if number.__contains__('e'):
             number_list = number.split('e')
-            return math.ceil(float(number_list[0]) * pow(10, int(number_list[1]+coef)))
+            return math.ceil(float(number_list[0]) * pow(10, int(number_list[1])+coef))
         elif number.__contains__('.'):
             number_list = number.split('.')
             integer = int(number_list[0]) * pow(10, coef)
