@@ -341,20 +341,22 @@ class RsmcResponsesMessage(Message):
             raise GoTo('RsmcResponsesMessage::create: channel<{}>'.format(channel_name),
                        'Incompatible nonce! self<{}>, peer<{}> for role index<{}>'.format(nonce, tx_nonce, role_index))
 
+        asset_type = asset_type.upper()
+
         # different ROLE by role index
-        trade_role = None
         role_index = int(role_index)
         if 0 == role_index:
+            # get address from uri
+            sender_address, _, _ = uri_parser(sender)
+            receiver_address, _, _ = uri_parser(receiver)
             trade_role = EnumTradeRole.TRADE_ROLE_PARTNER
         elif 1 == role_index:
+            # get address from uri
+            sender_address, _, _ = uri_parser(receiver)
+            receiver_address, _, _ = uri_parser(sender)
             trade_role = EnumTradeRole.TRADE_ROLE_FOUNDER
         else:
             raise GoTo('Incorrect role index<{}>'.format(role_index))
-
-        # get address from uri
-        sender_address, _, _ = uri_parser(sender)
-        receiver_address, _, _ = uri_parser(receiver)
-        asset_type = asset_type.upper()
 
         # check balance is enough
         checked, sender_balance = RsmcResponsesMessage.check_payment(channel_name, sender_address, asset_type, payment)
@@ -366,6 +368,7 @@ class RsmcResponsesMessage(Message):
         balance = channel.balance
         sender_balance = RsmcMessage.float_calculate(sender_balance, payment, False)
         receiver_balance = RsmcMessage.float_calculate(balance.get(receiver_address, {}).get(asset_type, 0), payment)
+        LOG.debug('balance: self<{}>, receiver<{}>'.format(sender_balance, receiver_balance))
 
         # sign the trade
         commitment = RsmcResponsesMessage.sign_content(
@@ -381,7 +384,7 @@ class RsmcResponsesMessage(Message):
         # add trade to database
         # ToDo: need re-sign all unconfirmed htlc message later
         rsmc_trade = Channel.founder_or_rsmc_trade(
-            role=EnumTradeRole.TRADE_ROLE_PARTNER, asset_type=asset_type, payment=payment,
+            role=trade_role, asset_type=asset_type, payment=payment,
             balance=receiver_balance, peer_balance=sender_balance,
             commitment=commitment, state=EnumTradeState.confirming
         )
@@ -402,7 +405,7 @@ class RsmcResponsesMessage(Message):
                                                              channel_name, asset_type, nonce)
         message = message.message_header
 
-        # to send response OK messsage
+        # to send response OK message
         message.update({'MessageBody': message_body})
         message.update({'Status': EnumResponseStatus.RESPONSE_OK.name})
         if comments:
