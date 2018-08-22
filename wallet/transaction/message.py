@@ -200,11 +200,18 @@ class Message(object):
     @classmethod
     def float_calculate(cls, balance, payment, add=True):
         trinity_coef = 100000000 # pow(10, 8)
+        fragment_coef = 10000000
+        balance_list = float(balance).__str__().split('.')
+        payment_list = float(payment).__str__().split('.')
 
+        int_balance = int(balance_list[0]) * trinity_coef + int(balance_list[1])*fragment_coef
+        int_payment = int(payment_list[0]) * trinity_coef + int(payment_list[1])*fragment_coef
+
+        # calculate
         if add:
-            result = int(trinity_coef*float(balance)) + int(trinity_coef*float(payment))
+            result = int_balance + int_payment
         else:
-            result = int(trinity_coef*float(balance)) - int(trinity_coef*float(payment))
+            result = int_balance - int_payment
 
         return result/trinity_coef
 
