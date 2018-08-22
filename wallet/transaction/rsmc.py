@@ -78,8 +78,7 @@ class RsmcMessage(Message):
                 status = EnumResponseStatus.RESPONSE_TRADE_VERIFIED_ERROR
                 raise GoTo('Verify RsmcMessage error: {}'.format(error))
 
-            verified, error = self.verify_channel_balance(self.sender_balance+self.payment,
-                                                          self.receiver_balance-self.payment)
+            verified, error = self.verify_channel_balance(self.sender_balance, self.receiver_balance, self.payment)
             if not verified:
                 status = EnumResponseStatus.RESPONSE_TRADE_BALANCE_ERROR
                 raise GoTo('Verify balance error: {}'.format(error))
@@ -330,6 +329,7 @@ class RsmcResponsesMessage(Message):
         :param comments:
         :return:
         """
+        LOG.debug('#################balance: sender_balance<{}>, receiver_balance<{}>'.format(sender_balance, receiver_balance))
         # get channel by channel name
         channel = Channel(channel_name)
         if not channel.is_opened:

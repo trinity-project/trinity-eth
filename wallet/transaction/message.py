@@ -182,13 +182,13 @@ class Message(object):
 
         return True, None
 
-    def verify_channel_balance(self, balance, peer_balance):
+    def verify_channel_balance(self, balance, peer_balance, payment):
         try:
             channel = Channel(self.channel_name)
-            sender_balance = channel.balance.get(self.sender_address)
-            receiver_balance = channel.balance.get(self.receiver_address)
+            sender_balance = float(channel.balance.get(self.sender_address)) - float(payment)
+            receiver_balance = float(channel.balance.get(self.receiver_address)) + float(payment)
 
-            if sender_balance != balance or receiver_balance != peer_balance:
+            if sender_balance != float(balance) or receiver_balance != float(peer_balance):
                 return False, 'Balances of peers DO NOT matched. sender<self: {}, peer {}>, receiver<self: {}, peer {}>'\
                     .format(sender_balance, balance, receiver_balance, peer_balance)
             pass
