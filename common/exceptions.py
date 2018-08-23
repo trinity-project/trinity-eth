@@ -25,8 +25,14 @@ SOFTWARE."""
 
 
 class GoTo(Exception):
+    """simulator goto sentences"""
     pass
 
 
 class GotoIgnore(Exception):
+    pass
+
+
+class UnsupportedTrinityNumber(Exception):
+    """Unsupported trinity number type"""
     pass

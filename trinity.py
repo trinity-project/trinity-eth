@@ -64,3 +64,9 @@ if __os_platform__ in ['LINUX', 'DARWIN']:
 else:
     TRINITY_LOG_PATH = os.getcwd().split(os.sep)[0]+os.sep+r'temp'
 
+# WebSocket server configuration
+EVENT_WS_SERVER = {
+    'uri': 'ws://47.104.81.20:9000',
+    'timeout': None
+}
+
