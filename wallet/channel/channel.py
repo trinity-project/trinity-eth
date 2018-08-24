@@ -25,7 +25,7 @@ SOFTWARE."""
 import hashlib
 import json
 import time
-from .trade import EnumTradeState
+from .trade import EnumTradeState, EnumTradeRole
 from model.channel_model import APIChannel
 from model.base_enum import EnumChannelState
 from model.transaction_model import APITransaction
@@ -34,12 +34,15 @@ from wallet.utils import convert_number_auto, get_magic
 from wallet.Interface.gate_way import sync_channel
 from common.console import console_log
 from common.common import LOG
+from wallet.event.contract_event import ContractEventInterface
 
 
 class Channel(object):
     """
 
     """
+    _contract_event_api = None
+
     def __init__(self, channel_name):
         self.channel_name = channel_name
 
@@ -250,6 +253,16 @@ class Channel(object):
             return trade
 
     @classmethod
+    def latest_confirmed_trade(cls, channel_name):
+        try:
+            trade = APITransaction(channel_name).sort(key='nonce', filters={'state': EnumTradeState.confirmed.name})[0]
+        except Exception as error:
+            LOG.error('No transaction records were found for channel<{}>. Exception: {}'.format(channel_name, error))
+            return None
+        else:
+            return trade
+
+    @classmethod
     def new_nonce(cls, channel_name):
         """
 
@@ -268,6 +281,13 @@ class Channel(object):
         """
         latest_trade = cls.latest_trade(channel_name)
         return int(latest_trade.nonce) if latest_trade else None
+
+    @classmethod
+    def contract_event_api(cls):
+        if not cls._contract_event_api:
+            cls._contract_event_api = ContractEventInterface()
+
+        return cls._contract_event_api
 
     @classmethod
     def create(cls, wallet, founder, partner, asset_type, deposit, partner_deposit=None, comments=None,
@@ -375,12 +395,31 @@ class Channel(object):
             LOG.error('Failed to close channel<{}>, Exception: {}'.format(channel_name, error))
 
     @classmethod
-    def force_release_rsmc(cls, channel_name, nonce=None):
+    def force_release_rsmc(cls, wallet, channel_name, nonce=None):
+        # get records by nonce from the trade history
         if not nonce:
-            pass
+            trade = cls.latest_confirmed_trade(channel_name)
         else:
-            latest_trade = cls.latest_trade()
-            pass
+            trade = cls.query_trade(channel_name, nonce)
+            if trade:
+                trade = trade[0]
+
+        # to check the trade
+        if not trade:
+            LOG.info('No trade record could be forced to release. channel<{}>, nonce<{}>'.format(channel_name, nonce))
+            return
+
+        channel = cls(channel_name)
+        self_uri = wallet.uri
+        peer_uri = channel.peer_uri(wallet.uri)
+
+        trade_role = trade.rsmc.get('role')
+        if EnumTradeRole.TRADE_ROLE_FOUNDER.name == trade_role:
+            address = channel.channel_name
+
+        # start to send the transaction
+        # cls.contract_event_api().close_channel(wallet.address, )
+
         pass
 
     @classmethod

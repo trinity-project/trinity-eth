@@ -148,6 +148,19 @@ class ContractEventInterface(metaclass=SingletonClass):
             return None
 
     @classmethod
+    def close_channel(cls, invoker, channel_id, nonce, founder, founder_balance, partner, partner_balance,
+                      founder_signature, partner_signature, invoker_key, gwei_coef=1):
+        try:
+            return cls._eth_interface.close_channel(invoker, channel_id, nonce,
+                                                    founder, cls.multiply(founder_balance),
+                                                    partner, cls.multiply(partner_balance),
+                                                    founder_signature, partner_signature, invoker_key,
+                                                    gwei_coef=gwei_coef)
+        except Exception as error:
+            LOG.error('force_settle error: {}'.format(error))
+            return None
+
+    @classmethod
     def sign_content(cls, start=3, *args, **kwargs):
         """
 

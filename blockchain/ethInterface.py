@@ -180,7 +180,7 @@ class Interface(object):
                                                      gwei_coef=gwei_coef)
 
     def close_channel(self, invoker, channel_id, nonce, founder, founder_balance,
-                      partner, partner_balance, founder_signature, partner_signature, invoker_key):
+                      partner, partner_balance, founder_signature, partner_signature, invoker_key, gwei_coef=1):
         """
         Description: one side of the channel dismantle the channel unilaterally
         :param meaning reference "quick_close_channel"
@@ -192,7 +192,8 @@ class Interface(object):
                                                          [channel_id, nonce,
                                                          founder, founder_balance,
                                                          partner, partner_balance,
-                                                         founder_signature, partner_signature],invoker_key)
+                                                         founder_signature, partner_signature],
+                                                         invoker_key, gwei_coef=gwei_coef)
             tx_msg = 'success'
         except Exception as e:
             tx_id = 'none'
