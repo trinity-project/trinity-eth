@@ -220,6 +220,7 @@ class UserPromptInterface(PromptInterface):
     def quit(self):
         console_log.info('Shutting down. This may take about 15 sec to sync the block info')
         self.go_on = False
+        ws_instance.close()
         EventMonitor.stop_monitor()
         self.do_close_wallet()
         CurrentLiveWallet.update_current_wallet(None)

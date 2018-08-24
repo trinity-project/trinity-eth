@@ -28,7 +28,7 @@ from websocket import create_connection, \
 import socket
 import json
 import time
-from enum import IntEnum
+from enum import Enum
 from common.coroutine import ucoro, ucoro_event
 from common.log import LOG
 from trinity import EVENT_WS_SERVER
@@ -36,7 +36,7 @@ from common.singleton import SingletonClass
 from wallet.channel import Channel
 
 
-class EnumChainEventReq(IntEnum):
+class EnumChainEventReq(Enum):
     init = 'init',
     monitorTx = 'monitorTx',
     monitorBlockHeight = 'monitorBlockHeight',
@@ -47,7 +47,7 @@ class EnumChainEventReq(IntEnum):
     monitorSettle = 'monitorSettle'
 
 
-class EnumChainEventResp(IntEnum):
+class EnumChainEventResp(Enum):
     initResponse = 'initResponse',
     monitorTxResponse = 'monitorTxResponse',
     monitorBlockHeightResponse = 'monitorBlockHeightResponse',
