@@ -145,7 +145,7 @@ class WebSocketConnection(metaclass=SingletonClass):
             time.sleep(2)
             count += 1
 
-    def handle(self, *args):
+    def handle(self):
         # co-routine handle????
         coro_handler = self.handle_event()
         next(coro_handler)

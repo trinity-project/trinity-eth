@@ -29,6 +29,8 @@ from wallet.transaction.rsmc import RsmcMessage, RsmcResponsesMessage
 from wallet.transaction.htlc import HtlcMessage, HtlcResponsesMessage, RResponse, RResponseAck
 from wallet.transaction.settle import SettleMessage, SettleResponseMessage
 from wallet.Interface.rpc_interface import RpcInteraceApi,CurrentLiveWallet
+from wallet.event.chain_event import event_init_wallet
+from wallet.connection.websocket import ws_instance
 from wallet.utils import get_magic
 from twisted.web.server import Site
 from lightwallet.prompt import PromptInterface
@@ -38,7 +40,6 @@ import time
 from model.base_enum import EnumChannelState
 from wallet.Interface import gate_way
 from blockchain.interface import get_block_count
-from blockchain.event import event_init_wallet
 from blockchain.monitor import monitorblock,EventMonitor
 import requests
 import qrcode_terminal
@@ -718,6 +719,7 @@ def main():
     reactor.callInThread(UserPrompt.run)
     reactor.callInThread(UserPrompt.handlemaessage)
     reactor.callInThread(monitorblock)
+    reactor.callInThread(ws_instance.handle)
     reactor.run()
 
 if __name__ == "__main__":
