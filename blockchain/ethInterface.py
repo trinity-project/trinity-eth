@@ -305,19 +305,14 @@ class Interface(object):
             "txMessage":tx_msg
         }
 
-    def withdraw_settle(self, invoker, channel_id, nonce, founder, partner, lock_period, lock_amount, lock_hash,
-                        founder_signature, partner_signature, secret, invoker_key):
+    def withdraw_settle(self, invoker, channel_id, lock_hash, secret, invoker_key):
         """
         Description: HTLC receiver can apply for withdraw the lock assets after lock period timeout
         :param meaning reference "withdraw"
         """
-        founder = checksum_encode(founder)
-        partner = checksum_encode(partner)
         try:
             tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "withdrawSettle",
-                                                          [channel_id, nonce, founder, partner,
-                                                          lock_period, lock_amount, lock_hash,
-                                                          founder_signature, partner_signature, secret], invoker_key)
+                                                          [channel_id, lock_hash, secret], invoker_key)
             tx_msg = 'success'
         except Exception as e:
             tx_id = 'none'
