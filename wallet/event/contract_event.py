@@ -87,7 +87,7 @@ class ContractEventInterface(metaclass=SingletonClass):
     def get_approved_asset(cls, address):
         try:
             result = cls._eth_interface.get_approved_asset(settings.TNC, settings.TNC_abi,
-                                                           address, settings.Eth_Contract_address)
+                                                           address, settings.ETH_Data_Contract_address)
             return float(result) if result else 0
         except Exception as error:
             LOG.error('get_approved_asset error: {}'.format(error))
