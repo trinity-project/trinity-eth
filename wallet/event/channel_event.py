@@ -24,7 +24,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 from .event import EventBase, EnumEventType, EnumEventAction
 from wallet.channel import Channel, sync_channel_info_to_gateway
-from blockchain.event import event_test_state
+from wallet.event.chain_event import event_monitor_settle, event_monitor_close_channel
 from common.log import LOG
 from common.console import console_log
 
@@ -111,6 +111,10 @@ class ChannelDepositEvent(ChannelEventBase):
             Channel.update_channel(self.channel_name, state=state)
             sync_channel_info_to_gateway(self.channel_name, 'AddChannel', asset_type)
             console_log.info('Channel {} state is {}'.format(self.channel_name, state))
+
+            # to trigger event
+            event_monitor_close_channel(self.channel_name)
+            event_monitor_settle(self.channel_name)
             self.next_stage()
 
     def timeout_handler(self, block_height, *args, **kwargs):

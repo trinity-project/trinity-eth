@@ -24,6 +24,7 @@ SOFTWARE."""
 import time
 from wallet.event import event_machine
 from blockchain.interface import get_block_count
+from wallet.event.chain_event import ws_instance
 
 
 class EventMonitor(object):
