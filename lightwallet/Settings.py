@@ -33,7 +33,7 @@ class SettingsHolder:
         self.NODEURL = "https://ropsten.infura.io"
         self.TNC = SUPPORTED_ASSET_TYPE['TNC']
         self.TNC_abi = erc20_asset_abi
-        self.Eth_Contract_address = "0xF904cC968B159A8D3cBB9A259a78a348AFA1F592" #"0x1002D9FE1afD4DDB629E3fcdB578297EFf380106"
+        self.Eth_Contract_address = "0x5e5FbB45B17e0ca2F898b0967742D6FC1A4DEeB6" #"0x1002D9FE1afD4DDB629E3fcdB578297EFf380106"
         self.Eth_Contract_abi = eth_contract_abi
         self.create_client()
     def setup_privnet(self):
@@ -731,6 +731,11 @@ eth_contract_abi = [
                 "indexed": False,
                 "name": "hashLock",
                 "type": "bytes32"
+            },
+            {
+                "indexed": False,
+                "name": "",
+                "type": "bytes32"
             }
         ],
         "name": "Withdraw",
@@ -832,28 +837,6 @@ eth_contract_abi = [
             },
             {
                 "indexed": False,
-                "name": "hashLock",
-                "type": "bytes32"
-            },
-            {
-                "indexed": False,
-                "name": "balance",
-                "type": "uint256"
-            }
-        ],
-        "name": "WithdrawSettle",
-        "type": "event"
-    },
-    {
-        "anonymous": False,
-        "inputs": [
-            {
-                "indexed": False,
-                "name": "channleId",
-                "type": "bytes32"
-            },
-            {
-                "indexed": False,
                 "name": "closer",
                 "type": "address"
             },
@@ -895,7 +878,7 @@ eth_contract_abi = [
                 "type": "uint256"
             }
         ],
-        "name": "WithdrawUpdate",
+        "name": "WithdrawSettle",
         "type": "event"
     },
     {
@@ -928,6 +911,28 @@ eth_contract_abi = [
             }
         ],
         "name": "UpdateDeposit",
+        "type": "event"
+    },
+    {
+        "anonymous": False,
+        "inputs": [
+            {
+                "indexed": False,
+                "name": "channleId",
+                "type": "bytes32"
+            },
+            {
+                "indexed": False,
+                "name": "hashLock",
+                "type": "bytes32"
+            },
+            {
+                "indexed": False,
+                "name": "balance",
+                "type": "uint256"
+            }
+        ],
+        "name": "WithdrawUpdate",
         "type": "event"
     },
     {
@@ -1153,6 +1158,48 @@ eth_contract_abi = [
                 "type": "bytes32"
             },
             {
+                "name": "nonce",
+                "type": "uint256"
+            },
+            {
+                "name": "funder",
+                "type": "address"
+            },
+            {
+                "name": "funderBalance",
+                "type": "uint256"
+            },
+            {
+                "name": "partner",
+                "type": "address"
+            },
+            {
+                "name": "partnerBalance",
+                "type": "uint256"
+            },
+            {
+                "name": "closerSignature",
+                "type": "bytes"
+            },
+            {
+                "name": "partnerSignature",
+                "type": "bytes"
+            }
+        ],
+        "name": "withdrawBalance",
+        "outputs": [],
+        "payable": False,
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "constant": False,
+        "inputs": [
+            {
+                "name": "channelId",
+                "type": "bytes32"
+            },
+            {
                 "name": "lockHash",
                 "type": "bytes32"
             },
@@ -1166,26 +1213,6 @@ eth_contract_abi = [
         "payable": False,
         "stateMutability": "nonpayable",
         "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "name": "_tokenAddress",
-                "type": "address"
-            },
-            {
-                "name": "_dataAddress",
-                "type": "address"
-            }
-        ],
-        "payable": False,
-        "stateMutability": "nonpayable",
-        "type": "constructor"
-    },
-    {
-        "payable": False,
-        "stateMutability": "nonpayable",
-        "type": "fallback"
     },
     {
         "constant": False,
@@ -1215,16 +1242,16 @@ eth_contract_abi = [
                 "type": "uint256"
             },
             {
+                "name": "lockHash",
+                "type": "bytes32"
+            },
+            {
                 "name": "partnerAsignature",
                 "type": "bytes"
             },
             {
                 "name": "partnerBsignature",
                 "type": "bytes"
-            },
-            {
-                "name": "lockHash",
-                "type": "bytes32"
             }
         ],
         "name": "withdrawUpdate",
@@ -1232,6 +1259,26 @@ eth_contract_abi = [
         "payable": False,
         "stateMutability": "nonpayable",
         "type": "function"
+    },
+    {
+        "payable": False,
+        "stateMutability": "nonpayable",
+        "type": "fallback"
+    },
+    {
+        "inputs": [
+            {
+                "name": "_tokenAddress",
+                "type": "address"
+            },
+            {
+                "name": "_dataAddress",
+                "type": "address"
+            }
+        ],
+        "payable": False,
+        "stateMutability": "nonpayable",
+        "type": "constructor"
     },
     {
         "constant": True,

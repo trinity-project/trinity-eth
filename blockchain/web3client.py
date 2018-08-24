@@ -193,6 +193,9 @@ class Client(object):
     def get_gas_price(cls):
         return cls._gwei_coeficient
 
+    def get_estimate_gas(self, invoker, contract, method, args):
+        return  contract.functions[method](*args).estimateGas({'from':invoker})
+
 if __name__ == "__main__":
     myclient = Client("https://ropsten.infura.io")
     print(myclient.get_block_count())
