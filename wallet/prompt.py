@@ -39,7 +39,7 @@ from model.base_enum import EnumChannelState
 from wallet.Interface import gate_way
 from blockchain.interface import get_block_count
 from blockchain.event import event_init_wallet
-from blockchain.monior import monitorblock,EventMonitor
+from blockchain.monitor import monitorblock,EventMonitor
 import requests
 import qrcode_terminal
 from wallet.configure import Configure

@@ -29,6 +29,7 @@ from common.log import LOG
 def ucoro(timeout=0.1, once=False):
     def handler(callback):
         def wrapper(*args, **kwargs):
+            received = None
             # use such mode to modulate blocking-mode to received
             while True:
                 try:
@@ -36,6 +37,7 @@ def ucoro(timeout=0.1, once=False):
                     if received in ['exit', None]:
                         break
 
+                    kwargs.update({'received': received})
                     callback(*args, **kwargs)
                 except Exception as error:
                     LOG.error('Co-routine received<{}>, error: {}'.format(received, error))
@@ -54,7 +56,6 @@ def ucoro_event(coro, iter_data):
     try:
         coro.send(iter_data)
     except StopIteration as error:
-        LOG.debug('Co-routine has been killed')
-        pass
+        LOG.debug('Co-routine has been killed.')
     except Exception as error:
         LOG.warning('Error occurred during using co-routine. error: {}'.format(error))
