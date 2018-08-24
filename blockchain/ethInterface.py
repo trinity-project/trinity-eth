@@ -21,7 +21,7 @@ class Interface(object):
             cls.__species = object.__new__(cls)
         return cls.__species
 
-    def __init__(self, url, contract_address, contract_abi, asset_address, asset_abi):
+    def __init__(self, url, data_contract_address,  contract_address, contract_abi, asset_address, asset_abi):
         """
 
         :param url: eth contract running location
@@ -34,6 +34,7 @@ class Interface(object):
             self.__class__.__first_init = False
             self.eth_client = Client(eth_url=url)
             self.contract_address = checksum_encode(contract_address)
+            self.data_contract_address = checksum_encode(data_contract_address)
 
             self.contract=self.eth_client.get_contract_instance(contract_address,contract_abi)
             self.asset_contract=self.eth_client.get_contract_instance(asset_address,asset_abi)
@@ -47,7 +48,7 @@ class Interface(object):
         :return: transaction id
         """
         return self.eth_client.contruct_Transaction(invoker, self.asset_contract, "approve",
-                                                    [self.contract_address, asset_amount],
+                                                    [self.data_contract_address, asset_amount],
                                                     invoker_key, gwei_coef=gwei_coef)
 
     def get_approved_asset(self, contract_address, abi, approver, spender):

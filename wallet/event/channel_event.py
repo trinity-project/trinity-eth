@@ -24,7 +24,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 from .event import EventBase, EnumEventType, EnumEventAction
 from wallet.channel import Channel, sync_channel_info_to_gateway
-from wallet.event.chain_event import event_monitor_settle, event_monitor_close_channel
+from wallet.event.chain_event import event_monitor_settle, \
+    event_monitor_close_channel, \
+    event_test_state
 from common.log import LOG
 from common.console import console_log
 

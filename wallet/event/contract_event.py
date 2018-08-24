@@ -38,9 +38,12 @@ class ContractEventInterface(metaclass=SingletonClass):
     _eth_client = None
 
     def __init__(self):
-        ContractEventInterface._eth_interface = EthInterface(settings.NODEURL, settings.Eth_Contract_address,
+        ContractEventInterface._eth_interface = EthInterface(settings.NODEURL,
+                                                             settings.ETH_Data_Contract_address,
+                                                             settings.Eth_Contract_address,
                                                              settings.Eth_Contract_abi,
-                                                             settings.TNC, settings.TNC_abi)
+                                                             settings.TNC,
+                                                             settings.TNC_abi)
         ContractEventInterface._eth_client = EthWebClient(settings.NODEURL)
 
     @property

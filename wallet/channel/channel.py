@@ -375,6 +375,19 @@ class Channel(object):
             LOG.error('Failed to close channel<{}>, Exception: {}'.format(channel_name, error))
 
     @classmethod
+    def force_release_rsmc(cls, channel_name, nonce=None):
+        if not nonce:
+            pass
+        else:
+            latest_trade = cls.latest_trade()
+            pass
+        pass
+
+    @classmethod
+    def force_release_htlc(cls, channel_name):
+        pass
+
+    @classmethod
     def founder_or_rsmc_trade(cls, role, asset_type, payment, balance, peer_balance, commitment=None, peer_commitment=None,
                               state=EnumTradeState.confirming):
         asset_type = asset_type.upper()
