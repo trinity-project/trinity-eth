@@ -167,12 +167,10 @@ class WebSocketConnection(metaclass=SingletonClass):
         while WebSocketConnection._websocket_listening:
             try:
                 response = self.receive()
-                LOG.debug('response is {}'.format(response))
                 block_height = get_block_count()
 
                 # handle response
-                if not response:
-                    LOG.debug('response is {}'.format(response))
+                if response:
                     self.handle_event(block_height, response)
 
                 ucoro_event(_event_coroutine, block_height)
@@ -188,16 +186,17 @@ class WebSocketConnection(metaclass=SingletonClass):
             return
 
         try:
-            message_type = received.get('messageType')
+            message = json.loads(received)
+            message_type = message.get('messageType')
 
             # start to handle the event
             if EnumChainEventResp.__dict__.__contains__(message_type):
-                LOG.info('Handle message<{}> status <{}> at block<{}>.'.format(message_type, received.get('state'), block_height))
+                LOG.info('Handle message<{}> status <{}> at block<{}>.'.format(message_type, message.get('state'), block_height))
             elif EnumChainEventReq.__dict__.__contains__(message_type):
                 LOG.info('Handle message<{}> at block<{}>'.format(message_type, block_height))
-                self.__getattribute__(message_type)(received)
+                self.__getattribute__(message_type)(message)
             else:
-                LOG.info('MessageType: {}. Test or invalid message: {} at block<{}>'.format(message_type, received, block_height))
+                LOG.info('MessageType: {}. Test or invalid message: {} at block<{}>'.format(message_type, message, block_height))
         except Exception as error:
             LOG.error('WebSocket handle event<{}> error: {}'.format(received, error))
 
