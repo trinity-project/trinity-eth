@@ -255,7 +255,9 @@ class Channel(object):
     @classmethod
     def latest_confirmed_trade(cls, channel_name):
         try:
-            trade = APITransaction(channel_name).sort(key='nonce', filters={'state': EnumTradeState.confirmed.name})[0]
+            filters = {'$or': [{'founder.state': EnumTradeState.confirmed.name},
+                               {'rsmc.state': EnumTradeState.confirmed.name}]}
+            trade = APITransaction(channel_name).sort(key='nonce', filters=filters)[0]
         except Exception as error:
             LOG.error('No transaction records were found for channel<{}>. Exception: {}'.format(channel_name, error))
             return None
@@ -401,7 +403,7 @@ class Channel(object):
         if not nonce:
             trade = cls.latest_confirmed_trade(channel_name)
         else:
-            trade = cls.query_trade(channel_name, nonce)
+            trade = cls.query_trade(channel_name, int(nonce))
             if trade:
                 trade = trade[0]
         nonce = int(trade.nonce)
@@ -410,6 +412,7 @@ class Channel(object):
         if not trade:
             LOG.info('No trade record could be forced to release. channel<{}>, nonce<{}>'.format(channel_name, nonce))
             return
+        LOG.debug('Force to close channel<{}> with nonce<{}>'.format(channel_name, nonce))
 
         channel = cls(channel_name)
         trade_rsmc = trade.rsmc
