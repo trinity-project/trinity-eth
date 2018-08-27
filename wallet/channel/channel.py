@@ -390,38 +390,61 @@ class Channel(object):
             LOG.error('Failed to close channel<{}>, Exception: {}'.format(channel_name, error))
 
     @classmethod
-    def force_release_rsmc(cls, wallet, channel_name, nonce=None):
+    def force_release_rsmc(cls, uri=None, channel_name=None, nonce=None, sign_key=None, gwei_coef=1, trigger=None):
         """
 
-        :param wallet:
+        :param uri:
         :param channel_name:
         :param nonce:
+        :param sign_key:
         :param gwei_coef:
+        :param trigger:
         :return:
         """
-        # get records by nonce from the trade history
-        if not nonce:
-            trade = cls.latest_confirmed_trade(channel_name)
-        else:
-            trade = cls.query_trade(channel_name, int(nonce))
-            if trade:
-                trade = trade[0]
-        nonce = int(trade.nonce)
+        if not (uri and channel_name and sign_key and trigger):
+            LOG.warn('uri<{}>, channel_name<{}>, trigger<{}> and sign_key should not be none'.format(uri, channel_name,
+                                                                                                     trigger))
+            return
 
-        # to check the trade
-        if not trade:
+        try:
+            # get records by nonce from the trade history
+            if not nonce:
+                trade = cls.latest_confirmed_trade(channel_name)
+            else:
+                trade = cls.query_trade(channel_name, int(nonce))
+                if trade:
+                    trade = trade[0]
+            nonce = int(trade.nonce)
+
+            if 1 == nonce:
+                trade_rsmc = trade.founder
+            else:
+                trade_rsmc = trade.rsmc
+        except Exception:
             LOG.info('No trade record could be forced to release. channel<{}>, nonce<{}>'.format(channel_name, nonce))
-            return None
-
-        channel = cls(channel_name)
-        peer_uri = channel.peer_uri(wallet.url)
-        peer_address, _, _ = uri_parser(peer_uri)
-        if 1 == nonce:
-            trade_rsmc = trade.founder
         else:
-            trade_rsmc = trade.rsmc
+            channel = cls(channel_name)
+            peer_uri = channel.peer_uri(uri)
+            self_address, _, _ = uri_parser(uri)
+            peer_address, _, _ = uri_parser(peer_uri)
 
-        return trade_rsmc
+            LOG.debug('Force to close channel<{}> with nonce<{}>'.format(channel_name, nonce))
+            LOG.debug('Trade RSMC part: {}'.format(trade_rsmc))
+            trade_role = trade.rsmc.get('role')
+            if EnumTradeRole.TRADE_ROLE_FOUNDER.name == trade_role:
+                trigger(self_address, channel_name, nonce,
+                        self_address, trade_rsmc.get('balance'),
+                        peer_address, trade_rsmc.get('peer_balance'),
+                        trade_rsmc.get('commitment'), trade_rsmc.get('peer_commitment'),
+                        sign_key, gwei_coef=gwei_coef)
+            else:
+                trigger(self_address, channel_name, nonce,
+                        peer_address, trade_rsmc.get('peer_balance'),
+                        self_address, trade_rsmc.get('balance'),
+                        trade_rsmc.get('peer_commitment'), trade_rsmc.get('commitment'),
+                        sign_key, gwei_coef=gwei_coef)
+
+        return
 
     @classmethod
     def force_release_htlc(cls, channel_name):

@@ -30,6 +30,7 @@ from wallet.event.chain_event import event_monitor_settle, \
     event_test_state
 from common.log import LOG
 from common.console import console_log
+from common.common import uri_parser
 
 
 class ChannelEventBase(EventBase):
@@ -178,11 +179,22 @@ class ChannelForceSettleEvent(ChannelEventBase):
         self.event_stage_iterator = iter(self.event_stage_list)
         self.event_stage = self.next_stage()
 
-    def execute(self, block_height, invoker_uri='', channel_name='', trade='', invoker_key='', gwei=None):
+    def execute(self, block_height, invoker_uri='', channel_name='', nonce=None, invoker_key='', gwei=None):
+        """
+
+        :param block_height:
+        :param invoker_uri:
+        :param channel_name:
+        :param trade:
+        :param invoker_key:
+        :param gwei:
+        :return:
+        """
         super(ChannelForceSettleEvent, self).execute(block_height)
 
-        self.contract_event_api.close_channel(invoker, channel_id, nonce, founder, founder_balance, partner, partner_balance,
-                                              founder_signature, partner_signature, invoker_key, gwei_coef=gwei_coef)
+        # close channel event
+        Channel.force_release_rsmc(invoker_uri, channel_name, nonce, invoker_key, gwei_coef=gwei,
+                                   trigger=self.contract_event_api.close_channel)
 
         # set channel settling
         Channel.update_channel(self.channel_name, state=EnumChannelState.SETTLING.name)

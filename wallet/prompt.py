@@ -481,10 +481,10 @@ class UserPromptInterface(PromptInterface):
 
         console_log.console("Force to close channel {}".format(channel_name))
         if channel_name:
-            rsmc_part = Channel.force_release_rsmc(self.Wallet, channel_name, nonce=nonce, gwei_coef=gwei_coef)
             channel_event = ChannelForceSettleEvent(channel_name, True)
             channel_event.register_args(EnumEventAction.EVENT_EXECUTE,
-                                        self.Wallet.url, channel_name, rsmc_part, self.Wallet._key.private_key_string)
+                                        self.Wallet.url, channel_name, nonce, gwei_coef,
+                                        self.Wallet._key.private_key_string)
             ws_instance.register_event(channel_event)
         else:
             console_log.warn("No Channel Create")
