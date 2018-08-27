@@ -155,7 +155,7 @@ class WebSocketConnection(metaclass=SingletonClass):
 
         :return:
         """
-        _event_coroutine = self.timer_event
+        _event_coroutine = self.timer_event()
         next(_event_coroutine)
         self.prepare_handle_event()
 
@@ -189,14 +189,14 @@ class WebSocketConnection(metaclass=SingletonClass):
             LOG.info('MessageType: {}. Test or invalid message: {} at block<{}>'.format(message_type, received, block_height))
 
     @ucoro(0.2)
-    def timer_event(self, block_height=None):
-        if not block_height:
+    def timer_event(self, received=None):
+        if not received:
             return
-        LOG.debug('Handle timer event at block<{}>'.format(block_height))
+        LOG.debug('Handle timer event at block<{}>'.format(received))
 
-        event_list = self.get_event(block_height)
+        event_list = self.get_event(received)
         for event in event_list:
-            event.execute(block_height)
+            event.execute(received)
 
     def prepare_handle_event(self):
         pass
