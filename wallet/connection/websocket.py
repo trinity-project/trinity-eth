@@ -25,15 +25,16 @@ SOFTWARE."""
 from websocket import create_connection, \
     WebSocketConnectionClosedException, \
     WebSocketTimeoutException
+from threading import Lock
 import socket
 import json
 import time
 from enum import Enum
 from common.coroutine import ucoro, ucoro_event
+from blockchain.interface import get_block_count
 from common.log import LOG
 from trinity import EVENT_WS_SERVER
 from common.singleton import SingletonClass
-from wallet.channel import Channel
 
 
 class EnumChainEventReq(Enum):
@@ -62,15 +63,19 @@ class WebSocketConnection(metaclass=SingletonClass):
     """
 
     """
-    def __init__(self):
+    def __init__(self, uri=None, timeout=5):
         """"""
-        self.__ws_url = EVENT_WS_SERVER.get('uri')
-        self.timeout = EVENT_WS_SERVER.get('timeout')
+        self.__ws_url = EVENT_WS_SERVER.get('uri') if not uri else uri
+        self.timeout = EVENT_WS_SERVER.get('timeout') if not timeout else timeout
         self.wallet_address = None
 
         # create connection
         self._conn = None
         self.create_client()
+
+        # queue
+        self.__monitor_queue = {}
+        self.event_lock = Lock()
 
     def set_timeout(self, timeout=0.2):
         self.timeout = timeout
@@ -86,7 +91,7 @@ class WebSocketConnection(metaclass=SingletonClass):
 
         self.send(json.dumps(payload))
 
-    def create_client(self):
+    def create_client(self, retry=False):
         try:
             self._conn = create_connection(self.__ws_url,
                                            sockopt=((socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1),
@@ -95,7 +100,7 @@ class WebSocketConnection(metaclass=SingletonClass):
         except Exception as error:
             LOG.error('Connect to server error. {}'.format(error))
         else:
-            if self.wallet_address:
+            if self.wallet_address and retry:
                 self.notify_wallet_info()
                 pass
 
@@ -138,7 +143,7 @@ class WebSocketConnection(metaclass=SingletonClass):
 
         count = 0
         while count < retry:
-            self.create_client()
+            self.create_client(True)
             if self._conn:
                 break
 
@@ -146,37 +151,73 @@ class WebSocketConnection(metaclass=SingletonClass):
             count += 1
 
     def handle(self):
-        # co-routine handle????
-        coro_handler = self.handle_event()
-        next(coro_handler)
+        """
 
-        try:
-            while True:
+        :return:
+        """
+        _event_coroutine = self.timer_event
+        next(_event_coroutine)
+        self.prepare_handle_event()
+
+        while True:
+            try:
                 response = self.receive()
+                block_height = get_block_count()
+
+                # handle response
                 if not response:
-                    ucoro_event(coro_handler, json.loads(response))
+                    self.handle_event(block_height, response)
 
+                ucoro_event(_event_coroutine, block_height)
                 time.sleep(0.5)
-        except Exception:
-            pass
-        finally:
-            ucoro_event(coro_handler, 'exit')
+            except Exception:
+                pass
 
-    @ucoro()
-    def handle_event(self, received = None):
+    def handle_event(self, block_height, received = None):
         if not received:
-            LOG.warn('Why send NoneType message to websocket co-routine handler.')
+            LOG.warn('Why send NoneType message to websocket handler.')
             return
         message_type = received.get('messageType')
 
         # start to handle the event
         if EnumChainEventResp.__dict__.__contains__(message_type):
-            LOG.info('Handle message<{}> status <{}>.'.format(message_type, received.get('state')))
+            LOG.info('Handle message<{}> status <{}> at block<{}>.'.format(message_type, received.get('state'), block_height))
         elif EnumChainEventReq.__dict__.__contains__(message_type):
-            LOG.info('Handle message<{}>'.format(message_type))
+            LOG.info('Handle message<{}> at block<{}>'.format(message_type, block_height))
             self.__getattribute__(message_type)(received)
         else:
-            LOG.info('MessageType: {}. Test or invalid message: {}'.format(message_type, received))
+            LOG.info('MessageType: {}. Test or invalid message: {} at block<{}>'.format(message_type, received, block_height))
+
+    @ucoro(0.2)
+    def timer_event(self, block_height=None):
+        if not block_height:
+            return
+        LOG.debug('Handle timer event at block<{}>'.format(block_height))
+
+        event_list = self.get_event(block_height)
+        for event in event_list:
+            event.execute(block_height)
+
+    def prepare_handle_event(self):
+        pass
+
+    def register_event(self, event, delay=0):
+        self.event_lock.acquire()
+        block_height = get_block_count() + delay
+        event_list = self.get_event(block_height)
+        if not event_list:
+            self.__monitor_queue.update({block_height: [event]})
+        else:
+            event_list.append(event)
+            self.__monitor_queue.update({block_height:event_list})
+        self.event_lock.release()
+
+    def get_event(self, key):
+        self.event_lock.acquire()
+        event =  self.__monitor_queue.pop(key)
+        self.event_lock.release()
+
+        return event
 
     def monitorTx(self):
         pass

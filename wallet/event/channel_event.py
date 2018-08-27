@@ -135,6 +135,11 @@ class ChannelQuickSettleEvent(ChannelEventBase):
         super(ChannelQuickSettleEvent, self).__init__(channel_name, EnumEventType.EVENT_TYPE_QUICK_SETTLE,
                                                       is_event_founder)
 
+        # different event stage
+        self.event_stage_list = [EnumEventAction.EVENT_PREPARE, EnumEventAction.EVENT_EXECUTE,
+                                 EnumEventAction.EVENT_TERMINATE, EnumEventAction.EVENT_COMPLETE]
+        self.event_stage_iterator = iter(self.event_stage_list)
+
     def prepare(self, block_height, *args, **kwargs):
         super(ChannelQuickSettleEvent, self).prepare(block_height, *args, **kwargs)
         self.next_stage()
@@ -173,8 +178,7 @@ class ChannelForceSettleEvent(ChannelEventBase):
         self.event_stage_iterator = iter(self.event_stage_list)
         self.event_stage = self.next_stage()
 
-    def execute(self, block_height=None, invoker='', channel_id='', nonce=None, founder='', founder_balance='',
-                partner='', partner_balance='', founder_signature='', partner_signature='', invoker_key='', gwei_coef=1):
+    def execute(self, block_height, invoker_uri='', channel_name='', trade='', invoker_key='', gwei=None):
         super(ChannelForceSettleEvent, self).execute(block_height)
 
         self.contract_event_api.close_channel(invoker, channel_id, nonce, founder, founder_balance, partner, partner_balance,

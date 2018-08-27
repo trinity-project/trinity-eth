@@ -29,6 +29,7 @@ from wallet.transaction.rsmc import RsmcMessage, RsmcResponsesMessage
 from wallet.transaction.htlc import HtlcMessage, HtlcResponsesMessage, RResponse, RResponseAck
 from wallet.transaction.settle import SettleMessage, SettleResponseMessage
 from wallet.Interface.rpc_interface import RpcInteraceApi,CurrentLiveWallet
+from wallet.event.event import EnumEventAction
 from wallet.event.chain_event import event_init_wallet
 from wallet.event.channel_event import ChannelForceSettleEvent
 from wallet.connection.websocket import ws_instance
@@ -470,18 +471,21 @@ class UserPromptInterface(PromptInterface):
 
         if 'debug' in arguments:
             nonce = get_arg(arguments, 2)
-            gwei_coef = get_arg(arguments, 3)
+            gwei_coef = get_arg(arguments, 3, True)
         else:
             nonce = None
-            gwei_coef = get_arg(arguments, 2)
+            gwei_coef = get_arg(arguments, 2, True)
 
         if not gwei_coef:
             gwei_coef = 1
 
         console_log.console("Force to close channel {}".format(channel_name))
         if channel_name:
-            channel_event = ChannelForceSettleEvent(channel_name)
-            Channel.force_release_rsmc(self.Wallet, channel_name, nonce=nonce, gwei_coef=gwei_coef, trigger=channel_event.execute)
+            rsmc_part = Channel.force_release_rsmc(self.Wallet, channel_name, nonce=nonce, gwei_coef=gwei_coef)
+            channel_event = ChannelForceSettleEvent(channel_name, True)
+            channel_event.register_args(EnumEventAction.EVENT_EXECUTE,
+                                        self.Wallet.url, channel_name, rsmc_part, self.Wallet._key.private_key_string)
+            ws_instance.register_event(channel_event)
         else:
             console_log.warn("No Channel Create")
 

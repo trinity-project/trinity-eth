@@ -390,7 +390,7 @@ class Channel(object):
             LOG.error('Failed to close channel<{}>, Exception: {}'.format(channel_name, error))
 
     @classmethod
-    def force_release_rsmc(cls, wallet, channel_name, nonce=None, gwei_coef=1, trigger = None):
+    def force_release_rsmc(cls, wallet, channel_name, nonce=None):
         """
 
         :param wallet:
@@ -411,7 +411,7 @@ class Channel(object):
         # to check the trade
         if not trade:
             LOG.info('No trade record could be forced to release. channel<{}>, nonce<{}>'.format(channel_name, nonce))
-            return
+            return None
 
         channel = cls(channel_name)
         peer_uri = channel.peer_uri(wallet.url)
@@ -421,23 +421,7 @@ class Channel(object):
         else:
             trade_rsmc = trade.rsmc
 
-        LOG.debug('Force to close channel<{}> with nonce<{}>'.format(channel_name, nonce))
-        LOG.debug('Trade RSMC part: {}'.format(trade_rsmc))
-        trade_role = trade.rsmc.get('role')
-        if EnumTradeRole.TRADE_ROLE_FOUNDER.name == trade_role:
-            trigger(None, wallet.address, channel_name, nonce,
-                    wallet.address, trade_rsmc.get('balance'),
-                    peer_address, trade_rsmc.get('peer_balance'),
-                    trade_rsmc.get('commitment'), trade_rsmc.get('peer_commitment'),
-                    wallet._key.private_key_string, gwei_coef=gwei_coef)
-        else:
-            trigger(None, wallet.address, channel_name, nonce,
-                    peer_address, trade_rsmc.get('peer_balance'),
-                    wallet.address, trade_rsmc.get('balance'),
-                    trade_rsmc.get('peer_commitment'), trade_rsmc.get('commitment'),
-                    wallet._key.private_key_string, gwei_coef=gwei_coef)
-
-        return
+        return trade_rsmc
 
     @classmethod
     def force_release_htlc(cls, channel_name):
