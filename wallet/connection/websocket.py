@@ -63,6 +63,7 @@ class WebSocketConnection(metaclass=SingletonClass):
     """
 
     """
+    _websocket_listening = True
     def __init__(self, uri=None, timeout=5):
         """"""
         self.__ws_url = EVENT_WS_SERVER.get('uri') if not uri else uri
@@ -79,6 +80,11 @@ class WebSocketConnection(metaclass=SingletonClass):
 
     def set_timeout(self, timeout=0.2):
         self.timeout = timeout
+
+    @classmethod
+    def stop_websocket(cls):
+        cls._websocket_listening = False
+        cls.close()
 
     def set_wallet(self, wallet_address):
         self.wallet_address = wallet_address
@@ -159,9 +165,10 @@ class WebSocketConnection(metaclass=SingletonClass):
         next(_event_coroutine)
         self.prepare_handle_event()
 
-        while True:
+        while WebSocketConnection._websocket_listening:
             try:
                 response = self.receive()
+                LOG.debug('response is {}'.format(response))
                 block_height = get_block_count()
 
                 # handle response
@@ -170,12 +177,14 @@ class WebSocketConnection(metaclass=SingletonClass):
 
                 ucoro_event(_event_coroutine, block_height)
                 time.sleep(0.5)
-            except Exception:
-                pass
+            except Exception as error:
+                LOG.debug('websocket handle: {}'.format(error))
+                time.sleep(1)
+
+        ucoro_event(_event_coroutine, None)
 
     def handle_event(self, block_height, received = None):
         if not received:
-            LOG.warn('Why send NoneType message to websocket handler.')
             return
         message_type = received.get('messageType')
 
