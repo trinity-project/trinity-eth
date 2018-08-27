@@ -421,8 +421,8 @@ class Channel(object):
         else:
             trade_rsmc = trade.rsmc
 
-        LOG.debug('Force to close channel<{}> with nonce<{}>'.format(channel_name, nonce),
-                  'Trade RSMC part: {}'.format(trade_rsmc))
+        LOG.debug('Force to close channel<{}> with nonce<{}>'.format(channel_name, nonce))
+        LOG.debug('Trade RSMC part: {}'.format(trade_rsmc))
         trade_role = trade.rsmc.get('role')
         if EnumTradeRole.TRADE_ROLE_FOUNDER.name == trade_role:
             trigger(None, wallet.address, channel_name, nonce,
