@@ -36,8 +36,8 @@ from common.log import LOG
 from trinity import EVENT_WS_SERVER
 from common.singleton import SingletonClass
 from wallet.event import event_machine, EnumEventAction
-from wallet.event.channel_event import ChannelUpdateSettleEvent, \
-    ChannelEndSettleEvent
+from wallet.event.offchain_event import ChannelEndSettleEvent, \
+    ChannelUpdateSettleEvent
 
 
 class EnumChainEventReq(Enum):

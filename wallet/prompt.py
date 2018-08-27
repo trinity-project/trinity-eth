@@ -31,7 +31,7 @@ from wallet.transaction.settle import SettleMessage, SettleResponseMessage
 from wallet.Interface.rpc_interface import RpcInteraceApi,CurrentLiveWallet
 from wallet.event.event import EnumEventAction
 from wallet.event.chain_event import event_init_wallet
-from wallet.event.channel_event import ChannelForceSettleEvent
+from wallet.event.offchain_event import ChannelForceSettleEvent
 from wallet.connection.websocket import ws_instance
 from wallet.utils import get_magic
 from twisted.web.server import Site

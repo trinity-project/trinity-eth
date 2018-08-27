@@ -30,7 +30,6 @@ from wallet.event.chain_event import event_monitor_settle, \
     event_test_state
 from common.log import LOG
 from common.console import console_log
-from common.common import uri_parser
 
 
 class ChannelEventBase(EventBase):
