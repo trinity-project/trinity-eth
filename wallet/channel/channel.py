@@ -412,15 +412,17 @@ class Channel(object):
         if not trade:
             LOG.info('No trade record could be forced to release. channel<{}>, nonce<{}>'.format(channel_name, nonce))
             return
-        LOG.debug('Force to close channel<{}> with nonce<{}>'.format(channel_name, nonce))
 
         channel = cls(channel_name)
-        trade_rsmc = trade.rsmc
-        # self_uri = wallet.uri
-        peer_uri = channel.peer_uri(wallet.uri)
-        # self_address, _, _ = uri_parser(self_uri)
+        peer_uri = channel.peer_uri(wallet.url)
         peer_address, _, _ = uri_parser(peer_uri)
+        if 1 == nonce:
+            trade_rsmc = trade.founder
+        else:
+            trade_rsmc = trade.rsmc
 
+        LOG.debug('Force to close channel<{}> with nonce<{}>'.format(channel_name, nonce),
+                  'Trade RSMC part: {}'.format(trade_rsmc))
         trade_role = trade.rsmc.get('role')
         if EnumTradeRole.TRADE_ROLE_FOUNDER.name == trade_role:
             trigger(None, wallet.address, channel_name, nonce,
