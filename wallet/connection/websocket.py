@@ -227,7 +227,10 @@ class WebSocketConnection(metaclass=SingletonClass):
 
     def get_event(self, key):
         self.event_lock.acquire()
-        event =  self.__monitor_queue.pop(key)
+        try:
+            event =  self.__monitor_queue.pop(key)
+        except Exception:
+            event = []
         self.event_lock.release()
 
         return event
