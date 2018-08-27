@@ -170,9 +170,9 @@ class WebSocketConnection(metaclass=SingletonClass):
                 block_height = get_block_count()
 
                 # handle response
-                if response:
-                    self.handle_event(block_height, response)
+                self.handle_event(block_height, response)
 
+                # handle timer event
                 ucoro_event(_event_coroutine, block_height)
                 time.sleep(0.5)
             except Exception as error:
@@ -188,7 +188,10 @@ class WebSocketConnection(metaclass=SingletonClass):
         try:
             message = json.loads(received)
             message_type = message.get('messageType')
-
+        except Exception:
+            message = received
+            message_type = None
+        finally:
             # start to handle the event
             if EnumChainEventResp.__dict__.__contains__(message_type):
                 LOG.info('Handle message<{}> status <{}> at block<{}>.'.format(message_type, message.get('state'), block_height))
@@ -197,8 +200,6 @@ class WebSocketConnection(metaclass=SingletonClass):
                 self.__getattribute__(message_type)(message)
             else:
                 LOG.info('MessageType: {}. Test or invalid message: {} at block<{}>'.format(message_type, message, block_height))
-        except Exception as error:
-            LOG.error('WebSocket handle event<{}> error: {}'.format(received, error))
 
     @ucoro(0.2)
     def timer_event(self, received=None):
