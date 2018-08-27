@@ -175,8 +175,8 @@ class WebSocketConnection(metaclass=SingletonClass):
 
                 # handle timer event
                 if old_block != block_height:
-                    old_block = block_height
-                    ucoro_event(_event_coroutine, block_height)
+                    for block in range(old_block, block_height):
+                        ucoro_event(_event_coroutine, block_height)
 
                 time.sleep(0.5)
             except Exception as error:
