@@ -160,6 +160,7 @@ class WebSocketConnection(metaclass=SingletonClass):
 
         :return:
         """
+        old_block = None
         _event_coroutine = self.timer_event()
         next(_event_coroutine)
         self.prepare_handle_event()
@@ -173,7 +174,10 @@ class WebSocketConnection(metaclass=SingletonClass):
                 self.handle_event(block_height, response)
 
                 # handle timer event
-                ucoro_event(_event_coroutine, block_height)
+                if old_block != block_height:
+                    old_block = block_height
+                    ucoro_event(_event_coroutine, block_height)
+
                 time.sleep(0.5)
             except Exception as error:
                 LOG.debug('websocket handle: {}'.format(error))
