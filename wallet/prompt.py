@@ -114,7 +114,7 @@ class UserPromptInterface(PromptInterface):
             "channel create {partner} {asset_type} {deposit}",
             "channel tx {payment_link}/{receiver} {asset_type} {count}",
             "channel close {channel}",
-            "channel force-close {channel} {gwei}"
+            "channel force-close {channel} {gwei}",
             "channel peer [state=]|[peer=]|[channel=]",
             "channel payment {asset}, {count}, [{comments}]",
             "channel qrcode {on/off}",
