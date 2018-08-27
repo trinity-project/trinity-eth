@@ -24,6 +24,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 from .event import EventBase, EnumEventType, EnumEventAction
 from wallet.channel import Channel, sync_channel_info_to_gateway
+from model.base_enum import EnumChannelState
 from wallet.event.chain_event import event_monitor_settle, \
     event_monitor_close_channel, \
     event_test_state
@@ -165,4 +166,20 @@ class ChannelQuickSettleEvent(ChannelEventBase):
             sync_channel_info_to_gateway(self.channel_name, 'DeleteChannel', asset_type)
             console_log.info('Channel {} state is {}'.format(self.channel_name, state))
             self.next_stage()
+
+
+class ChannelForceSettleEvent(ChannelEventBase):
+    def __init__(self, channel_name, is_event_founder=True):
+        super(ChannelForceSettleEvent, self).__init__(channel_name, EnumEventType.EVENT_TYPE_SETTLE,
+                                                      is_event_founder)
+
+    def execute(self, block_height=None, invoker='', channel_id='', nonce=None, founder='', founder_balance='',
+                partner='', partner_balance='', founder_signature='', partner_signature='', invoker_key='', gwei_coef=1):
+        super(ChannelForceSettleEvent, self).execute(block_height)
+
+        self.contract_event_api.close_channel(invoker, channel_id, nonce, founder, founder_balance, partner, partner_balance,
+                                              founder_signature, partner_signature, invoker_key, gwei_coef=gwei_coef)
+
+        # set channel settling
+        Channel.update_channel(self.channel_name, state=EnumChannelState.SETTLING.name)
 

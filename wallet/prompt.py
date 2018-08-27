@@ -30,6 +30,7 @@ from wallet.transaction.htlc import HtlcMessage, HtlcResponsesMessage, RResponse
 from wallet.transaction.settle import SettleMessage, SettleResponseMessage
 from wallet.Interface.rpc_interface import RpcInteraceApi,CurrentLiveWallet
 from wallet.event.chain_event import event_init_wallet
+from wallet.event.channel_event import ChannelForceSettleEvent
 from wallet.connection.websocket import ws_instance
 from wallet.utils import get_magic
 from twisted.web.server import Site
@@ -479,7 +480,8 @@ class UserPromptInterface(PromptInterface):
 
         console_log.console("Force to close channel {}".format(channel_name))
         if channel_name:
-            Channel.force_release_rsmc(self.Wallet, channel_name, nonce=nonce, gwei_coef=gwei_coef)
+            channel_event = ChannelForceSettleEvent(channel_name)
+            Channel.force_release_rsmc(self.Wallet, channel_name, nonce=nonce, gwei_coef=gwei_coef, trigger=channel_event.execute)
         else:
             console_log.warn("No Channel Create")
 

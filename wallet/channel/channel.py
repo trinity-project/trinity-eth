@@ -35,7 +35,6 @@ from wallet.Interface.gate_way import sync_channel
 from common.console import console_log
 from common.common import LOG
 from common.common import uri_parser
-from wallet.event.contract_event import ContractEventInterface
 
 
 class Channel(object):
@@ -284,13 +283,6 @@ class Channel(object):
         return int(latest_trade.nonce) if latest_trade else None
 
     @classmethod
-    def contract_event_api(cls):
-        if not cls._contract_event_api:
-            cls._contract_event_api = ContractEventInterface()
-
-        return cls._contract_event_api
-
-    @classmethod
     def create(cls, wallet, founder, partner, asset_type, deposit, partner_deposit=None, comments=None,
                trigger=None, cli=True):
         """
@@ -396,7 +388,7 @@ class Channel(object):
             LOG.error('Failed to close channel<{}>, Exception: {}'.format(channel_name, error))
 
     @classmethod
-    def force_release_rsmc(cls, wallet, channel_name, nonce=None, gwei_coef=1):
+    def force_release_rsmc(cls, wallet, channel_name, nonce=None, gwei_coef=1, trigger = None):
         """
 
         :param wallet:
@@ -428,17 +420,17 @@ class Channel(object):
 
         trade_role = trade.rsmc.get('role')
         if EnumTradeRole.TRADE_ROLE_FOUNDER.name == trade_role:
-            cls.contract_event_api().close_channel(wallet.address, channel_name, nonce,
-                                                   wallet.address, trade_rsmc.get('balance'),
-                                                   peer_address, trade_rsmc.get('peer_balance'),
-                                                   trade_rsmc.get('commitment'), trade_rsmc.get('peer_commitment'),
-                                                   wallet._key.private_key_string, gwei_coef=gwei_coef)
+            trigger(None, wallet.address, channel_name, nonce,
+                    wallet.address, trade_rsmc.get('balance'),
+                    peer_address, trade_rsmc.get('peer_balance'),
+                    trade_rsmc.get('commitment'), trade_rsmc.get('peer_commitment'),
+                    wallet._key.private_key_string, gwei_coef=gwei_coef)
         else:
-            cls.contract_event_api().close_channel(wallet.address, channel_name, nonce,
-                                                   peer_address, trade_rsmc.get('peer_balance'),
-                                                   wallet.address, trade_rsmc.get('balance'),
-                                                   trade_rsmc.get('peer_commitment'), trade_rsmc.get('commitment'),
-                                                   wallet._key.private_key_string, gwei_coef=gwei_coef)
+            trigger(None, wallet.address, channel_name, nonce,
+                    peer_address, trade_rsmc.get('peer_balance'),
+                    wallet.address, trade_rsmc.get('balance'),
+                    trade_rsmc.get('peer_commitment'), trade_rsmc.get('commitment'),
+                    wallet._key.private_key_string, gwei_coef=gwei_coef)
 
         return
 
