@@ -29,7 +29,9 @@ from wallet.transaction.rsmc import RsmcMessage, RsmcResponsesMessage
 from wallet.transaction.htlc import HtlcMessage, HtlcResponsesMessage, RResponse, RResponseAck
 from wallet.transaction.settle import SettleMessage, SettleResponseMessage
 from wallet.Interface.rpc_interface import RpcInteraceApi,CurrentLiveWallet
+from wallet.event.event import EnumEventAction
 from wallet.event.chain_event import event_init_wallet
+from wallet.event.channel_event import ChannelForceSettleEvent
 from wallet.connection.websocket import ws_instance
 from wallet.utils import get_magic
 from twisted.web.server import Site
@@ -113,6 +115,7 @@ class UserPromptInterface(PromptInterface):
             "channel create {partner} {asset_type} {deposit}",
             "channel tx {payment_link}/{receiver} {asset_type} {count}",
             "channel close {channel}",
+            "channel force-close {channel} {gwei}",
             "channel peer [state=]|[peer=]|[channel=]",
             "channel payment {asset}, {count}, [{comments}]",
             "channel qrcode {on/off}",
@@ -220,7 +223,7 @@ class UserPromptInterface(PromptInterface):
     def quit(self):
         console_log.info('Shutting down. This may take about 15 sec to sync the block info')
         self.go_on = False
-        ws_instance.close()
+        ws_instance.stop_websocket()
         EventMonitor.stop_monitor()
         self.do_close_wallet()
         CurrentLiveWallet.update_current_wallet(None)
@@ -458,6 +461,35 @@ class UserPromptInterface(PromptInterface):
             console_log.warn("No Channel Create")
 
     @channel_opened
+    def channel_force_close(self, arguments):
+        """
+
+        :param arguments:
+        :return:
+        """
+        channel_name = get_arg(arguments, 1)
+
+        if 'debug' in arguments:
+            nonce = get_arg(arguments, 2)
+            gwei_coef = get_arg(arguments, 3, True)
+        else:
+            nonce = None
+            gwei_coef = get_arg(arguments, 2, True)
+
+        if not gwei_coef:
+            gwei_coef = 1
+
+        console_log.console("Force to close channel {}".format(channel_name))
+        if channel_name:
+            rsmc_part = Channel.force_release_rsmc(self.Wallet, channel_name, nonce=nonce, gwei_coef=gwei_coef)
+            channel_event = ChannelForceSettleEvent(channel_name, True)
+            channel_event.register_args(EnumEventAction.EVENT_EXECUTE,
+                                        self.Wallet.url, channel_name, rsmc_part, self.Wallet._key.private_key_string)
+            ws_instance.register_event(channel_event)
+        else:
+            console_log.warn("No Channel Create")
+
+    @channel_opened
     @arguments_length([1,2,3,4])
     def channel_peer(self, arguments):
         """
@@ -590,6 +622,9 @@ class UserPromptInterface(PromptInterface):
 
         elif command == "close":
             self.channel_close(arguments)
+
+        elif command == "force-close":
+            self.channel_force_close(arguments)
 
         elif command == "peer":
             self.channel_peer(arguments)

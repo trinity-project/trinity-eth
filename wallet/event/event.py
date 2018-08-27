@@ -118,6 +118,9 @@ class EventBase(object):
     def stage_is_changed(self, stage):
         return self.event_stage != stage
 
+    def set_event_state(self, stage):
+        self.event_stage = stage
+
     def set_event_start_time(self, start_time:int):
         """
 

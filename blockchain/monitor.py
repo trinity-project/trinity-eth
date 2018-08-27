@@ -46,6 +46,7 @@ class EventMonitor(object):
         if wallet:
             try:
                 ws_instance.set_wallet(wallet.address)
+                ws_instance.notify_wallet_info()
             except Exception as error:
                 print('No wallet is opened')
                 pass
