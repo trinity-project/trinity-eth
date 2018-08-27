@@ -81,10 +81,9 @@ class WebSocketConnection(metaclass=SingletonClass):
     def set_timeout(self, timeout=0.2):
         self.timeout = timeout
 
-    @classmethod
-    def stop_websocket(cls):
-        cls._websocket_listening = False
-        cls.close()
+    def stop_websocket(self):
+        WebSocketConnection._websocket_listening = False
+        self.close()
 
     def set_wallet(self, wallet_address):
         self.wallet_address = wallet_address
@@ -173,6 +172,7 @@ class WebSocketConnection(metaclass=SingletonClass):
 
                 # handle response
                 if not response:
+                    LOG.debug('response is {}'.format(response))
                     self.handle_event(block_height, response)
 
                 ucoro_event(_event_coroutine, block_height)
@@ -186,16 +186,20 @@ class WebSocketConnection(metaclass=SingletonClass):
     def handle_event(self, block_height, received = None):
         if not received:
             return
-        message_type = received.get('messageType')
 
-        # start to handle the event
-        if EnumChainEventResp.__dict__.__contains__(message_type):
-            LOG.info('Handle message<{}> status <{}> at block<{}>.'.format(message_type, received.get('state'), block_height))
-        elif EnumChainEventReq.__dict__.__contains__(message_type):
-            LOG.info('Handle message<{}> at block<{}>'.format(message_type, block_height))
-            self.__getattribute__(message_type)(received)
-        else:
-            LOG.info('MessageType: {}. Test or invalid message: {} at block<{}>'.format(message_type, received, block_height))
+        try:
+            message_type = received.get('messageType')
+
+            # start to handle the event
+            if EnumChainEventResp.__dict__.__contains__(message_type):
+                LOG.info('Handle message<{}> status <{}> at block<{}>.'.format(message_type, received.get('state'), block_height))
+            elif EnumChainEventReq.__dict__.__contains__(message_type):
+                LOG.info('Handle message<{}> at block<{}>'.format(message_type, block_height))
+                self.__getattribute__(message_type)(received)
+            else:
+                LOG.info('MessageType: {}. Test or invalid message: {} at block<{}>'.format(message_type, received, block_height))
+        except Exception as error:
+            LOG.error('WebSocket handle event<{}> error: {}'.format(received, error))
 
     @ucoro(0.2)
     def timer_event(self, received=None):
