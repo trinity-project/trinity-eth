@@ -35,6 +35,9 @@ from blockchain.interface import get_block_count
 from common.log import LOG
 from trinity import EVENT_WS_SERVER
 from common.singleton import SingletonClass
+from wallet.event import event_machine, EnumEventAction
+from wallet.event.channel_event import ChannelUpdateSettleEvent, \
+    ChannelEndSettleEvent
 
 
 class EnumChainEventReq(Enum):
@@ -68,6 +71,7 @@ class WebSocketConnection(metaclass=SingletonClass):
         """"""
         self.__ws_url = EVENT_WS_SERVER.get('uri') if not uri else uri
         self.timeout = EVENT_WS_SERVER.get('timeout') if not timeout else timeout
+        self.wallet = None
         self.wallet_address = None
 
         # create connection
@@ -85,8 +89,10 @@ class WebSocketConnection(metaclass=SingletonClass):
         WebSocketConnection._websocket_listening = False
         self.close()
 
-    def set_wallet(self, wallet_address):
-        self.wallet_address = wallet_address
+    def set_wallet(self, wallet):
+        if not wallet:
+            self.wallet = wallet
+            self.wallet_address = wallet.address
 
     def notify_wallet_info(self):
         payload = {
@@ -178,6 +184,9 @@ class WebSocketConnection(metaclass=SingletonClass):
                     for block in range(old_block+1, block_height+1):
                         ucoro_event(_event_coroutine, block)
 
+                    # set new value to old_block
+                    old_block = block_height
+
                 time.sleep(0.5)
             except Exception as error:
                 LOG.debug('websocket handle: {}'.format(error))
@@ -213,14 +222,21 @@ class WebSocketConnection(metaclass=SingletonClass):
 
         event_list = self.get_event(received)
         for event in event_list:
-            event.execute(received)
+            # move this event to event machine
+            event_machine.register_event(event.channel_name, event)
+            event_machine.trigger_start_event(event.channel_name)
+            # event.execute(received)
 
     def prepare_handle_event(self):
         pass
 
-    def register_event(self, event, delay=0):
+    def register_event(self, event, end_block=None):
         self.event_lock.acquire()
-        block_height = get_block_count() + delay
+        if not end_block:
+            block_height = get_block_count() + 1
+        else:
+            block_height = end_block
+
         event_list = self.get_event(block_height)
         if not event_list:
             self.__monitor_queue.update({block_height: [event]})
@@ -252,9 +268,31 @@ class WebSocketConnection(metaclass=SingletonClass):
         pass
 
     def monitorQuickCloseChannel(self):
+
         pass
 
-    def monitorCloseChannel(self):
+    def monitorCloseChannel(self, message):
+        LOG.debug('Forced to close channel event: {}'.format(message))
+        invoker = None
+        channel_name = None
+        nonce = None
+        end_time = None
+
+        if not (self.wallet_address and invoker):
+            LOG.error('Wallet address should not be none')
+            return
+
+        if invoker == self.wallet_address:
+            channel_event = ChannelUpdateSettleEvent(channel_name)
+            channel_event.register_args(EnumEventAction.EVENT_EXECUTE,
+                                        self.wallet.url, channel_name, self.wallet._key.private_key_string)
+            event_machine.trigger_start_event(channel_name)
+        else:
+            channel_event = ChannelEndSettleEvent(channel_name)
+            channel_event.register_args(EnumEventAction.EVENT_EXECUTE,
+                                        invoker, channel_name, self.wallet._key.private_key_string)
+            self.register_event(channel_event, end_time)
+
         pass
 
     def monitorSettle(self):

@@ -49,6 +49,8 @@ class EnumEventType(IntEnum):
 
     # One of Both wallets is online
     EVENT_TYPE_SETTLE = 0x10
+    EVENT_TYPE_UPDATE_SETTLE = 0x11
+    EVENT_TYPE_END_SETTLE = 0x12
 
     # test event
     EVENT_TYPE_TEST_STATE = 0xE0

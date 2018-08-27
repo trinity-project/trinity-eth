@@ -161,21 +161,24 @@ class ContractEventInterface(metaclass=SingletonClass):
             return None
 
     @classmethod
-    def sign_content(cls, start=3, *args, **kwargs):
-        """
+    def update_close_channel(cls, invoker, channel_id, nonce, founder, founder_balance, partner, partner_balance,
+                      founder_signature, partner_signature, invoker_key):
+        try:
+            return cls._eth_interface.update_transaction(invoker, channel_id, nonce,
+                                                         founder, cls.multiply(founder_balance),
+                                                         partner, cls.multiply(partner_balance),
+                                                         founder_signature, partner_signature, invoker_key)
+        except Exception as error:
+            LOG.error('update force_settle error: {}'.format(error))
+            return None
 
-        :return:
-        """
-        typeList = args[0] if 0 < len(args) else kwargs.get('typeList')
-        valueList = args[1] if 1 < len(args) else kwargs.get('valueList')
-        privtKey = args[2] if 2 < len(args) else kwargs.get('privtKey')
-
-        for idx in range(start, len(typeList)):
-            if typeList[idx] in ['uint256']:
-                valueList[idx] = cls.multiply(valueList[idx])
-
-        content = cls._eth_client.sign_args(typeList, valueList, privtKey).decode()
-        return '0x' + content
+    @classmethod
+    def end_close_channel(cls, invoker, channel_id, invoker_key):
+        try:
+            return cls._eth_interface.settle_transaction(invoker, channel_id, invoker_key)
+        except Exception as error:
+            LOG.error('end force_settle error: {}'.format(error))
+            return None
 
     @classmethod
     def multiply(cls, asset_count):

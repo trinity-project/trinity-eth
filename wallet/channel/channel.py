@@ -436,13 +436,13 @@ class Channel(object):
                         self_address, trade_rsmc.get('balance'),
                         peer_address, trade_rsmc.get('peer_balance'),
                         trade_rsmc.get('commitment'), trade_rsmc.get('peer_commitment'),
-                        sign_key, gwei_coef=gwei_coef)
+                        sign_key)
             else:
                 trigger(self_address, channel_name, nonce,
                         peer_address, trade_rsmc.get('peer_balance'),
                         self_address, trade_rsmc.get('balance'),
                         trade_rsmc.get('peer_commitment'), trade_rsmc.get('commitment'),
-                        sign_key, gwei_coef=gwei_coef)
+                        sign_key)
 
         return
 

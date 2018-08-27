@@ -174,11 +174,6 @@ class ChannelForceSettleEvent(ChannelEventBase):
         super(ChannelForceSettleEvent, self).__init__(channel_name, EnumEventType.EVENT_TYPE_SETTLE,
                                                       is_event_founder)
 
-        # different event stage
-        self.event_stage_list = [EnumEventAction.EVENT_EXECUTE]
-        self.event_stage_iterator = iter(self.event_stage_list)
-        self.event_stage = self.next_stage()
-
     def execute(self, block_height, invoker_uri='', channel_name='', nonce=None, invoker_key='', gwei=None):
         """
 
@@ -198,4 +193,55 @@ class ChannelForceSettleEvent(ChannelEventBase):
 
         # set channel settling
         Channel.update_channel(self.channel_name, state=EnumChannelState.SETTLING.name)
+
+
+class ChannelUpdateSettleEvent(ChannelEventBase):
+    def __init__(self, channel_name, is_event_founder=True):
+        super(ChannelUpdateSettleEvent, self).__init__(channel_name, EnumEventType.EVENT_TYPE_UPDATE_SETTLE,
+                                                      is_event_founder)
+
+    def execute(self, block_height, invoker_uri='', channel_name='', invoker_key=''):
+        """
+
+        :param block_height:
+        :param invoker_uri:
+        :param channel_name:
+        :param trade:
+        :param invoker_key:
+        :param gwei:
+        :return:
+        """
+        super(ChannelUpdateSettleEvent, self).execute(block_height)
+
+        # close channel event
+        Channel.force_release_rsmc(invoker_uri, channel_name, None, invoker_key, gwei_coef=None,
+                                   trigger=self.contract_event_api.update_close_channel)
+
+        # set channel settling
+        Channel.update_channel(self.channel_name, state=EnumChannelState.CLOSED.name)
+
+
+class ChannelEndSettleEvent(ChannelEventBase):
+    def __init__(self, channel_name, is_event_founder=True):
+        super(ChannelEndSettleEvent, self).__init__(channel_name, EnumEventType.EVENT_TYPE_END_SETTLE,
+                                                      is_event_founder)
+
+    def execute(self, block_height, invoker='', channel_name='', invoker_key=''):
+        """
+
+        :param block_height:
+        :param invoker_uri:
+        :param channel_name:
+        :param trade:
+        :param invoker_key:
+        :param gwei:
+        :return:
+        """
+        super(ChannelEndSettleEvent, self).execute(block_height)
+
+        # close channel event
+        self.contract_event_api.end_close_channel(invoker, channel_name, invoker_key)
+
+        # set channel settling
+        Channel.update_channel(self.channel_name, state=EnumChannelState.CLOSED.name)
 
