@@ -34,6 +34,7 @@ from wallet.utils import convert_number_auto, get_magic
 from wallet.Interface.gate_way import sync_channel
 from common.console import console_log
 from common.common import LOG
+from common.common import uri_parser
 from wallet.event.contract_event import ContractEventInterface
 
 
@@ -395,7 +396,15 @@ class Channel(object):
             LOG.error('Failed to close channel<{}>, Exception: {}'.format(channel_name, error))
 
     @classmethod
-    def force_release_rsmc(cls, wallet, channel_name, nonce=None):
+    def force_release_rsmc(cls, wallet, channel_name, nonce=None, gwei_coef=1):
+        """
+
+        :param wallet:
+        :param channel_name:
+        :param nonce:
+        :param gwei_coef:
+        :return:
+        """
         # get records by nonce from the trade history
         if not nonce:
             trade = cls.latest_confirmed_trade(channel_name)
@@ -403,6 +412,7 @@ class Channel(object):
             trade = cls.query_trade(channel_name, nonce)
             if trade:
                 trade = trade[0]
+        nonce = int(trade.nonce)
 
         # to check the trade
         if not trade:
@@ -410,17 +420,27 @@ class Channel(object):
             return
 
         channel = cls(channel_name)
-        self_uri = wallet.uri
+        trade_rsmc = trade.rsmc
+        # self_uri = wallet.uri
         peer_uri = channel.peer_uri(wallet.uri)
+        # self_address, _, _ = uri_parser(self_uri)
+        peer_address, _, _ = uri_parser(peer_uri)
 
         trade_role = trade.rsmc.get('role')
         if EnumTradeRole.TRADE_ROLE_FOUNDER.name == trade_role:
-            address = channel.channel_name
+            cls.contract_event_api().close_channel(wallet.address, channel_name, nonce,
+                                                   wallet.address, trade_rsmc.get('balance'),
+                                                   peer_address, trade_rsmc.get('peer_balance'),
+                                                   trade_rsmc.get('commitment'), trade_rsmc.get('peer_commitment'),
+                                                   wallet._key.private_key_string, gwei_coef=gwei_coef)
+        else:
+            cls.contract_event_api().close_channel(wallet.address, channel_name, nonce,
+                                                   peer_address, trade_rsmc.get('peer_balance'),
+                                                   wallet.address, trade_rsmc.get('balance'),
+                                                   trade_rsmc.get('peer_commitment'), trade_rsmc.get('commitment'),
+                                                   wallet._key.private_key_string, gwei_coef=gwei_coef)
 
-        # start to send the transaction
-        # cls.contract_event_api().close_channel(wallet.address, )
-
-        pass
+        return
 
     @classmethod
     def force_release_htlc(cls, channel_name):

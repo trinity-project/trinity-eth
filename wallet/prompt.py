@@ -113,6 +113,7 @@ class UserPromptInterface(PromptInterface):
             "channel create {partner} {asset_type} {deposit}",
             "channel tx {payment_link}/{receiver} {asset_type} {count}",
             "channel close {channel}",
+            "channel force-close {channel} {gwei}"
             "channel peer [state=]|[peer=]|[channel=]",
             "channel payment {asset}, {count}, [{comments}]",
             "channel qrcode {on/off}",
@@ -458,6 +459,31 @@ class UserPromptInterface(PromptInterface):
             console_log.warn("No Channel Create")
 
     @channel_opened
+    def channel_force_close(self, arguments):
+        """
+
+        :param arguments:
+        :return:
+        """
+        channel_name = get_arg(arguments, 1)
+
+        if 'debug' in arguments:
+            nonce = get_arg(arguments, 2)
+            gwei_coef = get_arg(arguments, 3)
+        else:
+            nonce = None
+            gwei_coef = get_arg(arguments, 2)
+
+        if not gwei_coef:
+            gwei_coef = 1
+
+        console_log.console("Force to close channel {}".format(channel_name))
+        if channel_name:
+            Channel.force_release_rsmc(self.Wallet, channel_name, nonce=nonce, gwei_coef=gwei_coef)
+        else:
+            console_log.warn("No Channel Create")
+
+    @channel_opened
     @arguments_length([1,2,3,4])
     def channel_peer(self, arguments):
         """
@@ -590,6 +616,9 @@ class UserPromptInterface(PromptInterface):
 
         elif command == "close":
             self.channel_close(arguments)
+
+        elif command == "force-close":
+            self.channel_force_close(arguments)
 
         elif command == "peer":
             self.channel_peer(arguments)
