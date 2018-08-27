@@ -173,6 +173,10 @@ class ChannelForceSettleEvent(ChannelEventBase):
         super(ChannelForceSettleEvent, self).__init__(channel_name, EnumEventType.EVENT_TYPE_SETTLE,
                                                       is_event_founder)
 
+        # different event stage
+        self.event_stage_list = [EnumEventAction.EVENT_EXECUTE]
+        self.event_stage_iterator = iter(self.event_stage_list)
+
     def execute(self, block_height=None, invoker='', channel_id='', nonce=None, founder='', founder_balance='',
                 partner='', partner_balance='', founder_signature='', partner_signature='', invoker_key='', gwei_coef=1):
         super(ChannelForceSettleEvent, self).execute(block_height)
