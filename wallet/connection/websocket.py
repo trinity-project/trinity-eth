@@ -160,7 +160,7 @@ class WebSocketConnection(metaclass=SingletonClass):
 
         :return:
         """
-        old_block = None
+        old_block = get_block_count() - 1
         _event_coroutine = self.timer_event()
         next(_event_coroutine)
         self.prepare_handle_event()
@@ -175,8 +175,8 @@ class WebSocketConnection(metaclass=SingletonClass):
 
                 # handle timer event
                 if old_block != block_height:
-                    for block in range(old_block, block_height):
-                        ucoro_event(_event_coroutine, block_height)
+                    for block in range(old_block+1, block_height+1):
+                        ucoro_event(_event_coroutine, block)
 
                 time.sleep(0.5)
             except Exception as error:
