@@ -205,7 +205,8 @@ class Interface(object):
         }
 
     def update_transaction(self, invoker, channel_id, nonce, founder, founder_balance,
-                           partner, partner_balance, founder_signature, partner_signature, invoker_key):
+                           partner, partner_balance, founder_signature, partner_signature,
+                           invoker_key, gwei_coef=1):
         """
         Description: the partner will confirm shutter transaction whether it is valid
         :param meaning reference "quick_close_channel"
@@ -217,7 +218,8 @@ class Interface(object):
                                                         [channel_id, nonce,
                                                          founder, founder_balance,
                                                          partner, partner_balance,
-                                                         founder_signature, partner_signature],invoker_key)
+                                                         founder_signature, partner_signature],invoker_key,
+                                                         gwei_coef=gwei_coef)
             tx_msg = 'success'
         except Exception as e:
             tx_id = 'none'
@@ -228,7 +230,7 @@ class Interface(object):
             "txMessage":tx_msg
         }
 
-    def settle_transaction(self, invoker, channel_id, invoker_key):
+    def settle_transaction(self, invoker, channel_id, invoker_key, gwei_coef=1):
         """
         Description: channel shutter will apply for withdraw channel asset belong to shutter after arbitration period timeout
         :param invoker: shutter address
@@ -238,7 +240,7 @@ class Interface(object):
         """
         try:
             tx_id = self.eth_client.contruct_Transaction(invoker, self.contract,"settleTransaction",
-                                                         [channel_id], invoker_key)
+                                                         [channel_id], invoker_key, gwei_coef=gwei_coef)
             tx_msg = 'success'
         except Exception as e:
             tx_id = 'none'

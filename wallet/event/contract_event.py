@@ -152,9 +152,10 @@ class ContractEventInterface(metaclass=SingletonClass):
                       founder_signature, partner_signature, invoker_key, gwei_coef=1):
         try:
             result = cls._eth_interface.close_channel(invoker, channel_id, nonce,
-                                                    founder, cls.multiply(founder_balance),
-                                                    partner, cls.multiply(partner_balance),
-                                                    founder_signature, partner_signature, invoker_key)
+                                                      founder, cls.multiply(founder_balance),
+                                                      partner, cls.multiply(partner_balance),
+                                                      founder_signature, partner_signature, invoker_key,
+                                                      gwei_coef=gwei_coef)
             LOG.debug('close_channel result: {}'.format(result))
             return result
         except Exception as error:
@@ -163,12 +164,13 @@ class ContractEventInterface(metaclass=SingletonClass):
 
     @classmethod
     def update_close_channel(cls, invoker, channel_id, nonce, founder, founder_balance, partner, partner_balance,
-                      founder_signature, partner_signature, invoker_key):
+                      founder_signature, partner_signature, invoker_key, gwei_coef=1):
         try:
             result = cls._eth_interface.update_transaction(invoker, channel_id, nonce,
-                                                         founder, cls.multiply(founder_balance),
-                                                         partner, cls.multiply(partner_balance),
-                                                         founder_signature, partner_signature, invoker_key)
+                                                           founder, cls.multiply(founder_balance),
+                                                           partner, cls.multiply(partner_balance),
+                                                           founder_signature, partner_signature, invoker_key,
+                                                           gwei_coef= gwei_coef)
             LOG.debug('update_close_channel result: {}'.format(result))
             return result
         except Exception as error:
@@ -176,9 +178,9 @@ class ContractEventInterface(metaclass=SingletonClass):
             return None
 
     @classmethod
-    def end_close_channel(cls, invoker, channel_id, invoker_key):
+    def end_close_channel(cls, invoker, channel_id, invoker_key, gwei_coef=1):
         try:
-            result =  cls._eth_interface.settle_transaction(invoker, channel_id, invoker_key)
+            result =  cls._eth_interface.settle_transaction(invoker, channel_id, invoker_key, gwei_coef=gwei_coef)
             LOG.debug('end_close_channel result: {}'.format(result))
             return result
         except Exception as error:

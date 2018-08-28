@@ -432,19 +432,21 @@ class Channel(object):
             LOG.debug('Trade RSMC part: {}'.format(trade_rsmc))
             trade_role = trade.rsmc.get('role')
             if EnumTradeRole.TRADE_ROLE_FOUNDER.name == trade_role:
-                trigger(self_address, channel_name, nonce,
-                        self_address, trade_rsmc.get('balance'),
-                        peer_address, trade_rsmc.get('peer_balance'),
-                        trade_rsmc.get('commitment'), trade_rsmc.get('peer_commitment'),
-                        sign_key)
+                result = trigger(self_address, channel_name, nonce,
+                                 self_address, trade_rsmc.get('balance'),
+                                 peer_address, trade_rsmc.get('peer_balance'),
+                                 trade_rsmc.get('commitment'), trade_rsmc.get('peer_commitment'),
+                                 sign_key, gwei_coef)
             else:
-                trigger(self_address, channel_name, nonce,
-                        peer_address, trade_rsmc.get('peer_balance'),
-                        self_address, trade_rsmc.get('balance'),
-                        trade_rsmc.get('peer_commitment'), trade_rsmc.get('commitment'),
-                        sign_key)
+                result = trigger(self_address, channel_name, nonce,
+                                 peer_address, trade_rsmc.get('peer_balance'),
+                                 self_address, trade_rsmc.get('balance'),
+                                 trade_rsmc.get('peer_commitment'), trade_rsmc.get('commitment'),
+                                 sign_key, gwei_coef)
 
-        return
+            return result
+
+        return None
 
     @classmethod
     def force_release_htlc(cls, channel_name):

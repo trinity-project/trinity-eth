@@ -170,7 +170,7 @@ class Client(object):
     def call_contract(self,contract,method,args):
         return contract.functions[method](*args).call()
 
-    def contruct_Transaction(self, invoker, contract, method, args, key, gwei_coef=1, gasLimit=4600000):
+    def contruct_Transaction(self, invoker, contract, method, args, key, gwei_coef=None, gasLimit=4600000):
         """"""
         tx_dict = contract.functions[method](*args).buildTransaction({
             'gas':gasLimit,

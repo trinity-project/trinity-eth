@@ -50,7 +50,7 @@ class ChannelForceSettleEvent(ChannelOfflineEventBase):
         super(ChannelForceSettleEvent, self).prepare(block_height, *args, **kwargs)
         self.next_stage()
 
-    def execute(self, block_height, invoker_uri='', channel_name='', nonce=None, invoker_key='', gwei=None):
+    def execute(self, block_height, invoker_uri='', channel_name='', nonce=None, invoker_key=''):
         """
 
         :param block_height:
@@ -67,7 +67,7 @@ class ChannelForceSettleEvent(ChannelOfflineEventBase):
         LOG.debug('event args: {}, kwargs'.format(self.event_arguments.args, self.event_arguments.kwargs))
 
         # close channel event
-        Channel.force_release_rsmc(invoker_uri, channel_name, nonce, invoker_key, gwei_coef=gwei,
+        Channel.force_release_rsmc(invoker_uri, channel_name, nonce, invoker_key, gwei_coef=self.gwei_coef,
                                    trigger=self.contract_event_api.close_channel)
 
         # set channel settling
@@ -102,11 +102,13 @@ class ChannelUpdateSettleEvent(ChannelOfflineEventBase):
         super(ChannelUpdateSettleEvent, self).execute(block_height)
 
         # close channel event
-        Channel.force_release_rsmc(invoker_uri, channel_name, None, invoker_key, gwei_coef=None,
+        Channel.force_release_rsmc(invoker_uri, channel_name, None, invoker_key, gwei_coef=self.gwei_coef,
                                    trigger=self.contract_event_api.update_close_channel)
 
         # set channel settling
         Channel.update_channel(self.channel_name, state=EnumChannelState.CLOSED.name)
+
+        self.next_stage()
 
     def terminate(self, block_height, *args, **kwargs):
         super(ChannelUpdateSettleEvent, self).terminate(block_height, *args, **kwargs)
@@ -136,10 +138,11 @@ class ChannelEndSettleEvent(ChannelOfflineEventBase):
         super(ChannelEndSettleEvent, self).execute(block_height)
 
         # close channel event
-        self.contract_event_api.end_close_channel(invoker, channel_name, invoker_key)
+        self.contract_event_api.end_close_channel(invoker, channel_name, invoker_key, gwei_coef=self.gwei_coef)
 
         # set channel settling
         Channel.update_channel(self.channel_name, state=EnumChannelState.CLOSED.name)
+        self.next_stage()
 
     def terminate(self, block_height, *args, **kwargs):
         super(ChannelEndSettleEvent, self).terminate(block_height, *args, **kwargs)
