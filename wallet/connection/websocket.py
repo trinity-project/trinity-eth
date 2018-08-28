@@ -291,7 +291,7 @@ class WebSocketConnection(metaclass=SingletonClass):
             invoker = message.get('invoker').strip()
             channel_name = message.get('channelId')
             nonce = message.get('nounce')
-            end_time = int(message('blockNumber'))
+            end_time = int(message.get('blockNumber'))
         except Exception as error:
             LOG.error('Invalid message: {}. Exception: {}'.format(message, error))
         else:
