@@ -63,6 +63,9 @@ class ChannelForceSettleEvent(ChannelOfflineEventBase):
         """
         super(ChannelForceSettleEvent, self).execute(block_height)
 
+        LOG.debug('parameter: {}, {}, {}, {}'.format(invoker_uri, channel_name, nonce, invoker_key))
+        LOG.debug('event args: {}, kwargs'.format(self.event_arguments.args, self.event_arguments.kwargs))
+
         # close channel event
         Channel.force_release_rsmc(invoker_uri, channel_name, nonce, invoker_key, gwei_coef=gwei,
                                    trigger=self.contract_event_api.close_channel)

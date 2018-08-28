@@ -483,8 +483,9 @@ class UserPromptInterface(PromptInterface):
         if channel_name:
             channel_event = ChannelForceSettleEvent(channel_name, True)
             channel_event.register_args(EnumEventAction.EVENT_EXECUTE,
-                                        self.Wallet.url, channel_name, nonce, gwei_coef,
-                                        self.Wallet._key.private_key_string)
+                                        invoker_uri=self.Wallet.url, channel_name=channel_name,
+                                        nonce=nonce, invoker_key=self.Wallet._key.private_key_string,
+                                        gwei=None)
             ws_instance.register_event(channel_event)
         else:
             console_log.warn("No Channel Create")
