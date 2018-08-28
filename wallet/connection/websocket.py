@@ -289,7 +289,7 @@ class WebSocketConnection(metaclass=SingletonClass):
                 'txId': '0xc0461c9a92a295eec4dd1060e4abd34bbb1c8139e2b9bc5e35e7c2daa1dccfc5',
                 'channelId': '0xabf328663edff39bfa3f157556afa52bdcb14fda32d35c70e6e3386e954e7995',
                 'invoker': '0x23cca051bfedb5e17d3aad2038ba0a5155d1b1b7',
-                'nounce': 5,
+                'nonce': 5,
                 'blockNumber': 3924231,
                 'messageType': 'monitorCloseChannel'
             }
@@ -301,7 +301,7 @@ class WebSocketConnection(metaclass=SingletonClass):
         try:
             invoker = message.get('invoker').strip()
             channel_name = message.get('channelId')
-            nonce = message.get('nounce')
+            nonce = message.get('nonce')
             end_time = int(message.get('blockNumber'))
         except Exception as error:
             LOG.error('Invalid message: {}. Exception: {}'.format(message, error))
