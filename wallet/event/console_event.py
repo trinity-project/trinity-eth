@@ -25,7 +25,7 @@ SOFTWARE."""
 # from collections import namedtuple
 from enum import Enum
 from common.singleton import SingletonClass
-from common.coroutine import ucoro
+from common.decorator import ucoro
 from common.log import LOG
 
 

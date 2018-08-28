@@ -30,7 +30,7 @@ import socket
 import json
 import time
 from enum import Enum
-from common.coroutine import ucoro, ucoro_event
+from common.decorator import ucoro, ucoro_event
 from blockchain.interface import get_block_count
 from common.log import LOG
 from trinity import EVENT_WS_SERVER
@@ -237,16 +237,27 @@ class WebSocketConnection(metaclass=SingletonClass):
         else:
             block_height = end_block
 
-        self.event_lock.acquire()
-        event_list = self.__monitor_queue.get(block_height, [])
-        event_list.append(event)
-        self.__monitor_queue.update({block_height:event_list})
-        self.event_lock.release()
+        try:
+            self.event_lock.acquire()
+            event_list = self.__monitor_queue.get(block_height, [])
+            event_list.append(event)
+            self.__monitor_queue.update({block_height:event_list})
+        except Exception as error:
+            LOG.error('websocket register_event exception: {}'.format(error))
+        finally:
+            self.event_lock.release()
+
+        return
 
     def get_event(self, key):
-        self.event_lock.acquire()
-        event =  self.__monitor_queue.pop(key, [])
-        self.event_lock.release()
+        try:
+            self.event_lock.acquire()
+            event =  self.__monitor_queue.pop(key, [])
+        except Exception as error:
+            event = None
+            LOG.error('websocket get_event exception: {}'.format(error))
+        finally:
+            self.event_lock.release()
 
         return event
 
@@ -303,6 +314,7 @@ class WebSocketConnection(metaclass=SingletonClass):
                 channel_event = ChannelUpdateSettleEvent(channel_name)
                 channel_event.register_args(EnumEventAction.EVENT_EXECUTE,
                                             self.wallet.url, channel_name, self.wallet._key.private_key_string)
+                event_machine.register_event(channel_name, channel_event)
                 event_machine.trigger_start_event(channel_name)
             else:
                 channel_event = ChannelEndSettleEvent(channel_name)

@@ -24,7 +24,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 from threading import Lock
 from enum import Enum, IntEnum
-from common.coroutine import ucoro
+from common.decorator import ucoro
 from common.log import LOG
 from .contract_event import ContractEventInterface
 
@@ -277,10 +277,16 @@ class EventMachine(object):
             self.total_task_per_poll = 0
 
     def get_event(self):
-        self.event_lock.acquire()
-        name = self.__event_ordered_list.pop(0)
-        event = self.__event_queue.pop(name)
-        self.event_lock.release()
+        try:
+            self.event_lock.acquire()
+            name = self.__event_ordered_list.pop(0)
+            event = self.__event_queue.pop(name)
+        except Exception as error:
+            name = None
+            event = None
+            LOG.error('event machine get_event exception: {}'.format(error))
+        finally:
+            self.event_lock.release()
 
         return name, event
 
@@ -288,35 +294,52 @@ class EventMachine(object):
         return self.__event_queue.get(name)
 
     def insert_event_back_into_queue(self, name, event):
-        self.event_lock.acquire()
-        if not self.has_event(name):
-            self.__event_queue.update({name: event})
-            self.__event_ordered_list.append(name)
-        self.event_lock.release()
+        try:
+            self.event_lock.acquire()
+            if not self.has_event(name):
+                self.__event_queue.update({name: event})
+                self.__event_ordered_list.append(name)
+        except Exception as error:
+            LOG.error('event machine insert_event_back_into_queue<{}> exception: {}'.format(name, error))
+        finally:
+            self.event_lock.release()
+
+        return
 
     def register_event(self, name, event):
-        self.event_lock.acquire()
-        self.__event_queue.update({name: event})
-        self.event_lock.release()
+        try:
+            self.event_lock.acquire()
+            self.__event_queue.update({name: event})
+        except Exception as error:
+            LOG.error('event machine register_event<{}> exception: {}'.format(name, error))
+        finally:
+            self.event_lock.release()
 
     def unregister_event(self, name):
-        self.event_lock.acquire()
-        if name in self.__event_ordered_list:
-            self.__event_ordered_list.remove(name)
+        try:
+            self.event_lock.acquire()
+            if name in self.__event_ordered_list:
+                self.__event_ordered_list.remove(name)
 
-        if name in self.__event_queue.keys():
-            self.__event_queue.pop(name)
-
-        self.event_lock.release()
+            if name in self.__event_queue.keys():
+                self.__event_queue.pop(name)
+        except Exception as error:
+            LOG.error('event machine unregister_event<{}> exception: {}'.format(name, error))
+        finally:
+            self.event_lock.release()
 
     def update_event(self, name, event):
         self.register_event(name, event)
 
     def trigger_start_event(self, name):
-        self.event_lock.acquire()
-        if name not in self.__event_ordered_list:
-            self.__event_ordered_list.append(name)
-        self.event_lock.release()
+        try:
+            self.event_lock.acquire()
+            if name not in self.__event_ordered_list:
+                self.__event_ordered_list.append(name)
+        except Exception as error:
+            LOG.error('event machine trigger_start_event<{}> exception: {}'.format(name, error))
+        finally:
+            self.event_lock.release()
 
     def has_event(self, name):
         return name in self.__event_queue
