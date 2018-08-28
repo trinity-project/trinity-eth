@@ -310,7 +310,7 @@ class WebSocketConnection(metaclass=SingletonClass):
                 LOG.error('Wallet address<{}> or invoker<{}> should not be none'.format(self.wallet_address, invoker))
                 return
 
-            if invoker != self.wallet_address:
+            if invoker != self.wallet_address.lower():
                 channel_event = ChannelUpdateSettleEvent(channel_name)
                 channel_event.register_args(EnumEventAction.EVENT_EXECUTE,
                                             self.wallet.url, channel_name, self.wallet._key.private_key_string)
