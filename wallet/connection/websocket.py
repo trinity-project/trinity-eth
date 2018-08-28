@@ -313,13 +313,13 @@ class WebSocketConnection(metaclass=SingletonClass):
             if invoker != self.wallet_address.lower():
                 channel_event = ChannelUpdateSettleEvent(channel_name)
                 channel_event.register_args(EnumEventAction.EVENT_EXECUTE,
-                                            self.wallet.url, channel_name, self.wallet._key.private_key_string)
+                                            self.wallet.url, channel_name, self.wallet._key.private_key_string, nonce)
                 event_machine.register_event(channel_name, channel_event)
                 event_machine.trigger_start_event(channel_name)
             else:
                 channel_event = ChannelEndSettleEvent(channel_name)
                 channel_event.register_args(EnumEventAction.EVENT_EXECUTE,
-                                            invoker, channel_name, self.wallet._key.private_key_string)
+                                            invoker, channel_name, self.wallet._key.private_key_string, nonce)
                 self.register_event(channel_event, end_time)
 
         pass

@@ -390,7 +390,8 @@ class Channel(object):
             LOG.error('Failed to close channel<{}>, Exception: {}'.format(channel_name, error))
 
     @classmethod
-    def force_release_rsmc(cls, uri=None, channel_name=None, nonce=None, sign_key=None, gwei_coef=1, trigger=None):
+    def force_release_rsmc(cls, uri=None, channel_name=None, nonce=None, sign_key=None, gwei_coef=1, trigger=None,
+                           is_debug=False):
         """
 
         :param uri:
@@ -408,13 +409,17 @@ class Channel(object):
 
         try:
             # get records by nonce from the trade history
-            if not nonce:
-                trade = cls.latest_confirmed_trade(channel_name)
-            else:
+            if is_debug and not nonce:
                 trade = cls.query_trade(channel_name, int(nonce))
                 if trade:
                     trade = trade[0]
-            nonce = int(trade.nonce)
+            else:
+                trade = cls.latest_confirmed_trade(channel_name)
+                latest_nonce = int(trade.nonce)
+                if latest_nonce-1 <= int(nonce) <= latest_nonce+1:
+                    LOG.debug('No need update transaction. nonce<{}>, latest_nonce<{}>'.format(nonce, latest_nonce))
+                    return
+                nonce = latest_nonce
 
             if 1 == nonce:
                 trade_rsmc = trade.founder

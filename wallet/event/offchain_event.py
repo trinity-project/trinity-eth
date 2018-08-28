@@ -88,7 +88,7 @@ class ChannelUpdateSettleEvent(ChannelOfflineEventBase):
         super(ChannelUpdateSettleEvent, self).prepare(block_height, *args, **kwargs)
         self.next_stage()
 
-    def execute(self, block_height, invoker_uri='', channel_name='', invoker_key=''):
+    def execute(self, block_height, invoker_uri='', channel_name='', invoker_key='', nonce=None):
         """
 
         :param block_height:
@@ -102,7 +102,7 @@ class ChannelUpdateSettleEvent(ChannelOfflineEventBase):
         super(ChannelUpdateSettleEvent, self).execute(block_height)
 
         # close channel event
-        Channel.force_release_rsmc(invoker_uri, channel_name, None, invoker_key, gwei_coef=self.gwei_coef,
+        Channel.force_release_rsmc(invoker_uri, channel_name, nonce, invoker_key, gwei_coef=self.gwei_coef,
                                    trigger=self.contract_event_api.update_close_channel)
 
         # set channel settling
