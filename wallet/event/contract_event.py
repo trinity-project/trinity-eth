@@ -151,11 +151,13 @@ class ContractEventInterface(metaclass=SingletonClass):
     def close_channel(cls, invoker, channel_id, nonce, founder, founder_balance, partner, partner_balance,
                       founder_signature, partner_signature, invoker_key, gwei_coef=1):
         try:
-            return cls._eth_interface.close_channel(invoker, channel_id, nonce,
+            result = cls._eth_interface.close_channel(invoker, channel_id, nonce,
                                                     founder, cls.multiply(founder_balance),
                                                     partner, cls.multiply(partner_balance),
                                                     founder_signature, partner_signature, invoker_key,
                                                     gwei_coef=gwei_coef)
+            LOG.debug('close_channel result: {}'.format(result))
+            return result
         except Exception as error:
             LOG.error('force_settle error: {}'.format(error))
             return None
@@ -164,18 +166,22 @@ class ContractEventInterface(metaclass=SingletonClass):
     def update_close_channel(cls, invoker, channel_id, nonce, founder, founder_balance, partner, partner_balance,
                       founder_signature, partner_signature, invoker_key):
         try:
-            return cls._eth_interface.update_transaction(invoker, channel_id, nonce,
+            result = cls._eth_interface.update_transaction(invoker, channel_id, nonce,
                                                          founder, cls.multiply(founder_balance),
                                                          partner, cls.multiply(partner_balance),
                                                          founder_signature, partner_signature, invoker_key)
+            LOG.debug('update_close_channel result: {}'.format(result))
+            return result
         except Exception as error:
-            LOG.error('update force_settle error: {}'.format(error))
+            LOG.error('update_close_channel error: {}'.format(error))
             return None
 
     @classmethod
     def end_close_channel(cls, invoker, channel_id, invoker_key):
         try:
-            return cls._eth_interface.settle_transaction(invoker, channel_id, invoker_key)
+            result =  cls._eth_interface.settle_transaction(invoker, channel_id, invoker_key)
+            LOG.debug('end_close_channel result: {}'.format(result))
+            return result
         except Exception as error:
             LOG.error('end force_settle error: {}'.format(error))
             return None
