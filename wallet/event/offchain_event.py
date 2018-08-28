@@ -46,6 +46,10 @@ class ChannelForceSettleEvent(ChannelOfflineEventBase):
         super(ChannelForceSettleEvent, self).__init__(channel_name, EnumEventType.EVENT_TYPE_SETTLE,
                                                       is_event_founder)
 
+    def prepare(self, block_height, *args, **kwargs):
+        super(ChannelForceSettleEvent, self).prepare(block_height, *args, **kwargs)
+        self.next_stage()
+
     def execute(self, block_height, invoker_uri='', channel_name='', nonce=None, invoker_key='', gwei=None):
         """
 
@@ -65,12 +69,21 @@ class ChannelForceSettleEvent(ChannelOfflineEventBase):
 
         # set channel settling
         Channel.update_channel(self.channel_name, state=EnumChannelState.SETTLING.name)
+        self.next_stage()
+
+    def terminate(self, block_height, *args, **kwargs):
+        super(ChannelForceSettleEvent, self).terminate(block_height, *args, **kwargs)
+        self.next_stage()
 
 
 class ChannelUpdateSettleEvent(ChannelOfflineEventBase):
     def __init__(self, channel_name, is_event_founder=True):
         super(ChannelUpdateSettleEvent, self).__init__(channel_name, EnumEventType.EVENT_TYPE_UPDATE_SETTLE,
                                                        is_event_founder)
+
+    def prepare(self, block_height, *args, **kwargs):
+        super(ChannelUpdateSettleEvent, self).prepare(block_height, *args, **kwargs)
+        self.next_stage()
 
     def execute(self, block_height, invoker_uri='', channel_name='', invoker_key=''):
         """
@@ -92,11 +105,19 @@ class ChannelUpdateSettleEvent(ChannelOfflineEventBase):
         # set channel settling
         Channel.update_channel(self.channel_name, state=EnumChannelState.CLOSED.name)
 
+    def terminate(self, block_height, *args, **kwargs):
+        super(ChannelUpdateSettleEvent, self).terminate(block_height, *args, **kwargs)
+        self.next_stage()
+
 
 class ChannelEndSettleEvent(ChannelOfflineEventBase):
     def __init__(self, channel_name, is_event_founder=True):
         super(ChannelEndSettleEvent, self).__init__(channel_name, EnumEventType.EVENT_TYPE_END_SETTLE,
                                                     is_event_founder)
+
+    def prepare(self, block_height, *args, **kwargs):
+        super(ChannelEndSettleEvent, self).prepare(block_height, *args, **kwargs)
+        self.next_stage()
 
     def execute(self, block_height, invoker='', channel_name='', invoker_key=''):
         """
@@ -116,4 +137,8 @@ class ChannelEndSettleEvent(ChannelOfflineEventBase):
 
         # set channel settling
         Channel.update_channel(self.channel_name, state=EnumChannelState.CLOSED.name)
+
+    def terminate(self, block_height, *args, **kwargs):
+        super(ChannelEndSettleEvent, self).terminate(block_height, *args, **kwargs)
+        self.next_stage()
 
