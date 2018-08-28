@@ -420,6 +420,7 @@ class Channel(object):
                 trade_rsmc = trade.founder
             else:
                 trade_rsmc = trade.rsmc
+
         except Exception:
             LOG.info('No trade record could be forced to release. channel<{}>, nonce<{}>'.format(channel_name, nonce))
         else:
@@ -430,7 +431,7 @@ class Channel(object):
 
             LOG.debug('Force to close channel<{}> with nonce<{}>'.format(channel_name, nonce))
             LOG.debug('Trade RSMC part: {}'.format(trade_rsmc))
-            trade_role = trade.rsmc.get('role')
+            trade_role = trade_rsmc.get('role')
             if EnumTradeRole.TRADE_ROLE_FOUNDER.name == trade_role:
                 result = trigger(self_address, channel_name, nonce,
                                  self_address, trade_rsmc.get('balance'),
