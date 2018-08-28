@@ -267,26 +267,48 @@ class WebSocketConnection(metaclass=SingletonClass):
         pass
 
     def monitorCloseChannel(self, message):
-        LOG.debug('Forced to close channel event: {}'.format(message))
-        invoker = None
-        channel_name = None
-        nonce = None
-        end_time = None
+        """
 
-        if not (self.wallet_address and invoker):
-            LOG.error('Wallet address should not be none')
+        :param message:
+        :return:
+
+        message like below format:
+            {
+                'playload': '0xabf328663edff39bfa3f157556afa52bdcb14fda32d35c70e6e3386e954e7995',
+                'txId': '0xc0461c9a92a295eec4dd1060e4abd34bbb1c8139e2b9bc5e35e7c2daa1dccfc5',
+                'channelId': '0xabf328663edff39bfa3f157556afa52bdcb14fda32d35c70e6e3386e954e7995',
+                'invoker': '0x23cca051bfedb5e17d3aad2038ba0a5155d1b1b7',
+                'nounce': 5,
+                'blockNumber': 3924231,
+                'messageType': 'monitorCloseChannel'
+            }
+
+        """
+        if not message:
+            LOG.error('Invalid message: {}'.format(message))
             return
-
-        if invoker == self.wallet_address:
-            channel_event = ChannelUpdateSettleEvent(channel_name)
-            channel_event.register_args(EnumEventAction.EVENT_EXECUTE,
-                                        self.wallet.url, channel_name, self.wallet._key.private_key_string)
-            event_machine.trigger_start_event(channel_name)
+        try:
+            invoker = message.get('invoker').strip()
+            channel_name = message.get('channelId')
+            nonce = message.get('nounce')
+            end_time = int(message('blockNumber'))
+        except Exception as error:
+            LOG.error('Invalid message: {}. Exception: {}'.format(message, error))
         else:
-            channel_event = ChannelEndSettleEvent(channel_name)
-            channel_event.register_args(EnumEventAction.EVENT_EXECUTE,
-                                        invoker, channel_name, self.wallet._key.private_key_string)
-            self.register_event(channel_event, end_time)
+            if not (self.wallet_address and invoker):
+                LOG.error('Wallet address<{}> or invoker<{}> should not be none'.format(self.wallet_address, invoker))
+                return
+
+            if invoker != self.wallet_address:
+                channel_event = ChannelUpdateSettleEvent(channel_name)
+                channel_event.register_args(EnumEventAction.EVENT_EXECUTE,
+                                            self.wallet.url, channel_name, self.wallet._key.private_key_string)
+                event_machine.trigger_start_event(channel_name)
+            else:
+                channel_event = ChannelEndSettleEvent(channel_name)
+                channel_event.register_args(EnumEventAction.EVENT_EXECUTE,
+                                            invoker, channel_name, self.wallet._key.private_key_string)
+                self.register_event(channel_event, end_time)
 
         pass
 
