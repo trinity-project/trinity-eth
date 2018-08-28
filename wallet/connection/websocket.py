@@ -320,7 +320,7 @@ class WebSocketConnection(metaclass=SingletonClass):
                 LOG.debug('register ChannelEndSettleEvent at block<{}>'.format(end_time))
                 channel_event = ChannelEndSettleEvent(channel_name)
                 channel_event.register_args(EnumEventAction.EVENT_EXECUTE,
-                                            invoker, channel_name, self.wallet._key.private_key_string, nonce)
+                                            invoker, channel_name, self.wallet._key.private_key_string)
                 self.register_event(channel_event, end_time)
 
         pass
