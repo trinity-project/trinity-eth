@@ -90,7 +90,7 @@ class WebSocketConnection(metaclass=SingletonClass):
         self.close()
 
     def set_wallet(self, wallet):
-        if not wallet:
+        if wallet:
             self.wallet = wallet
             self.wallet_address = wallet.address
 
@@ -245,10 +245,7 @@ class WebSocketConnection(metaclass=SingletonClass):
 
     def get_event(self, key):
         self.event_lock.acquire()
-        try:
-            event =  self.__monitor_queue.pop(key)
-        except Exception:
-            event = []
+        event =  self.__monitor_queue.pop(key, [])
         self.event_lock.release()
 
         return event
