@@ -409,7 +409,7 @@ class Channel(object):
 
         try:
             # get records by nonce from the trade history
-            if is_debug and not nonce:
+            if is_debug and nonce is not None:
                 trade = cls.query_trade(channel_name, int(nonce))
                 if trade:
                     trade = trade[0]
