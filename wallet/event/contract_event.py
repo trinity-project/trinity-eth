@@ -154,8 +154,7 @@ class ContractEventInterface(metaclass=SingletonClass):
             result = cls._eth_interface.close_channel(invoker, channel_id, nonce,
                                                     founder, cls.multiply(founder_balance),
                                                     partner, cls.multiply(partner_balance),
-                                                    founder_signature, partner_signature, invoker_key,
-                                                    gwei_coef=gwei_coef)
+                                                    founder_signature, partner_signature, invoker_key)
             LOG.debug('close_channel result: {}'.format(result))
             return result
         except Exception as error:
