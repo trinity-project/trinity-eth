@@ -231,18 +231,16 @@ class WebSocketConnection(metaclass=SingletonClass):
         pass
 
     def register_event(self, event, end_block=None):
-        self.event_lock.acquire()
+
         if not end_block:
             block_height = get_block_count() + 1
         else:
             block_height = end_block
 
-        event_list = self.get_event(block_height)
-        if not event_list:
-            self.__monitor_queue.update({block_height: [event]})
-        else:
-            event_list.append(event)
-            self.__monitor_queue.update({block_height:event_list})
+        self.event_lock.acquire()
+        event_list = self.__monitor_queue.get(block_height, [])
+        event_list.append(event)
+        self.__monitor_queue.update({block_height:event_list})
         self.event_lock.release()
 
     def get_event(self, key):
