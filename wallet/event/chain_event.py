@@ -37,6 +37,7 @@ def eth_websocket(callback):
             LOG.error('Call {} error: {}'.format(callback.__name__, error))
         else:
             # to send the data by wwebsocket connection
+            LOG.debug('Register event<{}> to full-node'.format(payload))
             ws_instance.send(json.dumps(payload))
     return wrapper
 
