@@ -50,7 +50,7 @@ class ChannelForceSettleEvent(ChannelOfflineEventBase):
         super(ChannelForceSettleEvent, self).prepare(block_height, *args, **kwargs)
         self.next_stage()
 
-    def execute(self, block_height, invoker_uri='', channel_name='', nonce=None, invoker_key=''):
+    def execute(self, block_height, invoker_uri='', channel_name='', nonce=None, invoker_key='', is_debug=False):
         """
 
         :param block_height:
@@ -68,7 +68,7 @@ class ChannelForceSettleEvent(ChannelOfflineEventBase):
 
         # close channel event
         Channel.force_release_rsmc(invoker_uri, channel_name, nonce, invoker_key, gwei_coef=self.gwei_coef,
-                                   trigger=self.contract_event_api.close_channel)
+                                   trigger=self.contract_event_api.close_channel, is_debug=is_debug)
 
         # set channel settling
         Channel.update_channel(self.channel_name, state=EnumChannelState.SETTLING.name)

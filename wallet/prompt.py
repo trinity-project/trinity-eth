@@ -470,21 +470,19 @@ class UserPromptInterface(PromptInterface):
         channel_name = get_arg(arguments, 1)
 
         if 'debug' in arguments:
-            nonce = get_arg(arguments, 2)
-            gwei_coef = get_arg(arguments, 3, True)
+            nonce = get_arg(arguments, 2, True)
+            is_debug = True
         else:
             nonce = None
-            gwei_coef = get_arg(arguments, 2, True)
-
-        if not gwei_coef:
-            gwei_coef = 1
+            is_debug = False
 
         console_log.console("Force to close channel {}".format(channel_name))
         if channel_name:
             channel_event = ChannelForceSettleEvent(channel_name, True)
             channel_event.register_args(EnumEventAction.EVENT_EXECUTE,
                                         invoker_uri=self.Wallet.url, channel_name=channel_name,
-                                        nonce=nonce, invoker_key=self.Wallet._key.private_key_string)
+                                        nonce=nonce, invoker_key=self.Wallet._key.private_key_string,
+                                        is_debug=is_debug)
             ws_instance.register_event(channel_event)
         else:
             console_log.warn("No Channel Create")

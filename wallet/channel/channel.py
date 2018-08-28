@@ -416,7 +416,7 @@ class Channel(object):
             else:
                 trade = cls.latest_confirmed_trade(channel_name)
                 latest_nonce = int(trade.nonce)
-                if latest_nonce-1 <= int(nonce) <= latest_nonce+1:
+                if nonce is not None and (nonce-1 <= int(nonce) <= latest_nonce+1):
                     LOG.debug('No need update transaction. nonce<{}>, latest_nonce<{}>'.format(nonce, latest_nonce))
                     return
                 nonce = latest_nonce
@@ -426,8 +426,9 @@ class Channel(object):
             else:
                 trade_rsmc = trade.rsmc
 
-        except Exception:
-            LOG.info('No trade record could be forced to release. channel<{}>, nonce<{}>'.format(channel_name, nonce))
+        except Exception as error:
+            LOG.info('No trade record could be forced to release. channel<{}>, nonce<{}>. Exception: {}'.\
+                     format(channel_name, nonce, error))
         else:
             channel = cls(channel_name)
             peer_uri = channel.peer_uri(uri)
