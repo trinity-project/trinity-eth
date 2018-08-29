@@ -102,11 +102,13 @@ class ChannelUpdateSettleEvent(ChannelOfflineEventBase):
         super(ChannelUpdateSettleEvent, self).execute(block_height)
 
         # close channel event
-        Channel.force_release_rsmc(invoker_uri, channel_name, nonce, invoker_key, gwei_coef=self.gwei_coef,
-                                   trigger=self.contract_event_api.update_close_channel)
+
+        result = Channel.force_release_rsmc(invoker_uri, channel_name, nonce, invoker_key, gwei_coef=self.gwei_coef,
+                                            trigger=self.contract_event_api.update_close_channel)
 
         # set channel settling
-        Channel.update_channel(self.channel_name, state=EnumChannelState.CLOSED.name)
+        if result is not None and 'success' in result.values():
+            Channel.update_channel(self.channel_name, state=EnumChannelState.SETTLED.name)
 
         self.next_stage()
 

@@ -81,7 +81,7 @@ class ContractEventInterface(metaclass=SingletonClass):
         except Exception as error:
             LOG.error('authorized deposit error: {}'.format(error))
 
-        return None
+        return False
 
     @classmethod
     def get_approved_asset(cls, address):

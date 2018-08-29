@@ -409,7 +409,7 @@ class Channel(object):
         if not (uri and channel_name and sign_key and trigger):
             LOG.warn('uri<{}>, channel_name<{}>, trigger<{}> and sign_key should not be none'.format(uri, channel_name,
                                                                                                      trigger))
-            return
+            return None
 
         try:
             # get records by nonce from the trade history
