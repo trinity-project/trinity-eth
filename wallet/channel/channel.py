@@ -141,6 +141,10 @@ class Channel(object):
 
         console_log.info('Get Channels with Address {}{}'.format(address, output_text))
 
+        if filter_src.get('peer'):
+            filter_src.update({'dest_addr': filter_src.get('peer')})
+            filter_src.pop('peer')
+
         channels = APIChannel.batch_query_channel(filters=filter_src)
         for ch in channels:
             console_log.console('=='*10,'\nChannelName:', ch.channel, '\nState:', ch.state, '\nPeer:', ch.dest_addr,
