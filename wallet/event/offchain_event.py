@@ -67,11 +67,12 @@ class ChannelForceSettleEvent(ChannelOfflineEventBase):
         LOG.debug('event args: {}, kwargs'.format(self.event_arguments.args, self.event_arguments.kwargs))
 
         # close channel event
-        Channel.force_release_rsmc(invoker_uri, channel_name, nonce, invoker_key, gwei_coef=self.gwei_coef,
-                                   trigger=self.contract_event_api.close_channel, is_debug=is_debug)
+        result = Channel.force_release_rsmc(invoker_uri, channel_name, nonce, invoker_key, gwei_coef=self.gwei_coef,
+                                            trigger=self.contract_event_api.close_channel, is_debug=is_debug)
 
         # set channel settling
-        Channel.update_channel(self.channel_name, state=EnumChannelState.SETTLING.name)
+        if result is not None and 'success' in result.values():
+            Channel.update_channel(self.channel_name, state=EnumChannelState.SETTLED.name)
         self.next_stage()
 
     def terminate(self, block_height, *args, **kwargs):
@@ -140,10 +141,11 @@ class ChannelEndSettleEvent(ChannelOfflineEventBase):
         super(ChannelEndSettleEvent, self).execute(block_height)
 
         # close channel event
-        self.contract_event_api.end_close_channel(invoker, channel_name, invoker_key, gwei_coef=self.gwei_coef)
+        result = self.contract_event_api.end_close_channel(invoker, channel_name, invoker_key, gwei_coef=self.gwei_coef)
 
         # set channel settling
-        Channel.update_channel(self.channel_name, state=EnumChannelState.SETTLED.name)
+        if result is not None and 'success' in result.values():
+            Channel.update_channel(self.channel_name, state=EnumChannelState.CLOSED.name)
         self.next_stage()
 
     def terminate(self, block_height, *args, **kwargs):
