@@ -121,7 +121,7 @@ class FounderMessage(Message):
         message = message.message_header
 
         founder_deposit = float(founder_deposit)
-        if partner_deposit:
+        if not partner_deposit:
             partner_deposit = founder_deposit
 
         # check the deposit
