@@ -301,7 +301,9 @@ class UserPromptInterface(PromptInterface):
             deposit = float(get_arg(arguments, 3).strip())
             partner_deposit = get_arg(arguments, 4)
             partner_deposit = float(float(partner_deposit.strip())) if partner_deposit is not None else deposit
-            if deposit <= 0 or 0 > partner_deposit or partner_deposit > deposit:
+            if deposit <= 0:
+                console_log.error("Founder's Deposit MUST be lager than 0")
+            elif 0 > partner_deposit or partner_deposit > deposit:
                 console_log.error("Founder's Deposit should not be less than Partner's")
                 return None
         except ValueError:
