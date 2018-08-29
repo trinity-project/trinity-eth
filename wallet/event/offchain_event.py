@@ -143,10 +143,9 @@ class ChannelEndSettleEvent(ChannelOfflineEventBase):
         self.contract_event_api.end_close_channel(invoker, channel_name, invoker_key, gwei_coef=self.gwei_coef)
 
         # set channel settling
-        Channel.update_channel(self.channel_name, state=EnumChannelState.CLOSED.name)
+        Channel.update_channel(self.channel_name, state=EnumChannelState.SETTLED.name)
         self.next_stage()
 
     def terminate(self, block_height, *args, **kwargs):
         super(ChannelEndSettleEvent, self).terminate(block_height, *args, **kwargs)
         self.next_stage()
-
