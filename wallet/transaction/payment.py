@@ -27,11 +27,20 @@ from Crypto import Random
 from eth_hash.backends.pysha3 import keccak256
 
 from common.log import LOG
+<<<<<<< HEAD
 from common.singleton import SingletonClass
 from .message import Message
 from .response import EnumResponseStatus
 from wallet.utils import get_asset_type_id
 from trinity import IS_SUPPORTED_ASSET
+=======
+from common.console import console_log
+from common.singleton import SingletonClass
+from .message import Message
+from .response import EnumResponseStatus
+from wallet.utils import get_asset_type_id, get_magic
+from trinity import IS_SUPPORTED_ASSET_TYPE, SUPPORTED_ASSET_TYPE
+>>>>>>> dev
 from wallet.channel import Channel
 from wallet.channel.trade import EnumTradeState
 
@@ -44,6 +53,7 @@ class Payment(metaclass=SingletonClass):
         pass
 
     @classmethod
+<<<<<<< HEAD
     def generate_payment_code(cls, receiver, asset_type, value, hashcode, comments=''):
         if not IS_SUPPORTED_ASSET(asset_type):
             return None
@@ -55,11 +65,39 @@ class Payment(metaclass=SingletonClass):
 
         asset_id = asset_id.strip()
         asset_id = asset_id.replace('0x', '').strip()
+=======
+    def generate_payment_code(cls, receiver, asset_type, value, hashcode, comments='', cli=False):
+        """"""
+        if 0 >= float(value):
+            console_log.error('Not support negative number.')
+            return
+
+        if not IS_SUPPORTED_ASSET_TYPE(asset_type):
+            text = 'AssetType: {} is not supported'.format(asset_type)
+            LOG.error(text)
+            if cli:
+                console_log.error(text)
+
+            return None
+
+        asset_type = asset_type.replace('0x', '')
+        if asset_type.upper() in SUPPORTED_ASSET_TYPE.keys():
+            asset_type = asset_type.upper()
+>>>>>>> dev
 
         hashcode = hashcode.strip()
         hashcode = hashcode.replace('0x', '')
 
+<<<<<<< HEAD
         code = "{0}&{1}&{2}&{3}&{4}".format(receiver, hashcode, asset_id, value, comments)
+=======
+        code = "{uri}&{net_magic}&{hashcode}&{asset_type}&{payment}&{comments}".format(uri=receiver,
+                                                                                       net_magic=get_magic(),
+                                                                                       hashcode=hashcode,
+                                                                                       asset_type=asset_type,
+                                                                                       payment=value,
+                                                                                       comments=comments)
+>>>>>>> dev
         base58_code = base58.b58encode(code.encode())
         try:
             return "TN{}".format(base58_code.decode())
@@ -79,11 +117,19 @@ class Payment(metaclass=SingletonClass):
         base58_code = payment_code[2:]
         code = base58.b58decode(base58_code).decode()
         info = code.split("&",5)
+<<<<<<< HEAD
         print(info)
         if 5 != len(info):
             return False, None
 
         keys=['uri', 'hashcode', 'asset_type', 'payment', 'comments']
+=======
+
+        if 6 != len(info):
+            return False, None
+
+        keys=['uri', 'net_magic', 'hashcode', 'asset_type', 'payment', 'comments']
+>>>>>>> dev
 
         result = dict(zip(keys, info))
         result['hashcode'] = '0x'+result['hashcode']
@@ -114,8 +160,15 @@ class Payment(metaclass=SingletonClass):
                 #
                 # update the payment to confirm
                 Channel.update_payment(channel_name, hashcode, state=EnumTradeState.confirmed.name)
+<<<<<<< HEAD
         except Exception as error:
             LOG.exception('Payment for channel<{}> with HashR<{}> Not found from the DB'.format(channel_name, hashcode),
+=======
+
+            return
+        except Exception as error:
+            LOG.error('Payment for channel<{}> with HashR<{}> Not found from the DB'.format(channel_name, hashcode),
+>>>>>>> dev
                           'Exception: {}'.format(error))
 
         return
@@ -163,7 +216,11 @@ class PaymentLink(Message):
     _message_name = 'PaymentLink'
 
     def __init__(self, message):
+<<<<<<< HEAD
         super().__init__(message)
+=======
+        super(PaymentLink, self).__init__(message)
+>>>>>>> dev
 
         self.payment = self.message_body.get('PaymentCount')
         self.comments = self.message_body.get('Comments')

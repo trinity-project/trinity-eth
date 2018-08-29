@@ -21,9 +21,12 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
+from trinity import SUPPORTED_ASSET_TYPE
+
+
 Configure = {
-    "alias":"TrinityEthNode",# you can rename your node
-    "GatewayURL":"http://localhost:8077",
+    "alias": "TrinityEthNode",# you can rename your node
+    "GatewayURL": "http://localhost:8077",
     "AutoCreate": True, # if the wallet accept the create channel request automatically
     "Channel":{
                "TNC":{"CommitMinDeposit": 1,   # the min commit deposit
@@ -37,7 +40,11 @@ Configure = {
     "NetPort":"20556",
     "GatewayTCP":"localhost:8089",
     "AssetType":{
+<<<<<<< HEAD
         "TNC": "0x65096f2B7A8dc1592479F1911cd2B98dae4d2218"
+=======
+        "TNC": SUPPORTED_ASSET_TYPE['TNC']
+>>>>>>> dev
     },
     "BlockChain":{
         "EthNetUrl" : "https://ropsten.infura.io"
@@ -46,7 +53,7 @@ Configure = {
     },
     "Version":"v0.2.1",
     "Magic":{
-        "Block":1953787457,
+        "Block":5274657374,##binascii.b2a_hex(u"Rtest".encode("utf8"))
         "Trinity":19990331
     }
 }

@@ -19,8 +19,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 import platform
 import operator
-import json
 import os
+
 
 # version x.y.z
 #   This version will have same meaning as Linux
@@ -31,8 +31,11 @@ __version__ = '0.1.1'
 __os_platform__ = platform.system().upper() if platform.system() else 'LINUX'
 __running_mode__ = (0 == operator.imod(int(__version__.split('.')[1]), 2))
 
+<<<<<<< HEAD
 Console_log = False
 
+=======
+>>>>>>> dev
 
 DATABASE_CONFIG = {
     'authentication': {
@@ -48,4 +51,31 @@ DATABASE_CONFIG = {
 }
 
 
+<<<<<<< HEAD
 IS_SUPPORTED_ASSET = lambda asset_type: asset_type.upper() in ['TNC']
+=======
+# local gas settings
+GWEI_COEFFICIENT = 100
+
+# Asset Type configuration
+SUPPORTED_ASSET_TYPE = {'TNC': '0x65096f2B7A8dc1592479F1911cd2B98dae4d2218'}
+IS_SUPPORTED_ASSET_TYPE = lambda asset_type: \
+    isinstance(asset_type, str) and \
+    (asset_type.upper() in ['TNC'] or \
+     (SUPPORTED_ASSET_TYPE['TNC'].__contains__(asset_type.replace('0x', ''))))
+
+
+# Some configuration related to the logs
+LOG_TO_CONSOLE = False
+if __os_platform__ in ['LINUX', 'DARWIN']:
+    TRINITY_LOG_PATH = os.path.join(r'/var/log', r'trinity')
+else:
+    TRINITY_LOG_PATH = os.getcwd().split(os.sep)[0]+os.sep+r'temp'
+
+# WebSocket server configuration
+EVENT_WS_SERVER = {
+    'uri': 'ws://47.104.81.20:9000',
+    'timeout': None
+}
+
+>>>>>>> dev

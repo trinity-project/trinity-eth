@@ -21,7 +21,7 @@ class Interface(object):
             cls.__species = object.__new__(cls)
         return cls.__species
 
-    def __init__(self, url, contract_address, contract_abi, asset_address, asset_abi):
+    def __init__(self, url, data_contract_address,  contract_address, contract_abi, asset_address, asset_abi):
         """
 
         :param url: eth contract running location
@@ -34,6 +34,7 @@ class Interface(object):
             self.__class__.__first_init = False
             self.eth_client = Client(eth_url=url)
             self.contract_address = checksum_encode(contract_address)
+            self.data_contract_address = checksum_encode(data_contract_address)
 
             self.contract=self.eth_client.get_contract_instance(contract_address,contract_abi)
             self.asset_contract=self.eth_client.get_contract_instance(asset_address,asset_abi)
@@ -46,19 +47,9 @@ class Interface(object):
         :param invoker_key: sender's key
         :return: transaction id
         """
-        try:
-            tx_id = self.eth_client.contruct_Transaction(invoker, self.asset_contract, "approve",
-                                                         [self.contract_address, asset_amount],
-                                                         invoker_key, gwei_coef=gwei_coef)
-            tx_msg = 'success'
-        except Exception as e:
-            tx_id = 'none'
-            tx_msg = e
-
-        return {
-            "txData":tx_id,
-            "txMessage":tx_msg
-        }
+        return self.eth_client.contruct_Transaction(invoker, self.asset_contract, "approve",
+                                                    [self.data_contract_address, asset_amount],
+                                                    invoker_key, gwei_coef=gwei_coef)
 
     def get_approved_asset(self, contract_address, abi, approver, spender):
         """
@@ -131,22 +122,13 @@ class Interface(object):
         """
         founder = checksum_encode(founder)
         partner = checksum_encode(partner)
-        try:
-            tx_id = self.eth_client.contruct_Transaction(invoker, self.contract,"deposit",
-                                                         [channel_id, nonce,
-                                                         founder, founder_amount,
-                                                         partner, partner_amount,
-                                                         founder_signature, partner_signature], invoker_key,
-                                                         gwei_coef=gwei_coef)
-            tx_msg = 'success'
-        except Exception as e:
-            tx_id = 'none'
-            tx_msg = e
 
-        return {
-            "txData":tx_id,
-            "txMessage":tx_msg
-        }
+        return self.eth_client.contruct_Transaction(invoker, self.contract,"deposit",
+                                                    [channel_id, nonce,
+                                                     founder, founder_amount,
+                                                     partner, partner_amount,
+                                                     founder_signature, partner_signature], invoker_key,
+                                                    gwei_coef=gwei_coef)
 
     def update_deposit(self, invoker, channel_id, nonce, founder, founder_amount,
                        partner, partner_amount, founder_signature, partner_signature, invoker_key):
@@ -190,25 +172,15 @@ class Interface(object):
         """
         founder = checksum_encode(founder)
         partner = checksum_encode(partner)
-        try:
-            tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "quickCloseChannel",
-                                                         [channel_id, nonce,
-                                                         founder, founder_balance,
-                                                         partner, partner_balance,
-                                                         founder_signature, partner_signature], invoker_key,
-                                                         gwei_coef=gwei_coef)
-            tx_msg = 'success'
-        except Exception as e:
-            tx_id = 'none'
-            tx_msg = e
-
-        return {
-            "txData":tx_id,
-            "txMessage":tx_msg
-        }
+        return self.eth_client.contruct_Transaction(invoker, self.contract, "quickCloseChannel",
+                                                    [channel_id, nonce,
+                                                     founder, founder_balance,
+                                                     partner, partner_balance,
+                                                     founder_signature, partner_signature], invoker_key,
+                                                     gwei_coef=gwei_coef)
 
     def close_channel(self, invoker, channel_id, nonce, founder, founder_balance,
-                      partner, partner_balance, founder_signature, partner_signature, invoker_key):
+                      partner, partner_balance, founder_signature, partner_signature, invoker_key, gwei_coef=1):
         """
         Description: one side of the channel dismantle the channel unilaterally
         :param meaning reference "quick_close_channel"
@@ -220,7 +192,8 @@ class Interface(object):
                                                          [channel_id, nonce,
                                                          founder, founder_balance,
                                                          partner, partner_balance,
-                                                         founder_signature, partner_signature],invoker_key)
+                                                         founder_signature, partner_signature],
+                                                         invoker_key, gwei_coef=gwei_coef)
             tx_msg = 'success'
         except Exception as e:
             tx_id = 'none'
@@ -232,7 +205,8 @@ class Interface(object):
         }
 
     def update_transaction(self, invoker, channel_id, nonce, founder, founder_balance,
-                           partner, partner_balance, founder_signature, partner_signature, invoker_key):
+                           partner, partner_balance, founder_signature, partner_signature,
+                           invoker_key, gwei_coef=1):
         """
         Description: the partner will confirm shutter transaction whether it is valid
         :param meaning reference "quick_close_channel"
@@ -244,7 +218,8 @@ class Interface(object):
                                                         [channel_id, nonce,
                                                          founder, founder_balance,
                                                          partner, partner_balance,
-                                                         founder_signature, partner_signature],invoker_key)
+                                                         founder_signature, partner_signature],invoker_key,
+                                                         gwei_coef=gwei_coef)
             tx_msg = 'success'
         except Exception as e:
             tx_id = 'none'
@@ -255,7 +230,7 @@ class Interface(object):
             "txMessage":tx_msg
         }
 
-    def settle_transaction(self, invoker, channel_id, invoker_key):
+    def settle_transaction(self, invoker, channel_id, invoker_key, gwei_coef=1):
         """
         Description: channel shutter will apply for withdraw channel asset belong to shutter after arbitration period timeout
         :param invoker: shutter address
@@ -265,7 +240,7 @@ class Interface(object):
         """
         try:
             tx_id = self.eth_client.contruct_Transaction(invoker, self.contract,"settleTransaction",
-                                                         [channel_id], invoker_key)
+                                                         [channel_id], invoker_key, gwei_coef=gwei_coef)
             tx_msg = 'success'
         except Exception as e:
             tx_id = 'none'
@@ -334,19 +309,14 @@ class Interface(object):
             "txMessage":tx_msg
         }
 
-    def withdraw_settle(self, invoker, channel_id, nonce, founder, partner, lock_period, lock_amount, lock_hash,
-                        founder_signature, partner_signature, secret, invoker_key):
+    def withdraw_settle(self, invoker, channel_id, lock_hash, secret, invoker_key):
         """
         Description: HTLC receiver can apply for withdraw the lock assets after lock period timeout
         :param meaning reference "withdraw"
         """
-        founder = checksum_encode(founder)
-        partner = checksum_encode(partner)
         try:
             tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "withdrawSettle",
-                                                          [channel_id, nonce, founder, partner,
-                                                          lock_period, lock_amount, lock_hash,
-                                                          founder_signature, partner_signature, secret], invoker_key)
+                                                          [channel_id, lock_hash, secret], invoker_key)
             tx_msg = 'success'
         except Exception as e:
             tx_id = 'none'
@@ -406,7 +376,7 @@ class Interface(object):
         Description: get specified channel total balance
         :return: channel total balance
         """
-        total_balance = self.eth_client.call_contract(self.contract,"getChannelBalance",[channel_id])
+        total_balance = self.eth_client.call_contract(self.contract, "getChannelBalance",[channel_id])
         return {
             "totalChannelBalance": total_balance
         }

@@ -24,11 +24,20 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 from .event import EventBase, EnumEventType, EnumEventAction
 from wallet.channel import Channel, sync_channel_info_to_gateway
+<<<<<<< HEAD
 from blockchain.event import event_test_state
 from common.log import LOG
 from common.console import console_log
 from common.common import uri_parser
 from .contract_event import contract_event_api
+=======
+from model.base_enum import EnumChannelState
+from wallet.event.chain_event import event_monitor_settle, \
+    event_monitor_close_channel, \
+    event_test_state
+from common.log import LOG
+from common.console import console_log
+>>>>>>> dev
 
 
 class ChannelEventBase(EventBase):
@@ -59,12 +68,20 @@ class ChannelDepositEvent(ChannelEventBase):
 
         self.deposit = 0.0
         self.partner_deposit = 0.0
+<<<<<<< HEAD
+=======
+
+>>>>>>> dev
         pass
 
     def prepare(self, block_height, address='', deposit=0.0, key=''):
         super(ChannelDepositEvent, self).prepare(block_height)
 
+<<<<<<< HEAD
         result = contract_event_api.approve(address, deposit, key, gwei_coef=self.gwei_coef)
+=======
+        result = self.contract_event_api.approve(address, deposit, key, gwei_coef=self.gwei_coef)
+>>>>>>> dev
         if result:
             self.next_stage()
             return True
@@ -79,8 +96,13 @@ class ChannelDepositEvent(ChannelEventBase):
         # execute stage of channel event
         try:
 
+<<<<<<< HEAD
             approved_deposit = contract_event_api.get_approved_asset(founder)
             peer_approved_deposit = contract_event_api.get_approved_asset(partner)
+=======
+            approved_deposit = self.contract_event_api.get_approved_asset(founder)
+            peer_approved_deposit = self.contract_event_api.get_approved_asset(partner)
+>>>>>>> dev
 
             if approved_deposit >= float(deposit) and peer_approved_deposit >= float(partner_deposit):
                 LOG.debug('Approved asset: self<{}:{}>, peer<{}:{}>'.format(address, approved_deposit,
@@ -93,9 +115,15 @@ class ChannelDepositEvent(ChannelEventBase):
                 return False
 
             if self.is_event_founder:
+<<<<<<< HEAD
                 contract_event_api.approve_deposit(address, channel_id, nonce, founder, deposit,
                                                    partner, partner_deposit,
                                                    founder_sign, partner_sign, private_key, gwei_coef=self.gwei_coef)
+=======
+                self.contract_event_api.approve_deposit(
+                    address, channel_id, nonce, founder, deposit, partner, partner_deposit,
+                    founder_sign, partner_sign, private_key, gwei_coef=self.gwei_coef)
+>>>>>>> dev
         except Exception as error:
             LOG.warning('Failed to approve deposit of Channel<{}>. Exception: {}'.format(self.channel_name, error))
         else:
@@ -105,6 +133,7 @@ class ChannelDepositEvent(ChannelEventBase):
 
     def terminate(self, block_height, state='', asset_type='TNC'):
         super(ChannelDepositEvent, self).terminate(block_height)
+<<<<<<< HEAD
 
         # check the deposit of the contract address
         total_deposit = contract_event_api.get_channel_total_balance(self.channel_name)
@@ -112,6 +141,19 @@ class ChannelDepositEvent(ChannelEventBase):
             Channel.update_channel(self.channel_name, state=state)
             sync_channel_info_to_gateway(self.channel_name, 'AddChannel', asset_type)
             console_log.info('Channel {} state is {}'.format(self.channel_name, state))
+=======
+
+        # check the deposit of the contract address
+        total_deposit = self.contract_event_api.get_channel_total_balance(self.channel_name)
+        if total_deposit >= self.deposit + self.partner_deposit:
+            Channel.update_channel(self.channel_name, state=state)
+            sync_channel_info_to_gateway(self.channel_name, 'AddChannel', asset_type)
+            console_log.info('Channel {} state is {}'.format(self.channel_name, state))
+
+            # to trigger event
+            event_monitor_close_channel(self.channel_name)
+            event_monitor_settle(self.channel_name)
+>>>>>>> dev
             self.next_stage()
 
     def timeout_handler(self, block_height, *args, **kwargs):
@@ -143,8 +185,14 @@ class ChannelQuickSettleEvent(ChannelEventBase):
         super(ChannelQuickSettleEvent, self).execute(block_height)
 
         if self.is_event_founder:
+<<<<<<< HEAD
             contract_event_api.quick_settle(invoker, channel_id, nonce, founder, founder_balance,
                                             partner, partner_balance, founder_signature, partner_signature, invoker_key)
+=======
+            self.contract_event_api.quick_settle(
+                invoker, channel_id, nonce, founder, founder_balance, partner, partner_balance,
+                founder_signature, partner_signature, invoker_key, gwei_coef=self.gwei_coef)
+>>>>>>> dev
 
         # set next stage
         self.next_stage()
@@ -153,10 +201,17 @@ class ChannelQuickSettleEvent(ChannelEventBase):
         super(ChannelQuickSettleEvent, self).terminate(block_height)
 
         # to check the total deposit of the channel
+<<<<<<< HEAD
         total_deposit = contract_event_api.get_channel_total_balance(self.channel_name)
+=======
+        total_deposit = self.contract_event_api.get_channel_total_balance(self.channel_name)
+>>>>>>> dev
         if 0 >= total_deposit:
             Channel.update_channel(self.channel_name, state=state)
             sync_channel_info_to_gateway(self.channel_name, 'DeleteChannel', asset_type)
             console_log.info('Channel {} state is {}'.format(self.channel_name, state))
             self.next_stage()
+<<<<<<< HEAD
 
+=======
+>>>>>>> dev

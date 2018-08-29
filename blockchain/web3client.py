@@ -2,6 +2,9 @@ import binascii
 import requests
 from ethereum.utils import ecsign, normalize_key, int_to_big_endian, checksum_encode
 from web3 import Web3, HTTPProvider
+from ethereum.utils import sha3, is_string, encode_hex, checksum_encode
+from trinity import GWEI_COEFFICIENT
+
 
 def get_privtKey_from_keystore(filename,password):
     with open(filename) as keyfile:
@@ -24,12 +27,14 @@ def get_price_from_coincapmarket(asset_type):
 
 class Client(object):
 
+    _gwei_coeficient = GWEI_COEFFICIENT
+
     def __init__(self, eth_url):
         self.web3 = Web3(HTTPProvider(eth_url))
 
-    def construct_common_tx(self, addressFrom, addressTo, value, gasLimit=25600):
+    def construct_common_tx(self, addressFrom, addressTo, value, gasLimit=None):
         tx = {
-            'gas': gasLimit,
+            'gas': gasLimit if gasLimit else 4500000,
             'to': addressTo,
             'value': int(value*10**18),
             'gasPrice': self.web3.eth.gasPrice,
@@ -46,18 +51,22 @@ class Client(object):
         :param abi:
         :return:
         """
-        return self.web3.eth.contract(address=contract_address, abi=abi)
+        return self.web3.eth.contract(address=checksum_encode(contract_address), abi=abi)
 
 
-    def construct_erc20_tx(self, contract,addressFrom, addressTo,value, gasLimit=25600, gasprice=None):
-        tx = contract.functions.transfer(
-            addressTo,
-            int(value)
-        ).buildTransaction({
-            "gas": gasLimit,
+    def construct_erc20_tx(self, contract,addressFrom, addressTo,value, gasLimit=None, gasprice=None):
+        tx_d = {
+
             'gasPrice': self.web3.eth.gasPrice * 2 if not gasprice  else gasprice,
-            'nonce': self.web3.eth.getTransactionCount(addressFrom),
-        })
+            'nonce': self.web3.eth.getTransactionCount(checksum_encode(addressFrom)),
+        }
+        if gasLimit:
+            tx_d.update({"gas": gasLimit})
+
+        tx = contract.functions.transfer(
+            checksum_encode(addressTo),
+            int(value)
+        ).buildTransaction(tx_d)
         return tx
 
     def invoke_contract(self, invoker, contract, method, args):
@@ -109,7 +118,7 @@ class Client(object):
         :param address:
         :return:
         """
-        return self.web3.eth.getBalance(address)/(10**18)
+        return self.web3.eth.getBalance(checksum_encode(address))/(10**18)
 
     def get_balance_of_erc20(self,contract_address, abi, address):
         """
@@ -119,8 +128,8 @@ class Client(object):
         :param address:
         :return:
         """
-        contract = self.get_contract_instance(contract_address, abi)
-        return contract.functions.balanceOf(address).call()/(10**8)
+        contract = self.get_contract_instance(checksum_encode(contract_address), abi)
+        return contract.functions.balanceOf(checksum_encode(address)).call()/(10**8)
 
     def get_approved_asset(self, contract_address, abi, approver, spender):
         """
@@ -130,7 +139,7 @@ class Client(object):
         :param spender: the address be authorized to spend
         :return:
         """
-        contract = self.get_contract_instance(contract_address, abi)
+        contract = self.get_contract_instance(checksum_encode(contract_address), abi)
         return contract.functions.allowance(approver, spender).call()/(10**8)
 
     def get_block_count(self):
@@ -161,11 +170,18 @@ class Client(object):
     def call_contract(self,contract,method,args):
         return contract.functions[method](*args).call()
 
+<<<<<<< HEAD
 
     def contruct_Transaction(self, invoker, contract, method, args, key, gwei_coef = 1):
         gas_price = self.web3.eth.gasPrice*10
         print('gas price: {}'.format(gas_price))
         tx_dict = contract.functions[method](*args).buildTransaction({
+=======
+    def contruct_Transaction(self, invoker, contract, method, args, key, gwei_coef=None, gasLimit=4600000):
+        """"""
+        tx_dict = contract.functions[method](*args).buildTransaction({
+            'gas':gasLimit,
+>>>>>>> dev
             'gasPrice': pow(10, 9) * gwei_coef,
             'nonce': self.web3.eth.getTransactionCount(checksum_encode(invoker)),
         })
@@ -174,11 +190,20 @@ class Client(object):
 
         return binascii.hexlify(tx_id).decode()
 
-    def get_transaction_receipt(self,hashString):
+    def get_transaction_receipt(self, hashString):
         return self.web3.eth.getTransactionReceipt(hashString)
 
+    @classmethod
+    def set_gas_price(cls, coef=1):
+        cls._gwei_coeficient = coef
 
-'''
+    @classmethod
+    def get_gas_price(cls):
+        return cls._gwei_coeficient
+
+    def get_estimate_gas(self, invoker, contract, method, args):
+        return  contract.functions[method](*args).estimateGas({'from':invoker})
+
 if __name__ == "__main__":
     myclient = Client("https://ropsten.infura.io")
     print(myclient.get_block_count())
@@ -241,9 +266,9 @@ if __name__ == "__main__":
                                                          {"indexed":True,"name":"_spender","type":"address"},
                                                          {"indexed":False,"name":"_value","type":"uint256"}],
                                                "name":"Approval","type":"event"}]
-    c = myclient.get_contract_instance("0x4c7A0D54ec5CbFFE4Ebe263F1F25aa53611521cB",abi=abi)
+    #c = myclient.get_contract_instance("0x65096f2b7a8dc1592479f1911cd2b98dae4d2218",abi=abi)
 
-    balance = myclient.get_balance_of_erc20(c,"0xed630C05336D07787B1DAbC5dA1aD963cE47FC50")
+    balance = myclient.get_balance_of_erc20(checksum_encode("0x65096f2b7a8dc1592479f1911cd2b98dae4d2218"),abi,checksum_encode("0xed630C05336D07787B1DAbC5dA1aD963cE47FC50"))
     print(balance)
 
 
@@ -358,4 +383,4 @@ if __name__ == "__main__":
     # # print(c)
     # # print(d)
     # pass
-    '''
+

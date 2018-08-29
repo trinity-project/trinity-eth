@@ -24,6 +24,7 @@ SOFTWARE."""
 from .web3client import Client
 from wallet.configure import Configure
 from common.log import LOG
+from lightwallet.Settings import settings
 from tokenconf import TokenConfigure
 
 
@@ -32,18 +33,16 @@ AssetType=Configure["AssetType"]
 
 NetUrl = Configure['BlockChain']['EthNetUrl']
 
-EthClient = Client(NetUrl)
-
 
 def send_raw(raw_data):
-    return EthClient.broadcast(raw_data)
+    return settings.EthClient.broadcast(raw_data)
 
 def get_block_count():
-    return EthClient.get_block_count()
+    return settings.EthClient.get_block_count()
 
 
 def get_block(index):
-    return EthClient.get_block(index)
+    return settings.EthClient.get_block(index)
 
 
 def get_balance(address, asset_type, asset_address=None, asset_abi=None):
@@ -55,20 +54,20 @@ def get_balance(address, asset_type, asset_address=None, asset_abi=None):
     """
     if asset_type.upper() == "ETH":
         try:
-            return EthClient.get_balance_of_eth(address)
+            return settings.EthClient.get_balance_of_eth(address)
         except Exception as e:
             LOG.error(e)
             return 0
     else:
         try:
-            return EthClient.get_balance_of_erc20(asset_address, asset_abi, address)
+            return settings.EthClient.get_balance_of_erc20(asset_address, asset_abi, address)
         except Exception as e:
             LOG.exception(e)
             return 0
 
 
 def get_application_log(filter_id):
-    return EthClient.get_fitler_log(filter_id)
+    return settings.EthClient.get_fitler_log(filter_id)
 
 
 def check_vmstate(filter_id):

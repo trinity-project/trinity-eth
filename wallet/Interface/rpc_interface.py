@@ -26,7 +26,11 @@ import json
 from json.decoder import JSONDecodeError
 from klein import Klein
 from wallet.Interface.rpc_utils import json_response, cors_header
+<<<<<<< HEAD
 from wallet.channel import get_channel_via_name, udpate_channel_when_setup
+=======
+from wallet.channel import get_channel_via_name, query_channel_list
+>>>>>>> dev
 from common.log import LOG
 from wallet.configure import Configure
 from blockchain.interface import get_balance
@@ -210,10 +214,15 @@ class RpcInteraceApi(object):
             # return rsmc_message
 
         elif method == "GetChannelList":
+            LOG.debug("GetChannelList")
             from wallet.utils import get_wallet_info
             if CurrentLiveWallet.Wallet:
-                channel_list = udpate_channel_when_setup(CurrentLiveWallet.Wallet.url)
-                wallet_info = get_wallet_info(CurrentLiveWallet.Wallet.address)
+                try:
+                    channel_list = query_channel_list(CurrentLiveWallet.Wallet.url)
+                except Exception as e:
+                    channel_list= None
+                    LOG.error(e)
+                wallet_info = get_wallet_info(CurrentLiveWallet.Wallet)
 
                 return {"MessageType":"GetChannelList",
                         "MessageBody":{"Channel":channel_list,

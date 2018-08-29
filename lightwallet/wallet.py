@@ -75,6 +75,9 @@ class Wallet(object):
             self._key.unlock(passwordKey)
             del passwordKey
 
+    @property
+    def SupportAssert(self):
+        return ["TNC", "ETH"]
 
     @staticmethod
     def Open(path, password):
@@ -132,6 +135,15 @@ class Wallet(object):
         """
         return self._key.sign_hash(message_hash)
 
+    def recoverHash(self,message_hash, signature):
+        """
+
+        :param message_hash:
+        :param signature:
+        :return:
+        """
+        return self._key.recoverHash(message_hash, signature=signature)
+
     def SignTX(self,tx_data: dict):
         """
 
@@ -171,7 +183,7 @@ class Wallet(object):
         """
         return self._accounts[0]["account"].GetAddress()
 
-    def send_eth(self,address_to, value, gasLimit=25600):
+    def send_eth(self,address_to, value, gasLimit=None):
         """
 
         :param addresss_to:
@@ -194,6 +206,8 @@ class Wallet(object):
             raise Exception(e)
 
         tx_id = binascii.hexlify(tx_id).decode()
+        if "send failed" in tx_id:
+            raise Exception("send faild")
         try:
             self.record_history(tx_id=tx_id, asset_id=asset_id, sendto=sendto, value=value)
         except Exception as e:
@@ -202,7 +216,7 @@ class Wallet(object):
         return tx_id
 
 
-    def send_erc20(self, asset, address_to, value, gasLimit=25600, gasprice=None):
+    def send_erc20(self, asset, address_to, value, gasLimit=None, gasprice=None):
         """
 
         :param asset:
@@ -221,8 +235,8 @@ class Wallet(object):
         contract_instance = settings.EthClient.get_contract_instance(conract_address,
                                                        abi)
         address_to = checksum_encode(address_to)
-        tx = settings.EthClient.construct_erc20_tx(contract_instance, self._key.address,
-                                                   int(value*10*decimals), gasLimit, gasprice)
+        tx = settings.EthClient.construct_erc20_tx(contract_instance, self._key.address, address_to,
+                                                   int(value*10**decimals), gasLimit, gasprice)
         rawdata = self.SignTX(tx)
 
         asset = "{}({})".format(asset, conract_address)
@@ -354,9 +368,9 @@ class Wallet(object):
                "asset":asset_id,
                "sender":self.address,
                "receiver":sendto,
-               "value":value,
-               "block":"null",
-               "state":"waiting"}
+               "value":value,}
+               #"block":nill,
+               #"state":""}
         return self.history.add_history(**his)
 
     def update_history(self, tx_id, block, state):

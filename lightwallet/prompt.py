@@ -3,23 +3,46 @@ import argparse
 import json
 import pprint
 import traceback
-from prompt_toolkit import prompt
+from prompt_toolkit import print_formatted_text, PromptSession, ANSI
+from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.history import FileHistory
-from prompt_toolkit.shortcuts import print_tokens
-from prompt_toolkit.styles import style_from_dict
-from prompt_toolkit.token import Token
+# from prompt_toolkit.shortcuts import print_formatted_text, PromptSession, ANSI
+from prompt_toolkit.formatted_text import FormattedText
+from prompt_toolkit.styles import Style
+from prompt_toolkit import prompt
+from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
+
 import os
 import sys
+import re
 pythonpath = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(pythonpath)
-from lightwallet.Utils import get_arg,get_asset_id
+
+from common.log import LOG
+from common.console import console_log
+from lightwallet.Utils import get_arg, get_asset_id
 from lightwallet.Settings import settings
 from lightwallet.wallet import Wallet
-
+from model.base_enum import EnumStatusCode
+from blockchain.web3client import Client
 from lightwallet.UserPreferences import preferences
 import binascii
 
 FILENAME_PROMPT_HISTORY = os.path.join(settings.DIR_CURRENT, '.prompt.py.history')
+
+
+def command_wapper(command):
+    def handler(callback):
+        def wrapper(*args, **kwargs):
+            try:
+                callback(*args, **kwargs)
+            except Exception as error:
+                console_log.error('Error occurred to run command: {}. Please check logs for details.'.format(command))
+                LOG.error('Error occurred to run command: {}. Exception: {}'.format(command, error))
+
+        return wrapper
+    return handler
+
 
 class PromptInterface(object):
     """
@@ -28,19 +51,19 @@ class PromptInterface(object):
     """
 
     commands = [
-                'help',
-                'quit',
-                'create wallet {path}',
-                'open wallet {path}',
-                'close',
-                'wallet',
-                'send {asset} {address} {amount}',
-                'export wif {address}',
-                'export nep2 {address}',
-                'history',
-                'lock cli',
-                'unlock cli'
-                ]
+        'help',
+        'quit',
+        'create wallet {path}',
+        'open wallet {path}',
+        'close',
+        'wallet',
+        'send {asset} {address} {amount}',
+        'history',
+        'lock cli',
+        'unlock cli',
+        'gas configure {amount}',
+        'gas query'
+    ]
     go_on = True
     Wallet=None
     history = FileHistory(FILENAME_PROMPT_HISTORY)
@@ -48,11 +71,11 @@ class PromptInterface(object):
 
     def __init__(self):
 
-        self.token_style = style_from_dict({
-            Token.Command: preferences.token_style['Command'],
-            Token.Neo: preferences.token_style['Neo'],
-            Token.Default: preferences.token_style['Default'],
-            Token.Number: preferences.token_style['Number'],
+        self.token_style = Style.from_dict({
+            "command": preferences.token_style['Command'],
+            "eth": preferences.token_style['Eth'],
+            "default": preferences.token_style['Default'],
+            "number": preferences.token_style['Number'],
         })
 
 
@@ -63,16 +86,7 @@ class PromptInterface(object):
         :return:
         """
 
-        out = []
-        try:
-            out = [
-                (Token.Command, '[%s]' % (settings.NET_NAME if not self.locked else settings.NET_NAME + " (Locked) ")),
-
-            ]
-        except Exception as e:
-            pass
-
-        return out
+        return'[%s]' % (settings.NET_NAME if not PromptInterface.locked else settings.NET_NAME + " (Locked) ")
 
     def quit(self):
         self.go_on = False
@@ -80,8 +94,8 @@ class PromptInterface(object):
     def help(self):
         tokens = []
         for c in self.commands:
-            tokens.append((Token.Command, "%s\n" % c))
-        print_tokens(tokens)
+            tokens.append(("class:command", "%s\n" % c))
+        print_formatted_text(FormattedText(tokens), style=self.token_style)
 
     def do_create(self, arguments):
         """
@@ -89,7 +103,8 @@ class PromptInterface(object):
         :param arguments:
         :return:
         """
-        self.do_close_wallet()
+        if self.Wallet:
+            self.do_close_wallet()
         item = get_arg(arguments)
         if self.Wallet:
             self.do_close_wallet()
@@ -136,30 +151,19 @@ class PromptInterface(object):
 
         if self.Wallet:
             self.do_close_wallet()
-
         item = get_arg(arguments)
-
         if item and item == 'wallet':
-
             path = get_arg(arguments, 1)
-
             if path:
-
                 if not os.path.exists(path):
                     print("wallet file not found")
                     return
-
                 passwd = prompt("[Password]> ", is_password=True)
-                self.Wallet = Wallet.Open(path, passwd)
-
                 try:
                     self.Wallet = Wallet.Open(path, passwd)
-
-
                     print("Opened wallet at %s" % path)
                 except Exception as e:
                     print("could not open wallet: %s " % e)
-
             else:
                 print("Please specify a path")
         else:
@@ -176,6 +180,7 @@ class PromptInterface(object):
             print("closed wallet %s " % path)
 
 
+    @command_wapper("wallet")
     def show_wallet(self, arguments):
         """
 
@@ -198,6 +203,7 @@ class PromptInterface(object):
         else:
             print("wallet: '{}' is an invalid parameter".format(item))
 
+    @command_wapper("import")
     def do_import(self, arguments):
         """
 
@@ -214,6 +220,7 @@ class PromptInterface(object):
             print("Import of '%s' not implemented" % item)
 
 
+    @command_wapper("export")
     def do_export(self, arguments):
         """
 
@@ -244,6 +251,7 @@ class PromptInterface(object):
         print("Command export %s not found" % item)
 
 
+    @command_wapper("send")
     def do_send(self, arguments):
         """
 
@@ -262,10 +270,21 @@ class PromptInterface(object):
         assetId = get_arg(arguments).upper()
         address_to = get_arg(arguments, 1)
         amount = float(get_arg(arguments, 2))
-        gaslimit = int(get_arg(arguments,3)) if get_arg(arguments,3) else 25600
+        if amount <=0:
+            console_log.error("value can not less then 0")
+            return None
+
+        if not assetId in self.Wallet.SupportAssert:
+            console_log.error("No support assert")
+            return None
+
+        gaslimit = int(get_arg(arguments,3)) if get_arg(arguments,3) else None
         gasprice = int(get_arg(arguments,4)) if get_arg(arguments, 4) else None
 
         if assetId == "ETH":
+            if amount >= self.Wallet.eth_balance:
+                console_log.error("No balance")
+                return None
 
             try:
                 res = self.Wallet.send_eth(address_to, amount, gaslimit)
@@ -273,7 +292,9 @@ class PromptInterface(object):
             except Exception as e:
                 print("send failed %s" %e)
         elif assetId == "TNC":
-
+            if amount > self.Wallet.tnc_balance or self.Wallet.eth_balance < 0:
+                console_log.error("No balance")
+                return None
             try:
                 res = self.Wallet.send_erc20(assetId, address_to, amount, gaslimit, gasprice)
                 print("txid: 0x" +res)
@@ -284,6 +305,7 @@ class PromptInterface(object):
             pass
         return
 
+    @command_wapper("unlock")
     def unlock(self, args):
         """
 
@@ -293,21 +315,22 @@ class PromptInterface(object):
 
         item = get_arg(args)
         if item == "cli":
-            if self.locked:
+            if PromptInterface.locked:
                 passwd = prompt("[Wallet Password]> ", is_password=True)
                 if not self.Wallet.ValidatePassword(passwd):
                     print("Incorrect password")
                     return None
-                self.locked = False
+                PromptInterface.locked = False
                 print("cli unlocked")
             else:
                 print("cli not in locked mode")
         elif item == "wallet":
             pass
         else:
-            print("please spacify unlock item [cli/wallet]")
+            print("please spacify unlock item [cli]")
         return None
 
+    @command_wapper("lock")
     def do_lock(self, args):
         """
 
@@ -316,20 +339,21 @@ class PromptInterface(object):
         """
         item = get_arg(args)
         if item == "cli":
-            if self.locked:
+            if PromptInterface.locked:
                 print("cli now is in locked mode")
             else:
                 if self.Wallet:
-                    self.locked = True
+                    PromptInterface.locked = True
                     print("lock cli with wallet %s" %self.Wallet.name)
                 else:
                     print("No opened wallet")
         elif item == "wallet":
             pass
         else:
-            print("please spacify lock item [cli/wallet]")
+            print("please spacify lock item [cli]")
         return None
 
+    @command_wapper("history")
     def show_tx(self, args):
         """
 
@@ -337,6 +361,9 @@ class PromptInterface(object):
         :return:
         """
         history = self.Wallet.query_history()
+        if history is EnumStatusCode.DBQueryWithoutMatchedItems:
+            print("No tx history")
+            return
         for item in history:
             print("*"*20)
             print(item)
@@ -348,10 +375,35 @@ class PromptInterface(object):
         :param result:
         :return:
         """
-        if len(result):
-            commandParts = [s for s in result.split()]
+        if result.strip():
+            commandParts = result.strip().split()
             return commandParts[0], commandParts[1:]
         return None, None
+
+    @command_wapper("gas")
+    def configure_gas(self, arguments):
+        """
+
+        :param arguments:
+        :return:
+        """
+        subcommand = get_arg(arguments)
+        if not subcommand:
+            self.help()
+            return False
+
+        if subcommand == 'configure':
+            coef = get_arg(arguments, 1, True)
+            if coef is None or 0 >= coef:
+                console_log.warn('Please use number. Attention: much larger, much more expensive charge.')
+                return False
+            Client.set_gas_price(coef)
+        elif subcommand == 'query':
+            console_log.info('Current use {} GWEI'.format(Client.get_gas_price()))
+        else:
+            self.help()
+
+        return
 
     def handle_commands(self,command, arguments):
         """
@@ -386,6 +438,8 @@ class PromptInterface(object):
             self.show_tx(arguments)
         elif command == "lock":
             self.do_lock(arguments)
+        elif command == "gas":
+            self.configure_gas(arguments)
         else:
             print("command %s not found" % command)
 
@@ -403,29 +457,46 @@ class PromptInterface(object):
             print("cli is in locked mode please unlock cli via 'unlock cli'")
             return None
 
+    def get_completer(self):
+        standard_completions =[]
+        for i in self.commands:
+            sub_c = re.match(r"([^{\[]*).*",i)
+            if sub_c:
+                standard_completions.append(sub_c.groups()[0].strip())
+        all_completions = list(set(standard_completions))
+        prompt_completer = WordCompleter(all_completions, sentence=True)
+
+        return prompt_completer
+
     def run(self):
         """
 
         :return:
         """
-        tokens = [(Token.Neo, 'TRINITY'), (Token.Default, ' cli. Type '),
-                  (Token.Command, "'help' "), (Token.Default, 'to get started')]
+        tokens = [("class:eth", 'EthTrinity'), ("class:default", ' cli. Type '),
+                  ("class:command", '\'help\' '), ("class:default", 'to get started')]
 
-        #print_tokens(tokens,self.token_style)
-        print("\n")
+        print_formatted_text(FormattedText(tokens), style=self.token_style)
+        print('\n')
+
 
         while self.go_on:
+            session = PromptSession("trinity> ",
+                                    completer=self.get_completer(),
+                                    history=self.history,
+                                    bottom_toolbar=self.get_bottom_toolbar,
+                                    style=self.token_style,
+                                    refresh_interval=3,
+                                    auto_suggest=AutoSuggestFromHistory()
+                                    )
+
             try:
-                result = prompt("trinity>",
-                                history=self.history,
-                                get_bottom_toolbar_tokens=self.get_bottom_toolbar,
-                                style=self.token_style,
-                                # refresh_interval=15
-                                )
+                result = session.prompt()
             except EOFError:
+                # Control-D pressed: quit
                 return self.quit()
             except KeyboardInterrupt:
-                self.quit()
+                # Control-C pressed: do nothing
                 continue
             # try:
             #     command, arguments = self.parse_result(result)
@@ -450,7 +521,7 @@ class PromptInterface(object):
             if command is not None and len(command) > 0:
                 command = command.lower()
 
-                if self.locked:
+                if PromptInterface.locked:
                     self.handle_locked_command(command, arguments)
                     continue
 

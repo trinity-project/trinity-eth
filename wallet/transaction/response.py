@@ -49,6 +49,13 @@ class EnumResponseStatus(IntEnum):
 
     # Channel related error
     RESPONSE_CHANNEL_NOT_FOUND = 0x80
+<<<<<<< HEAD:wallet/transaction/response.py
+=======
+    RESPONSE_CHANNEL_NOT_OPENED = 0x81
+
+    # payment related error
+    RESPONSE_PAYMENT_NOT_FOUND = 0x9F
+>>>>>>> dev:wallet/transaction/response.py
 
     # Trade related error
     RESPONSE_TRADE_NOT_FOUND = 0xa0
@@ -57,7 +64,13 @@ class EnumResponseStatus(IntEnum):
     RESPONSE_TRADE_INCORRECT_ROLE = 0xa3
     RESPONSE_TRADE_INCOMPATIBLE_NONCE = 0xa4
     RESPONSE_TRADE_VERIFIED_ERROR = 0xa5
+<<<<<<< HEAD:wallet/transaction/response.py
     RESPONSE_TRADE_HASHR_NOT_FOUND = 0x6
+=======
+    RESPONSE_TRADE_HASHR_NOT_FOUND = 0xa6
+    RESPONSE_TRADE_INCORRECT_PAYMENT = 0xa7
+    RESPONSE_TRADE_BALANCE_ERROR = 0xa8
+>>>>>>> dev:wallet/transaction/response.py
 
     # router related error
     RESPONSE_ROUTER_VOID_ROUTER = 0xEF

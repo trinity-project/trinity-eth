@@ -17,18 +17,18 @@ from json.decoder import JSONDecodeError
 FILENAME_PREFERENCES="prefence.json"
 
 PREFERENCES_DEFAULT = {
-    "theme": "dark",
+    "theme": "light",
     "themes": {
         "dark": {
             "Command": "#ff0066",
             "Default": "#00ee00",
-            "Neo": "#0000ee",
+            "Eth": "#0000ee",
             "Number": "#ffffff"
         },
         "light": {
             "Command": "#ff0066",
             "Default": "#008800",
-            "Neo": "#0000ee",
+            "Eth": "#0000ee",
             "Number": "#000000"
         }
     }

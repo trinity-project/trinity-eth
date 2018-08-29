@@ -23,16 +23,27 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 # system and 3rd party libs
+import math
 
 # self modules import
 from wallet.utils import get_magic
 from common.common import uri_parser
 from common.log import LOG
+<<<<<<< HEAD
 from wallet.channel import Channel
 from wallet.Interface.gate_way import send_message
 from .response import EnumResponseStatus
 from trinity import IS_SUPPORTED_ASSET
 
+=======
+from common.exceptions import GoTo
+from wallet.channel import Channel
+from wallet.Interface.gate_way import send_message
+from .response import EnumResponseStatus
+from trinity import IS_SUPPORTED_ASSET_TYPE
+from wallet.event import event_machine
+from wallet.event.contract_event import ContractEventInterface
+>>>>>>> dev
 
 class MessageHeader(object):
     """
@@ -68,8 +79,15 @@ class Message(object):
     }
 
     """
+<<<<<<< HEAD
     _FOUNDER_NONCE = 0
     _SETTLE_NONCE = 0xFFFFFFFF
+=======
+    _SETTLE_NONCE = 0
+    _FOUNDER_NONCE = 1
+    _message_name = None
+    _contract_event_api = None
+>>>>>>> dev
 
     def __init__(self, message):
         self.message = message
@@ -104,6 +122,53 @@ class Message(object):
         LOG.info('Received Message<{}>'.format(self.message_type))
         pass
 
+<<<<<<< HEAD
+=======
+    @classmethod
+    def check_nonce(cls, channel_name, nonce):
+        """
+
+        :param channel_name:
+        :param nonce:
+        :return:
+        """
+        new_nonce = Channel.new_nonce(channel_name)
+        return Message._FOUNDER_NONCE < int(nonce) == new_nonce, new_nonce
+
+    @classmethod
+    def contract_event_api(cls):
+        if not cls._contract_event_api:
+            cls._contract_event_api = ContractEventInterface()
+
+        return cls._contract_event_api
+
+    @classmethod
+    def sign_content(cls, start=3, *args, **kwargs):
+        return cls.contract_event_api().sign_content(start, *args, **kwargs)
+
+    @classmethod
+    def check_balance(cls, channel_name, asset_type, address, balance, peer_address, peer_balance):
+        """
+
+        :param address:
+        :param balance:
+        :param peer_address:
+        :param peer_balance:
+        :return:
+        """
+        try:
+            # get channel if trade has already existed
+            channel_set = Channel.query_channel(channel_name)[0]
+
+            expected_balance = channel_set.balance.get(address).get(asset_type)
+            expected_peer_balance = channel_set.balance.get(peer_address).get(asset_type)
+
+            return float(balance) == float(expected_balance) and float(peer_balance) == float(expected_peer_balance)
+        except Exception as error:
+            LOG.error('Channel<{}> was not found. Exception: {}'.format(channel_name, error))
+            return False
+
+>>>>>>> dev
     def verify(self):
         """
 
@@ -111,7 +176,11 @@ class Message(object):
         """
         # to validate the parameters
         try:
+<<<<<<< HEAD
             if not IS_SUPPORTED_ASSET(self.asset_type):
+=======
+            if not IS_SUPPORTED_ASSET_TYPE(self.asset_type):
+>>>>>>> dev
                 return False, 'Unsupported Asset type: \'{}\''.format(self.asset_type)
 
             # check whether the sender and receiver are correct url or not
@@ -135,6 +204,7 @@ class Message(object):
 
         return True, None
 
+<<<<<<< HEAD
     def verify_channel_balance(self, balance, peer_balance):
         try:
             channel = Channel(self.channel_name)
@@ -143,6 +213,17 @@ class Message(object):
 
             if sender_balance != balance or receiver_balance != peer_balance:
                 return False, 'Balances of peers DO NOT matched'
+=======
+    def verify_channel_balance(self, balance, peer_balance, payment):
+        try:
+            channel = Channel(self.channel_name)
+            sender_balance = float(channel.balance.get(self.sender_address)) - float(payment)
+            receiver_balance = float(channel.balance.get(self.receiver_address)) + float(payment)
+
+            if sender_balance != float(balance) or receiver_balance != float(peer_balance):
+                return False, 'Balances of peers DO NOT matched. sender<self: {}, peer {}>, receiver<self: {}, peer {}>'\
+                    .format(sender_balance, balance, receiver_balance, peer_balance)
+>>>>>>> dev
             pass
         except Exception as error:
             return False, 'Error to verify balance. Exception{}'.format(error)
@@ -150,6 +231,7 @@ class Message(object):
             return True, None
 
     @classmethod
+<<<<<<< HEAD
     def float_calculate(cls, balance, payment, add=True):
         trinity_coef = 100000000 # pow(10, 8)
 
@@ -157,6 +239,32 @@ class Message(object):
             result = int(trinity_coef*float(balance)) + int(trinity_coef*float(payment))
         else:
             result = int(trinity_coef*float(balance)) - int(trinity_coef*float(payment))
+=======
+    def float_to_int(cls, number:str):
+        coef = 8
+        if number.__contains__('e'):
+            number_list = number.split('e')
+            return math.ceil(float(number_list[0]) * pow(10, int(number_list[1])+coef))
+        elif number.__contains__('.'):
+            number_list = number.split('.')
+            integer = int(number_list[0]) * pow(10, coef)
+            fragment = int(number_list[1]) * pow(10, 8 - len(number_list[1]))
+            return integer + fragment
+        else:
+            return int(number) * pow(10, 8)
+
+    @classmethod
+    def float_calculate(cls, balance, payment, add=True):
+        trinity_coef = 100000000   # pow(10, 8)
+        balance = cls.float_to_int(balance.__str__())
+        payment = cls.float_to_int(payment.__str__())
+
+        # calculate
+        if add:
+            result = balance + payment
+        else:
+            result = balance - payment
+>>>>>>> dev
 
         return result/trinity_coef
 
@@ -171,4 +279,82 @@ class Message(object):
         peer = channel_set.src_addr
 
         return peer if peer != source else channel_set.dest_addr
+<<<<<<< HEAD
+=======
 
+    @classmethod
+    def check_payment(cls, channel_name, address, asset_type, payment):
+        try:
+            channel_balance = Channel(channel_name).balance
+            balance = channel_balance.get(address).get(asset_type.upper())
+
+            if not 0 < float(payment) <= float(balance):
+                raise GoTo('Invalid payment')
+
+            return True, float(balance)
+        except Exception as error:
+            LOG.error('check payment error: {}.'.format(error))
+            LOG.error('Parameters: channel<{}>, address<{}>, asset_type<{}>, payment<{}>'.format(channel_name,
+                                                                                                 address,
+                                                                                                 asset_type,
+                                                                                                 payment))
+            return False, None
+
+    @classmethod
+    def send_error_response(cls, sender:str, receiver:str, channel_name:str, asset_type:str,
+                       nonce:int, status=EnumResponseStatus.RESPONSE_FAIL):
+        message = cls.create_message_header(receiver, sender, cls._message_name, channel_name, asset_type, nonce)
+        message = message.message_header
+        message.update({'MessageBody': {}})
+
+        if status:
+            message.update({'Status': status.name})
+
+        cls.send(message)
+
+    @classmethod
+    def rollback_resource(cls, channel_name, nonce, payment=None, status=None):
+        """
+
+        :param channel_name:
+        :param nonce:
+        :param payment:
+        :return:
+        """
+        # failure action
+        if status == EnumResponseStatus.RESPONSE_TRADE_INCOMPATIBLE_NONCE.name:
+            Channel.delete_trade(channel_name, int(nonce))
+
+        if status is not None and status != EnumResponseStatus.RESPONSE_OK.name:
+            event_machine.unregister_event(channel_name)
+
+    @classmethod
+    def check_channel_state(cls, channel_name):
+        channel = Channel(channel_name)
+        assert channel.is_opened, 'Channel is not OPENED. State<{}>'.format(channel.state)
+        return channel.is_opened
+
+    @classmethod
+    def update_balance_for_channel(cls, channel_name, payer_address, payee_address, asset_type, payment):
+        channel = Channel(channel_name)
+
+        try:
+            asset_type = asset_type.upper()
+            payment = float(payment)
+            channel_balance = channel.balance
+            payer_balance = channel_balance.get(payer_address).get(asset_type)
+            payee_balance = channel_balance.get(payee_address).get(asset_type)
+
+            payer_balance = cls.float_calculate(payer_balance, payment, False)
+            payee_balance = cls.float_calculate(payee_balance, payment)
+
+            if payer_balance >= 0 and payee_balance >= 0:
+                Channel.update_channel(channel_name,
+                                       balance={payer_address: {asset_type: payer_balance},
+                                                payee_address: {asset_type: payee_balance}})
+            else:
+                raise Exception('Payer has not enough balance for this payment<{}>'.format(payment))
+>>>>>>> dev
+
+        except Exception as error:
+            LOG.error('Update channel<{}> balance error. payment<{}>. Exception: {}'.format(channel_name, payment, error))

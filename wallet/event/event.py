@@ -24,8 +24,40 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 from threading import Lock
 from enum import Enum, IntEnum
+<<<<<<< HEAD
 from common.coroutine import ucoro
+=======
+from common.decorator import ucoro
+>>>>>>> dev
 from common.log import LOG
+from .contract_event import ContractEventInterface
+
+
+class EnumEventAction(Enum):
+    EVENT_INIT = 'INIT'
+    EVENT_PREPARE = 'prepare'
+    EVENT_EXECUTE = 'execute'
+    EVENT_TERMINATE = 'terminate'
+    EVENT_COMPLETE = 'complete'
+
+    EVENT_TIMEOUT = 'timeout_handler'
+    EVENT_ERROR = 'error_handler'
+
+
+class EnumEventType(IntEnum):
+    # both wallet are online
+    EVENT_TYPE_DEPOSIT = 0x0
+    EVENT_TYPE_RSMC = 0x04
+    EVENT_TYPE_HTLC = 0x08
+    EVENT_TYPE_QUICK_SETTLE = 0x0c
+
+    # One of Both wallets is online
+    EVENT_TYPE_SETTLE = 0x10
+    EVENT_TYPE_UPDATE_SETTLE = 0x11
+    EVENT_TYPE_END_SETTLE = 0x12
+
+    # test event
+    EVENT_TYPE_TEST_STATE = 0xE0
 
 
 class EnumEventAction(Enum):
@@ -83,15 +115,43 @@ class EventBase(object):
         self.start_time = 0
         self.need_websocket = False
 
+<<<<<<< HEAD
         self.gwei_coef = 6
 
     def retry_event(self):
         self.retry = True
         self.gwei_coef = 8
+=======
+        self.contract_event_api = ContractEventInterface()
+        self.gwei_coef = self.contract_event_api.gwei_coefficient
+
+    def retry_event(self):
+        self.retry = True
+        self.gwei_coef = self.gwei_for_retry
+>>>>>>> dev
         self._event_timeout += 20       # retry timeout: extra 20 block height. it's about 5 minutes
         self.is_event_ready = False
         self.event_stage_iterator = iter(self.event_stage_list)
         self.event_stage = self.next_stage()
+<<<<<<< HEAD
+=======
+
+    @property
+    def gwei_for_retry(self):
+        auto_adaptive_list = [2, 5, 8, 10]
+
+        # gwei_coef in the adaptor
+        if self.gwei_coef not in auto_adaptive_list:
+            auto_adaptive_list.append(self.gwei_coef)
+            auto_adaptive_list.sort()
+
+        # get the index of the gwei_coef
+        coef_index = auto_adaptive_list.index(self.gwei_coef)
+        try:
+            return auto_adaptive_list[coef_index+1]
+        except Exception as error:
+            return self.gwei_coef + 1
+>>>>>>> dev
 
     @property
     def event_timeout(self):
@@ -99,6 +159,9 @@ class EventBase(object):
 
     def stage_is_changed(self, stage):
         return self.event_stage != stage
+
+    def set_event_state(self, stage):
+        self.event_stage = stage
 
     def set_event_start_time(self, start_time:int):
         """
@@ -143,7 +206,10 @@ class EventBase(object):
         assert EnumEventAction.__contains__(action_type), 'Invalid action_type<{}>'.format(action_type)
 
     def prepare(self, block_height, *args, **kwargs):
+<<<<<<< HEAD
         print('prepare')
+=======
+>>>>>>> dev
         LOG.debug('{} stage of event<{}-{}> at block-{}'.format(self.stage_action, self.event_name,
                                                                 self.event_type_name, block_height))
         self.set_event_start_time(int(block_height))
@@ -194,7 +260,11 @@ class EventBase(object):
 
     def handle(self, block_height):
         event_args = self.event_arguments
+<<<<<<< HEAD
         self.__getattribute__(self.stage_action)(block_height, *event_args.args, **event_args.kwargs)
+=======
+        self.__getattribute__(self.stage_action.__str__())(block_height, *event_args.args, **event_args.kwargs)
+>>>>>>> dev
 
 
 class EventMachine(object):
@@ -255,10 +325,16 @@ class EventMachine(object):
             self.total_task_per_poll = 0
 
     def get_event(self):
-        self.event_lock.acquire()
-        name = self.__event_ordered_list.pop(0)
-        event = self.__event_queue.pop(name)
-        self.event_lock.release()
+        try:
+            self.event_lock.acquire()
+            name = self.__event_ordered_list.pop(0)
+            event = self.__event_queue.pop(name)
+        except Exception as error:
+            name = None
+            event = None
+            LOG.error('event machine get_event exception: {}'.format(error))
+        finally:
+            self.event_lock.release()
 
         return name, event
 
@@ -266,24 +342,64 @@ class EventMachine(object):
         return self.__event_queue.get(name)
 
     def insert_event_back_into_queue(self, name, event):
-        self.event_lock.acquire()
-        if not self.has_event(name):
-            self.__event_queue.update({name: event})
-            self.__event_ordered_list.append(name)
-        self.event_lock.release()
+        try:
+            self.event_lock.acquire()
+            if not self.has_event(name):
+                self.__event_queue.update({name: event})
+                self.__event_ordered_list.append(name)
+        except Exception as error:
+            LOG.error('event machine insert_event_back_into_queue<{}> exception: {}'.format(name, error))
+        finally:
+            self.event_lock.release()
+
+        return
 
     def register_event(self, name, event):
+<<<<<<< HEAD
         self.event_lock.acquire()
         self.__event_queue.update({name: event})
         self.event_lock.release()
+=======
+        try:
+            self.event_lock.acquire()
+            self.__event_queue.update({name: event})
+        except Exception as error:
+            LOG.error('event machine register_event<{}> exception: {}'.format(name, error))
+        finally:
+            self.event_lock.release()
+
+    def unregister_event(self, name):
+        try:
+            self.event_lock.acquire()
+            if name in self.__event_ordered_list:
+                self.__event_ordered_list.remove(name)
+
+            if name in self.__event_queue.keys():
+                self.__event_queue.pop(name)
+        except Exception as error:
+            LOG.error('event machine unregister_event<{}> exception: {}'.format(name, error))
+        finally:
+            self.event_lock.release()
+>>>>>>> dev
 
     def update_event(self, name, event):
         self.register_event(name, event)
 
     def trigger_start_event(self, name):
+<<<<<<< HEAD
         self.event_lock.acquire()
         self.__event_ordered_list.append(name)
         self.event_lock.release()
+=======
+        try:
+            self.event_lock.acquire()
+            if name not in self.__event_ordered_list:
+                self.__event_ordered_list.append(name)
+        except Exception as error:
+            LOG.error('event machine trigger_start_event<{}> exception: {}'.format(name, error))
+        finally:
+            self.event_lock.release()
+>>>>>>> dev
 
     def has_event(self, name):
         return name in self.__event_queue

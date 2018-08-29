@@ -88,3 +88,9 @@ class APIWalletAddress(object):
     def update_wallet_address(cls, address, **kwargs):
         return cls.table.update_one(address, **kwargs)
 
+<<<<<<< HEAD
+=======
+    @classmethod
+    def update_wallet_address(cls, filters, **kwargs):
+        return cls.table.update_many(filters, **kwargs)
+>>>>>>> dev

@@ -25,7 +25,11 @@ SOFTWARE."""
 # from collections import namedtuple
 from enum import Enum
 from common.singleton import SingletonClass
+<<<<<<< HEAD
 from common.coroutine import ucoro
+=======
+from common.decorator import ucoro
+>>>>>>> dev
 from common.log import LOG
 
 

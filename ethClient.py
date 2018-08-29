@@ -222,10 +222,7 @@ class Client(object):
 
         return binascii.hexlify(unsigned_tx).decode()
 
-
-
-
-    def sign_args(self,typeList, valueList, privtKey):
+    def sign_args(self, typeList, valueList, privtKey):
         '''
 
         :param typeList: ['bytes32', 'bytes32', 'uint256', 'uint256']

@@ -249,10 +249,6 @@ def privtoaddr(x):
     return sha3(bitcoin.privtopub(x)[1:])[12:]
 
 
-
-
-
-
 if __name__ == "__main__":
     account = Account.new("mytest",path="./test")
     print(account.pubkey)

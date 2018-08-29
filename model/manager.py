@@ -26,6 +26,8 @@ import pymongo
 from pymongo.errors import DuplicateKeyError
 from datetime import datetime
 import json
+from dateutil.tz import tzlocal
+DataTZ = datetime.now(tzlocal()).tzname()
 
 #from jsonrpc import dispatcher
 
@@ -95,7 +97,7 @@ class DBClient(object):
         try:
             self.db_client.close()
         except Exception as exp_info:
-            LOG.exception('Exception happened to close DB client. Exception: {}'.format(exp_info))
+            LOG.error('Exception happened to close DB client. Exception: {}'.format(exp_info))
 
         # reset the class member's value
         self.db_client = None
@@ -177,10 +179,10 @@ class DBManager(object):
 
             return EnumStatusCode.OK
         except DuplicateKeyError as exp_info:
-            LOG.exception('Primary Key {} is Duplicated. Exception: {}'.format(kwargs.get(self.primary_key), exp_info))
+            LOG.error('Primary Key {} is Duplicated. Exception: {}'.format(kwargs.get(self.primary_key), exp_info))
             return EnumStatusCode.PrimaryKeyIsDuplicated
         except Exception as exp_info:
-            LOG.exception('Exception occurred during add item {}. Exception'.format(kwargs, exp_info))
+            LOG.error('Exception occurred during add item {}. Exception'.format(kwargs, exp_info))
             return EnumStatusCode.PrimaryKeyInsertWithException
 
     def update_one(self, primary_key, **kwargs):
@@ -250,11 +252,17 @@ class DBManager(object):
         result = [ModelSet(**res) for res in cursor.limit(0)]
         return result if result else []
 
-    def sort(self, key, descending=True):
+    def sort(self, key, descending=True, filters={}):
         if descending:
+<<<<<<< HEAD
             result = self.db_table.find().sort([(key, pymongo.DESCENDING)]).limit(0)
         else:
             result = self.db_table.find({}).sort([(key, pymongo.ASCENDING)]).limit(0)
+=======
+            result = self.db_table.find(filters).sort([(key, pymongo.DESCENDING)]).limit(0)
+        else:
+            result = self.db_table.find(filters).sort([(key, pymongo.ASCENDING)]).limit(0)
+>>>>>>> dev
 
         result = [ModelSet(**res) for res in result.limit(1)]
         return result
@@ -274,11 +282,11 @@ class DBManager(object):
 
     @property
     def create_at(self):
-        return {'create_at': str(datetime.utcnow()), 'update_at': ''}
+        return {'create_at': "{} {}".format(str(datetime.now()),DataTZ), 'update_at': ''}
 
     @property
     def update_at(self):
-        return {'update_at': str(datetime.utcnow())}
+        return {'update_at': "{} {}".format(str(datetime.now()),DataTZ)}
 
     @property
     def client(self):

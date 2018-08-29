@@ -22,11 +22,40 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
+import time
+from common.log import LOG
 
 
-class GoTo(Exception):
-    pass
+def ucoro(timeout=0.1, once=False):
+    def handler(callback):
+        def wrapper(*args, **kwargs):
+            received = None
+            # use such mode to modulate blocking-mode to received
+            while True:
+                try:
+                    received = yield
+                    if received in ['exit', None]:
+                        break
+
+                    kwargs.update({'received': received})
+                    callback(*args, **kwargs)
+                except Exception as error:
+                    LOG.error('Co-routine received<{}>, error: {}'.format(received, error))
+                finally:
+                    # only run once time
+                    if once:
+                        break
+
+                    time.sleep(timeout)
+
+        return wrapper
+    return handler
 
 
-class GotoIgnore(Exception):
-    pass
+def ucoro_event(coro, iter_data):
+    try:
+        coro.send(iter_data)
+    except StopIteration as error:
+        LOG.debug('Co-routine has been killed.')
+    except Exception as error:
+        LOG.warning('Error occurred during using co-routine. error: {}'.format(error))

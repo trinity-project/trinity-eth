@@ -24,16 +24,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 import os
 import logging.config
-from trinity import __os_platform__, __running_mode__, Console_log
-LogDataDir = os.path.join(os.path.dirname(__file__),"common.log")
-if not os.path.exists(LogDataDir):
-    os.makedirs(LogDataDir)
+from trinity import __running_mode__, LOG_TO_CONSOLE, TRINITY_LOG_PATH
 LOG = logging.getLogger('logger')
-# common.log configuration parts
-if __os_platform__ in ['LINUX', 'DARWIN']:
-    TRINITY_LOG_PATH = os.path.join(LogDataDir,"trinity.common.log")
-else:
-    TRINITY_LOG_PATH = os.getcwd().split(os.sep)[0]+os.sep+'temp'
+
 
 log_settings = {
     'version': 1,
@@ -55,7 +48,7 @@ log_settings = {
         'file': {
             'level': 'DEBUG',
             'class': 'logging.handlers.RotatingFileHandler',
-            'filename': '{}{}{}'.format(TRINITY_LOG_PATH, os.sep, 'trinity.common.log'),
+            'filename': '{}{}{}'.format(TRINITY_LOG_PATH, os.sep, 'trinity.log'),
             'formatter': 'release',
             'maxBytes': 5 * 1024 * 1024,
             'backupCount': 10
@@ -63,7 +56,7 @@ log_settings = {
     },
     'loggers': {
         'logger': {
-            'handlers': ['file', 'console'] if Console_log else ['file'],#if __running_mode__ else ,
+            'handlers': ['file', 'console'] if LOG_TO_CONSOLE else ['file'],#if __running_mode__ else ,
             'level': 'INFO' if __running_mode__ else 'DEBUG',
         }
     },
@@ -72,7 +65,7 @@ log_settings = {
 
 def init_logger(log_path = None, file_name=None):
     init_log_path = log_path if log_path else TRINITY_LOG_PATH
-    init_filename = file_name if file_name else 'trinity.common.log'
+    init_filename = file_name if file_name else 'trinity.log'
 
     # create the common.log path
     if not os.path.exists(init_log_path):
@@ -81,5 +74,3 @@ def init_logger(log_path = None, file_name=None):
     # load logger configuration
     log_settings['handlers']['file']['filename'] = '{}{}{}'.format(init_log_path, os.sep, init_filename)
     logging.config.dictConfig(log_settings)
-
-init_logger()

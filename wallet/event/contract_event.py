@@ -28,7 +28,10 @@ from blockchain.ethInterface import Interface as EthInterface
 from blockchain.web3client import Client as EthWebClient
 from lightwallet.Settings import settings
 
+<<<<<<< HEAD
 settings.setup_testnet()
+=======
+>>>>>>> dev
 
 class ContractEventInterface(metaclass=SingletonClass):
     """
@@ -39,11 +42,26 @@ class ContractEventInterface(metaclass=SingletonClass):
     _eth_client = None
 
     def __init__(self):
+<<<<<<< HEAD
         ContractEventInterface._eth_interface = EthInterface(settings.NODEURL, settings.Eth_Contract_address,
                                                              settings.Eth_Contract_abi,
                                                              settings.TNC, settings.TNC_abi)
         ContractEventInterface._eth_client = EthWebClient(settings.NODEURL)
 
+=======
+        ContractEventInterface._eth_interface = EthInterface(settings.NODEURL,
+                                                             settings.ETH_Data_Contract_address,
+                                                             settings.Eth_Contract_address,
+                                                             settings.Eth_Contract_abi,
+                                                             settings.TNC,
+                                                             settings.TNC_abi)
+        ContractEventInterface._eth_client = EthWebClient(settings.NODEURL)
+
+    @property
+    def gwei_coefficient(self):
+        return EthWebClient.get_gas_price()
+
+>>>>>>> dev
     @classmethod
     def sign_content(cls, start=3, *args, **kwargs):
         """
@@ -69,11 +87,19 @@ class ContractEventInterface(metaclass=SingletonClass):
             LOG.info('Has been approved asset count: {}'.format(approved_asset))
             return True
 
+<<<<<<< HEAD
         result = cls._eth_interface.approve(address, cls.multiply(deposit), private_key, gwei_coef=gwei_coef)
         if result.get('txMessage') in ['success']:
             return True
         else:
             LOG.error('Approve asset error: {}'.format(result))
+=======
+        try:
+            # return tx_id
+            return cls._eth_interface.approve(address, cls.multiply(deposit), private_key, gwei_coef=gwei_coef)
+        except Exception as error:
+            LOG.error('authorized deposit error: {}'.format(error))
+>>>>>>> dev
 
         return False
 
@@ -81,22 +107,49 @@ class ContractEventInterface(metaclass=SingletonClass):
     def get_approved_asset(cls, address):
         try:
             result = cls._eth_interface.get_approved_asset(settings.TNC, settings.TNC_abi,
+<<<<<<< HEAD
                                                            address, settings.Eth_Contract_address)
             return float(result) if result else 0
         except Exception as error:
             LOG.error('get_approved_asset error: {}'.format(error))
             return float(0)
+=======
+                                                           address, settings.ETH_Data_Contract_address)
+            return float(result) if result else 0
+        except Exception as error:
+            LOG.error('get_approved_asset error: {}'.format(error))
+            return 0
+
+    @classmethod
+    def get_transaction_receipt(cls, tx_id):
+        try:
+            result = cls._eth_interface.get_transaction_receipt(tx_id)
+            if result:
+                print(result)
+            return
+        except Exception as error:
+            LOG.error('get_approved_asset error: {}'.format(error))
+            return None
+>>>>>>> dev
 
     @classmethod
     def approve_deposit(cls, address, channel_id, nonce, founder, founder_amount, partner, partner_amount,
                         founder_sign, partner_sign, private_key, gwei_coef=1):
         try:
+<<<<<<< HEAD
             cls._eth_interface.deposit(address,channel_id, nonce,
+=======
+            return cls._eth_interface.deposit(address,channel_id, nonce,
+>>>>>>> dev
                                        founder, cls.multiply(founder_amount),
                                        partner, cls.multiply(partner_amount),
                                        founder_sign, partner_sign, private_key, gwei_coef=gwei_coef)
         except Exception as error:
             LOG.error('approve_deposit error: {}'.format(error))
+<<<<<<< HEAD
+=======
+            return None
+>>>>>>> dev
 
     @classmethod
     def get_channel_total_balance(cls, channel_id):
@@ -104,6 +157,7 @@ class ContractEventInterface(metaclass=SingletonClass):
 
     @classmethod
     def quick_settle(cls, invoker, channel_id, nonce, founder, founder_balance,
+<<<<<<< HEAD
                      partner, partner_balance, founder_signature, partner_signature, invoker_key):
 
         try:
@@ -130,6 +184,72 @@ class ContractEventInterface(metaclass=SingletonClass):
 
         content = cls._eth_client.sign_args(typeList, valueList, privtKey).decode()
         return '0x' + content
+=======
+                     partner, partner_balance, founder_signature, partner_signature, invoker_key, gwei_coef=1):
+        """
+
+        :param invoker:
+        :param channel_id:
+        :param nonce:
+        :param founder:
+        :param founder_balance:
+        :param partner:
+        :param partner_balance:
+        :param founder_signature:
+        :param partner_signature:
+        :param invoker_key:
+        :return:
+        """
+        try:
+            return cls._eth_interface.quick_close_channel(invoker, channel_id, nonce,
+                                                   founder, cls.multiply(founder_balance),
+                                                   partner, cls.multiply(partner_balance),
+                                                   founder_signature, partner_signature, invoker_key,
+                                                          gwei_coef=gwei_coef)
+        except Exception as error:
+            LOG.error('quick_settle error: {}'.format(error))
+            return None
+
+    @classmethod
+    def close_channel(cls, invoker, channel_id, nonce, founder, founder_balance, partner, partner_balance,
+                      founder_signature, partner_signature, invoker_key, gwei_coef=1):
+        try:
+            result = cls._eth_interface.close_channel(invoker, channel_id, nonce,
+                                                      founder, cls.multiply(founder_balance),
+                                                      partner, cls.multiply(partner_balance),
+                                                      founder_signature, partner_signature, invoker_key,
+                                                      gwei_coef=gwei_coef)
+            LOG.debug('close_channel result: {}'.format(result))
+            return result
+        except Exception as error:
+            LOG.error('force_settle error: {}'.format(error))
+            return None
+
+    @classmethod
+    def update_close_channel(cls, invoker, channel_id, nonce, founder, founder_balance, partner, partner_balance,
+                      founder_signature, partner_signature, invoker_key, gwei_coef=1):
+        try:
+            result = cls._eth_interface.update_transaction(invoker, channel_id, nonce,
+                                                           founder, cls.multiply(founder_balance),
+                                                           partner, cls.multiply(partner_balance),
+                                                           founder_signature, partner_signature, invoker_key,
+                                                           gwei_coef= gwei_coef)
+            LOG.debug('update_close_channel result: {}'.format(result))
+            return result
+        except Exception as error:
+            LOG.error('update_close_channel error: {}'.format(error))
+            return None
+
+    @classmethod
+    def end_close_channel(cls, invoker, channel_id, invoker_key, gwei_coef=1):
+        try:
+            result =  cls._eth_interface.settle_transaction(invoker, channel_id, invoker_key, gwei_coef=gwei_coef)
+            LOG.debug('end_close_channel result: {}'.format(result))
+            return result
+        except Exception as error:
+            LOG.error('end force_settle error: {}'.format(error))
+            return None
+>>>>>>> dev
 
     @classmethod
     def multiply(cls, asset_count):
@@ -138,6 +258,9 @@ class ContractEventInterface(metaclass=SingletonClass):
     @classmethod
     def divide(cls, asset_count):
         return float(asset_count) / cls._trinity_coef
+<<<<<<< HEAD
 
 
 contract_event_api = ContractEventInterface()
+=======
+>>>>>>> dev

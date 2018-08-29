@@ -11,10 +11,8 @@ import traceback
 import signal
 from functools import wraps, reduce
 from prompt_toolkit import prompt
-from prompt_toolkit.shortcuts import print_tokens
-from prompt_toolkit.token import Token
 from twisted.internet import reactor, endpoints, protocol
-from common.log import LOG
+from common.log import LOG, init_logger
 from common.console import console_log
 from lightwallet.Settings import settings
 from wallet.utils import get_arg, \
@@ -22,7 +20,12 @@ from wallet.utils import get_arg, \
     check_onchain_balance,\
     check_support_asset_type,\
     check_partner, \
+<<<<<<< HEAD
     is_correct_uri
+=======
+    is_valid_deposit,\
+    is_correct_uri, SupportAssetType,check_float_decimals
+>>>>>>> dev
 from wallet.channel import Channel, udpate_channel_when_setup
 from wallet.transaction.founder import FounderMessage, FounderResponsesMessage
 from wallet.transaction.payment import Payment, PaymentLink
@@ -30,6 +33,13 @@ from wallet.transaction.rsmc import RsmcMessage, RsmcResponsesMessage
 from wallet.transaction.htlc import HtlcMessage, HtlcResponsesMessage, RResponse, RResponseAck
 from wallet.transaction.settle import SettleMessage, SettleResponseMessage
 from wallet.Interface.rpc_interface import RpcInteraceApi,CurrentLiveWallet
+<<<<<<< HEAD
+=======
+from wallet.event.event import EnumEventAction
+from wallet.event.chain_event import event_init_wallet
+from wallet.event.offchain_event import ChannelForceSettleEvent
+from wallet.connection.websocket import ws_instance
+>>>>>>> dev
 from wallet.utils import get_magic
 from twisted.web.server import Site
 from lightwallet.prompt import PromptInterface
@@ -39,8 +49,12 @@ import time
 from model.base_enum import EnumChannelState
 from wallet.Interface import gate_way
 from blockchain.interface import get_block_count
+<<<<<<< HEAD
 from blockchain.event import event_init_wallet
 from blockchain.monior import monitorblock,EventMonitor
+=======
+from blockchain.monitor import monitorblock,EventMonitor
+>>>>>>> dev
 import requests
 import qrcode_terminal
 from wallet.configure import Configure
@@ -108,20 +122,21 @@ class UserPromptInterface(PromptInterface):
 
     def __init__(self):
         super().__init__()
-        self.user_commands = ["channel enable",
-                              "channel create {partner} {asset_type} {deposit}",
-                              "channel tx {payment_link}/{receiver} {asset_type} {count}",
-                              "channel close {channel}",
-                              "channel peer",
-                              "channel payment {asset}, {count}, [{comments}]",
-                              "channel qrcode {on/off}",
-                              "channel trans",
-                              "channel show uri",
-							  "channel show trans_history {channel}",
-                              "channel depoist_limit",
-                              # "contract approve {count}",
-                              # "contract check-approved"
-                              ]
+        self.user_commands = [
+            "channel enable",
+            "channel create {partner} {asset_type} {deposit}",
+            "channel tx {payment_link}/{receiver} {asset_type} {count}",
+            "channel close {channel}",
+            "channel force-close {channel} {gwei}",
+            "channel peer [state=]|[peer=]|[channel=]",
+            "channel payment {asset}, {count}, [{comments}]",
+            "channel qrcode {on/off}",
+            "channel show uri",
+            "channel show trans_history {channel}",
+            "channel deposit_limit",
+            # "contract approve {count}",
+            # "contract check-approved"
+        ]
         self.commands.extend(self.user_commands)
         self.qrcode = False
 
@@ -132,92 +147,36 @@ class UserPromptInterface(PromptInterface):
         """
         return self.Wallet.address
 
-
-    def run(self):
+    def handle_commands(self,command, arguments):
         """
+
+        :param command:
+        :param arguments:
         :return:
         """
+        try:
+            if command is not None and len(command) > 0:
+                command = command.lower()
+                if command == 'channel':
+                    self.do_channel(arguments)
+                elif command == "faucet":
+                    self.do_faucet()
+                else:
+                    super().handle_commands(command,arguments)
+        except Exception as error:
+            LOG.error(error)
+            pass
 
-        tokens = [(Token.Neo, 'TRINITY'), (Token.Default, ' cli. Type '),
-                  (Token.Command, "'help' "), (Token.Default, 'to get started')]
-
-        print_tokens(tokens,self.token_style)
-        print("\n")
-
-
-        while self.go_on:
-            try:
-                result = prompt("trinity>",
-                                history=self.history,
-                                get_bottom_toolbar_tokens=self.get_bottom_toolbar,
-                                style=self.token_style,
-                                refresh_interval=3
-                                )
-            except EOFError:
-                return self.quit()
-            except KeyboardInterrupt:
-                self.quit()
-                continue
-
-            try:
-                command, arguments = self.parse_result(result)
-
-                if command is not None and len(command) > 0:
-                    command = command.lower()
-
-                    if command == 'quit' or command == 'exit':
-                        self.quit()
-                    elif command == 'help':
-                        self.help()
-                    elif command == 'wallet':
-                        self.show_wallet(arguments)
-                    elif command is None:
-                        print('please specify a command')
-                    elif command == 'create':
-                        self.do_create(arguments)
-                    elif command == 'close':
-                        self.do_close_wallet()
-                    elif command == 'open':
-                        self.do_open(arguments)
-                    elif command == 'export':
-                        self.do_export(arguments)
-                    elif command == 'send':
-                        self.do_send(arguments)
-                    elif command == 'tx':
-                        self.show_tx(arguments)
-                    elif command == 'channel':
-                        self.do_channel(arguments)
-                    elif command == "faucet":
-                        self.do_faucet()
-                    # elif command == 'contract':
-                    #     self.do_contract(arguments)
-                    else:
-                        print("command %s not found" % command)
-
-            except Exception as e:
-
-                console_log.error("could not execute command: %s " % e)
-                traceback.print_stack()
-                traceback.print_exc()
 
     def get_bottom_toolbar(self, cli=None):
-        out = []
-        try:
-            out = [
-                (Token.Command, "[%s]" % settings.NET_NAME),
-                (Token.Default, str(EventMonitor.get_wallet_block_height())),
-                (Token.Command, '/'),
-                (Token.Default, str(EventMonitor.get_block_height()))]
-
-        except Exception as e:
-            pass
-        return out
+        return "[{}]{}/{}".format(settings.NET_NAME if not PromptInterface.locked else settings.NET_NAME + "(Locked)",
+        str(EventMonitor.get_wallet_block_height()),str(EventMonitor.get_block_height()))
 
 
     #faucet for test tnc
     @wallet_opened
     def do_faucet(self):
-        console_log.info(self.Wallet.address)
+        console_log.console(self.Wallet.address)
         request = {
                 "jsonrpc": "2.0",
                 "method": "transferTnc",
@@ -276,6 +235,7 @@ class UserPromptInterface(PromptInterface):
     def quit(self):
         console_log.info('Shutting down. This may take about 15 sec to sync the block info')
         self.go_on = False
+        ws_instance.stop_websocket()
         EventMonitor.stop_monitor()
         self.do_close_wallet()
         CurrentLiveWallet.update_current_wallet(None)
@@ -283,7 +243,7 @@ class UserPromptInterface(PromptInterface):
 
     def enable_channel(self):
         try:
-            result = gate_way.join_gateway(self.Wallet.address).get("result")
+            result = gate_way.join_gateway(self.Wallet).get("result")
             if result:
                 self.Wallet.url = json.loads(result).get("MessageBody").get("Url")
 
@@ -346,14 +306,18 @@ class UserPromptInterface(PromptInterface):
         asset_type = get_arg(arguments, 2)
         asset_type = asset_type.upper() if check_support_asset_type(asset_type) else None
         if not asset_type:
-            console_log.error("No support asset type %s" % asset_type)
+            console_log.error("No support asset, current just support {}".format(str(SupportAssetType.SupportAssetType)))
             return None
 
         try:
             deposit = float(get_arg(arguments, 3).strip())
-            partner_deposit = float(get_arg(arguments, 4).strip()) if get_arg(arguments, 4) else deposit
+            partner_deposit = get_arg(arguments, 4)
+            partner_deposit = float(float(partner_deposit.strip())) if partner_deposit is not None else deposit
+            if deposit <= 0 or 0 > partner_deposit or partner_deposit > deposit:
+                console_log.error("Founder's Deposit should not be less than Partner's")
+                return None
         except ValueError:
-            console_log.error("No correct depoist value")
+            console_log.error("Founder's Deposit should not be less than Partner'")
             return None
 
         if not check_onchain_balance(self.Wallet.address, asset_type, deposit):
@@ -364,7 +328,7 @@ class UserPromptInterface(PromptInterface):
             console_log.error("Partner URI is not correct, Please check the partner uri")
             return None
 
-        if not check_onchain_balance(partner.strip().split("@")[0], asset_type, deposit):
+        if not check_onchain_balance(partner.strip().split("@")[0], asset_type, partner_deposit):
             console_log.error("Partner balance on chain is less than the deposit")
             return None
 
@@ -372,7 +336,7 @@ class UserPromptInterface(PromptInterface):
                        trigger=FounderMessage.create)
 
     @channel_opened
-    @arguments_length([2,4])
+    @arguments_length([2,4,5])
     def channel_trans(self, arguments):
         """
 
@@ -380,40 +344,64 @@ class UserPromptInterface(PromptInterface):
         :return:
         """
 
-        argument1 = get_arg(arguments, 1)
-        if len(argument1) > 88:
+
+        if len(arguments) ==2:
             # payment code
-            result, info = Payment.decode_payment_code(argument1)
+            pay_code = get_arg(arguments, 1)
+            result, info = Payment.decode_payment_code(pay_code)
             if result:
                 receiver = info.get("uri")
+<<<<<<< HEAD
                 hashcode = info.get("hashcode")
                 asset_type = info.get("asset_type")
                 asset_type = get_asset_type_name(asset_type)
+=======
+                net_magic = info.get('net_magic')
+                if not net_magic or net_magic != str(get_magic()):
+                    console_log.error("No correct net magic")
+                    return None
+                hashcode = info.get("hashcode")
+                asset_type = info.get("asset_type")
+                # asset_type = get_asset_type_name(asset_type)
+>>>>>>> dev
                 count = info.get("payment")
                 comments = info.get("comments")
+                console_log.info("will pay {} {} to {} comments {}".format(count, asset_type, receiver, comments))
             else:
-                print("The payment code is not correct")
+                console_log.error("The payment code is not correct")
                 return
         else:
             receiver = get_arg(arguments, 1)
             asset_type = get_arg(arguments, 2)
             count = get_arg(arguments, 3)
+<<<<<<< HEAD
             hashcode = None
+=======
+            hashcode = get_arg(arguments, 4)
+>>>>>>> dev
             if not receiver or not asset_type or not count:
                 self.help()
                 return None
 
             asset_type = asset_type.upper() if check_support_asset_type(asset_type) else None
             if not asset_type:
-                print("No support asset type %s" % asset_type)
+                console_log.error("No support asset, current just support {}".format(str(SupportAssetType.SupportAssetType)))
                 return None
 
+<<<<<<< HEAD
+=======
+            if 0 >= float(count):
+                console_log.warn('Not support negative number or zero.')
+                return None
+
+>>>>>>> dev
         # query channels by address
         channel_set = Channel.get_channel(self.Wallet.url, receiver, EnumChannelState.OPENED)
         if channel_set and channel_set[0]:
             Channel.transfer(channel_set[0].channel, self.Wallet, receiver, asset_type, count, hashcode,
                              cli=True, trigger=RsmcMessage.create)
         else:
+<<<<<<< HEAD
             message = {"MessageType":"GetRouterInfo",
                        "Sender":self.Wallet.url,
                        "Receiver": receiver,
@@ -435,6 +423,34 @@ class UserPromptInterface(PromptInterface):
             if not hashcode:
                 print("NO HR in payments")
                 return
+=======
+            if not hashcode:
+                console_log.error("No hashcode")
+                return None
+            try:
+                message = {"MessageType":"GetRouterInfo",
+                           "Sender":self.Wallet.url,
+                           "Receiver": receiver,
+                           "AssetType": asset_type,
+                           "NetMagic": get_magic(),
+                           "MessageBody":{
+                               "AssetType":asset_type,
+                               "Value":count
+                               }
+                           }
+                result = gate_way.get_router_info(message)
+                routerinfo = json.loads(result.get("result"))
+            except Exception as error:
+                LOG.error('Exception occurred during get route info. Exception: {}'.format(error))
+                console_log.warning('No router was found.')
+                return
+            else:
+                router=routerinfo.get("RouterInfo")
+                if not router:
+                    LOG.error('Router between {} and {} was not found.'.format(self.Wallet.url, receiver))
+                    console_log.error('Router not found for HTLC transfer.')
+                    return
+>>>>>>> dev
 
             full_path = router.get("FullPath")
             LOG.info("Get Router {}".format(str(full_path)))
@@ -475,7 +491,7 @@ class UserPromptInterface(PromptInterface):
         if enable.upper() not in ["ON", "OFF"]:
             console_log.error("should be on or off")
         self.qrcode = True if enable.upper() == "ON" else False
-        console_log.info("Qrcode opened") if self.qrcode else console_log.info("Qrcode closed")
+        console_log.console("Qrcode opened") if self.qrcode else console_log.info("Qrcode closed")
         return None
 
     @channel_opened
@@ -488,22 +504,71 @@ class UserPromptInterface(PromptInterface):
         """
         channel_name = get_arg(arguments, 1)
 
-        console_log.info("Closing channel {}".format(channel_name))
+        console_log.console("Closing channel {}".format(channel_name))
         if channel_name:
             Channel.quick_close(channel_name, wallet=self.Wallet, cli=True, trigger=SettleMessage.create)
         else:
             console_log.warn("No Channel Create")
 
     @channel_opened
-    @arguments_length([1,2])
+    def channel_force_close(self, arguments):
+        """
+
+        :param arguments:
+        :return:
+        """
+        channel_name = get_arg(arguments, 1)
+
+        if 'debug' in arguments:
+            nonce = get_arg(arguments, 2, True)
+            is_debug = True
+        else:
+            nonce = None
+            is_debug = False
+
+        console_log.console("Force to close channel {}".format(channel_name))
+        if channel_name:
+<<<<<<< HEAD
+            Channel.quick_close(channel_name, wallet=self.Wallet, cli=True, trigger=SettleMessage.create)
+=======
+            channel_event = ChannelForceSettleEvent(channel_name, True)
+            channel_event.register_args(EnumEventAction.EVENT_EXECUTE,
+                                        invoker_uri=self.Wallet.url, channel_name=channel_name,
+                                        nonce=nonce, invoker_key=self.Wallet._key.private_key_string,
+                                        is_debug=is_debug)
+            ws_instance.register_event(channel_event)
+>>>>>>> dev
+        else:
+            console_log.warn("No Channel Create")
+
+    @channel_opened
+    @arguments_length([1,2,3,4])
     def channel_peer(self, arguments):
         """
 
         :param arguments:
         :return:
         """
+<<<<<<< HEAD
         state = '{}'.format(get_arg(arguments, 1)).upper()
         Channel.get_channel_list(self.Wallet.url, state=state)
+=======
+        arg_dic={"state":None,"peer":None,"channel":None}
+        for i in range(1,4):
+            arg = get_arg(arguments,i)
+            if arg is None:
+                continue
+            try:
+                k_v=arg.strip().split("=")
+                if k_v[0] in arg_dic.keys():
+                    arg_dic[k_v[0]]=k_v[1]
+            except IndexError:
+                continue
+            else:
+                continue
+
+        Channel.get_channel_list(self.Wallet.url, **arg_dic)
+>>>>>>> dev
         return
 
     @channel_opened
@@ -514,26 +579,40 @@ class UserPromptInterface(PromptInterface):
         :return:
         """
         asset_type = get_arg(arguments, 1)
-        if not asset_type:
-            console_log.error("command not give the asset type")
+        if not check_support_asset_type(asset_type):
+            console_log.error("No support asset, current just support {}".format(SupportAssetType.SupportAssetType))
             return None
         value = get_arg(arguments, 2)
         if not value:
             console_log.error("command not give the count")
             return None
+        try:
+            if float(value) <=0 or not check_float_decimals(value, asset_type):
+                console_log.error("value should not be less than 0")
+                return None
+        except ValueError:
+            console_log.error("value format error")
+            return None
         comments = " ".join(arguments[3:])
         comments = comments if comments else "None"
+        if len(comments) > 128:
+            console_log.error("comments length should be less than 128")
+            return None
         try:
             hash_r, rcode = Payment.create_hr()
             Channel.add_payment(None, hash_r, rcode, value)
+<<<<<<< HEAD
             paycode = Payment.generate_payment_code(self.Wallet.url, asset_type, value, hash_r, comments)
+=======
+            paycode = Payment.generate_payment_code(self.Wallet.url, asset_type, value, hash_r, comments, True)
+>>>>>>> dev
         except Exception as e:
             LOG.error(e)
             console_log.error("Get payment link error, please check the log")
             return None
         if self.qrcode:
             qrcode_terminal.draw(paycode, version=4)
-        console_log.info(paycode)
+        console_log.console(paycode)
         return None
 
     @channel_opened
@@ -548,15 +627,19 @@ class UserPromptInterface(PromptInterface):
             self.help()
             return None
         if subcommand.upper() == "URI":
-            console_log.info(self.Wallet.url)
+            console_log.console(self.Wallet.url)
         elif subcommand.upper() == "TRANS_HISTORY":
             channel_name = get_arg(arguments, 2)
             if channel_name is None:
                 console_log.error("No provide channel")
                 return None
+<<<<<<< HEAD
             tx_his = Channel.query_trade(channel_name)
+=======
+            tx_his = Channel.batch_query_trade(channel_name)
+>>>>>>> dev
             for tx in tx_his:
-                console_log.info(tx)
+                console_log.console(tx)
             return None
         else:
             self.help()
@@ -564,7 +647,7 @@ class UserPromptInterface(PromptInterface):
 
     @channel_opened
     @arguments_length(1)
-    def channel_depoistlimit(self, arguments):
+    def channel_deposit_limit(self, arguments):
         """
 
         :param arguments:
@@ -574,7 +657,6 @@ class UserPromptInterface(PromptInterface):
         deposit = DepositAuth.deposit_limit()
         console_log.info("Current Deposit limit is %s TNC" % deposit)
         return None
-
 
     @wallet_opened
     def do_channel(self,arguments):
@@ -606,6 +688,9 @@ class UserPromptInterface(PromptInterface):
         elif command == "close":
             self.channel_close(arguments)
 
+        elif command == "force-close":
+            self.channel_force_close(arguments)
+
         elif command == "peer":
             self.channel_peer(arguments)
 
@@ -615,8 +700,8 @@ class UserPromptInterface(PromptInterface):
         elif command == "show":
             self.channel_show(arguments)
 
-        elif command == "depoist_limit":
-            self.channel_depoistlimit(arguments)
+        elif command == "deposit_limit":
+            self.channel_deposit_limit(arguments)
         else:
             return None
 
@@ -682,7 +767,11 @@ class UserPromptInterface(PromptInterface):
         #     m_instance = TestMessage(message, self.Wallet)
 
         elif message_type == "PaymentLink":
+<<<<<<< HEAD
             m_instance = PaymentLink(message, self.Wallet)
+=======
+            m_instance = PaymentLink(message)
+>>>>>>> dev
 
         else:
             return "No Support Message Type "
@@ -709,6 +798,9 @@ def main():
     else:
         settings.setup_testnet()
 
+    # initialize the loggers
+    init_logger(file_name='wallet.log')
+
     UserPrompt = UserPromptInterface()
     port = Configure.get("NetPort")
     address = Configure.get("RpcListenAddress")
@@ -732,6 +824,7 @@ def main():
     reactor.callInThread(UserPrompt.run)
     reactor.callInThread(UserPrompt.handlemaessage)
     reactor.callInThread(monitorblock)
+    reactor.callInThread(ws_instance.handle)
     reactor.run()
 
 if __name__ == "__main__":
