@@ -107,3 +107,8 @@ class TrinityNumber(object):
     def restore_number(number):
         return number
 
+    @classmethod
+    def convert_to_number(cls, number, asset_type='TNC'):
+        return number / cls._trinity_unit
+
+

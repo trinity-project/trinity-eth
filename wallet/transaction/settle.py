@@ -295,7 +295,7 @@ class SettleResponseMessage(Message):
         # sign the contents
         self_commitment = SettleResponseMessage.sign_content(
             typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
-            valueList=[channel_name, nonce, sender_address, int(sender_balance), receiver_address, (receiver_balance)],
+            valueList=[channel_name, nonce, sender_address, int(sender_balance), receiver_address, int(receiver_balance)],
             privtKey = wallet._key.private_key_string)
         message.update({"MessageBody": {"Commitment": self_commitment}})
 

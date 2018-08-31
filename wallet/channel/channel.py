@@ -35,6 +35,7 @@ from wallet.Interface.gate_way import sync_channel
 from common.console import console_log
 from common.common import LOG
 from common.common import uri_parser
+from common.number import TrinityNumber
 
 
 class Channel(object):
@@ -147,13 +148,27 @@ class Channel(object):
 
         channels = APIChannel.batch_query_channel(filters=filter_src)
         for ch in channels:
+            balance = Channel.convert_balance(ch.balance)
             console_log.console('=='*10,'\nChannelName:', ch.channel, '\nState:', ch.state, '\nPeer:', ch.dest_addr,
-                  '\nBalance:', json.dumps(ch.balance, indent=1))
+                  '\nBalance:', json.dumps(balance, indent=1))
 
         channels = APIChannel.batch_query_channel(filters=filter_dest)
         for ch in channels:
+            balance = Channel.convert_balance(ch.balance)
             console_log.console('=='*10,'\nChannelName:', ch.channel, '\nState:', ch.state, '\nPeer:', ch.src_addr,
-                  '\nBalance:', json.dumps(ch.balance, indent=1))
+                  '\nBalance:', json.dumps(balance, indent=1))
+
+    @classmethod
+    def convert_balance(cls, balance:dict):
+        if not balance:
+            return
+
+        for address, asset_value in balance.items():
+            for asset_type, count in asset_value.items():
+                temp_value = TrinityNumber.convert_to_number(TrinityNumber(count).number)
+                balance[address][asset_type] = temp_value
+
+        return balance
 
     @property
     def state(self):
