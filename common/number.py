@@ -22,8 +22,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
-from exceptions import UnsupportedTrinityNumber
-from log import LOG
+from .exceptions import UnsupportedTrinityNumber
+from .log import LOG
 import re
 
 
@@ -103,7 +103,4 @@ class TrinityNumber(object):
     @trinity_operator
     def restore_number(number):
         return number
-
-
-
-print(TrinityNumber.restore_number(1900000001000))
+    
