@@ -33,9 +33,9 @@ class SettingsHolder:
         self.NODEURL = "https://ropsten.infura.io"
         self.TNC = SUPPORTED_ASSET_TYPE['TNC']
         self.TNC_abi = erc20_asset_abi
-        self.Eth_Contract_address = "0x56a8DcDB4480d73ddE0a13E87206C887D466872E" #"0x1002D9FE1afD4DDB629E3fcdB578297EFf380106"
+        self.Eth_Contract_address = "0xB38758094373f9C6651a765e7bbB38722a07c63a"
         self.Eth_Contract_abi = eth_contract_abi
-        self.ETH_Data_Contract_address = "0x77080e395c328bd2Cb0F0166c459E85041Bd4d7F"
+        self.ETH_Data_Contract_address = "0xF928BA6a908207BF6C0Cd73eba2f165B6115AbD9"
         self.create_client()
     def setup_privnet(self):
         self.NET_NAME = "PrivateNet"
@@ -575,93 +575,33 @@ eth_contract_abi = [
         "constant": False,
         "inputs": [
             {
-                "name": "channelId",
-                "type": "bytes32"
-            },
-            {
-                "name": "nonce",
-                "type": "uint256"
-            },
-            {
-                "name": "founder",
+                "name": "_dataContract",
                 "type": "address"
-            },
-            {
-                "name": "founderBalance",
-                "type": "uint256"
-            },
-            {
-                "name": "partner",
-                "type": "address"
-            },
-            {
-                "name": "partnerBalance",
-                "type": "uint256"
-            },
-            {
-                "name": "closerSignature",
-                "type": "bytes"
-            },
-            {
-                "name": "partnerSignature",
-                "type": "bytes"
             }
         ],
-        "name": "closeChannel",
+        "name": "setDataContract",
         "outputs": [],
         "payable": False,
         "stateMutability": "nonpayable",
         "type": "function"
     },
     {
-        "constant": False,
+        "constant": True,
         "inputs": [
             {
                 "name": "channelId",
                 "type": "bytes32"
-            },
-            {
-                "name": "nonce",
-                "type": "uint256"
-            },
-            {
-                "name": "funderAddress",
-                "type": "address"
-            },
-            {
-                "name": "funderAmount",
-                "type": "uint256"
-            },
-            {
-                "name": "partnerAddress",
-                "type": "address"
-            },
-            {
-                "name": "partnerAmount",
-                "type": "uint256"
-            },
-            {
-                "name": "funderSignature",
-                "type": "bytes"
-            },
-            {
-                "name": "partnerSignature",
-                "type": "bytes"
             }
         ],
-        "name": "deposit",
-        "outputs": [],
+        "name": "getChannelBalance",
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256"
+            }
+        ],
         "payable": False,
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "constant": False,
-        "inputs": [],
-        "name": "pause",
-        "outputs": [],
-        "payable": False,
-        "stateMutability": "nonpayable",
+        "stateMutability": "view",
         "type": "function"
     },
     {
@@ -710,11 +650,113 @@ eth_contract_abi = [
         "constant": False,
         "inputs": [
             {
-                "name": "_dataContract",
+                "name": "channelId",
+                "type": "bytes32"
+            },
+            {
+                "name": "nonce",
+                "type": "uint256"
+            },
+            {
+                "name": "funderAddress",
                 "type": "address"
+            },
+            {
+                "name": "funderAmount",
+                "type": "uint256"
+            },
+            {
+                "name": "partnerAddress",
+                "type": "address"
+            },
+            {
+                "name": "partnerAmount",
+                "type": "uint256"
+            },
+            {
+                "name": "funderSignature",
+                "type": "bytes"
+            },
+            {
+                "name": "partnerSignature",
+                "type": "bytes"
             }
         ],
-        "name": "setDataContract",
+        "name": "updateDeposit",
+        "outputs": [],
+        "payable": False,
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "constant": True,
+        "inputs": [
+            {
+                "name": "channelId",
+                "type": "bytes32"
+            }
+        ],
+        "name": "getTimeoutBlock",
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "payable": False,
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "constant": False,
+        "inputs": [],
+        "name": "unpause",
+        "outputs": [],
+        "payable": False,
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "constant": False,
+        "inputs": [
+            {
+                "name": "channelId",
+                "type": "bytes32"
+            },
+            {
+                "name": "nonce",
+                "type": "uint256"
+            },
+            {
+                "name": "sender",
+                "type": "address"
+            },
+            {
+                "name": "receiver",
+                "type": "address"
+            },
+            {
+                "name": "lockTime",
+                "type": "uint256"
+            },
+            {
+                "name": "lockAmount",
+                "type": "uint256"
+            },
+            {
+                "name": "lockHash",
+                "type": "bytes32"
+            },
+            {
+                "name": "partnerAsignature",
+                "type": "bytes"
+            },
+            {
+                "name": "partnerBsignature",
+                "type": "bytes"
+            }
+        ],
+        "name": "withdrawUpdate",
         "outputs": [],
         "payable": False,
         "stateMutability": "nonpayable",
@@ -737,10 +779,24 @@ eth_contract_abi = [
     {
         "constant": False,
         "inputs": [],
-        "name": "unpause",
+        "name": "pause",
         "outputs": [],
         "payable": False,
         "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "constant": True,
+        "inputs": [],
+        "name": "owner",
+        "outputs": [
+            {
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "payable": False,
+        "stateMutability": "view",
         "type": "function"
     },
     {
@@ -779,7 +835,132 @@ eth_contract_abi = [
                 "type": "bytes"
             }
         ],
-        "name": "updateDeposit",
+        "name": "deposit",
+        "outputs": [],
+        "payable": False,
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "constant": True,
+        "inputs": [],
+        "name": "trinityDataContract",
+        "outputs": [
+            {
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "payable": False,
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "constant": False,
+        "inputs": [
+            {
+                "name": "channelId",
+                "type": "bytes32"
+            },
+            {
+                "name": "nonce",
+                "type": "uint256"
+            },
+            {
+                "name": "funder",
+                "type": "address"
+            },
+            {
+                "name": "funderBalance",
+                "type": "uint256"
+            },
+            {
+                "name": "partner",
+                "type": "address"
+            },
+            {
+                "name": "partnerBalance",
+                "type": "uint256"
+            },
+            {
+                "name": "closerSignature",
+                "type": "bytes"
+            },
+            {
+                "name": "partnerSignature",
+                "type": "bytes"
+            }
+        ],
+        "name": "withdrawBalance",
+        "outputs": [],
+        "payable": False,
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "constant": True,
+        "inputs": [
+            {
+                "name": "channelId",
+                "type": "bytes32"
+            }
+        ],
+        "name": "getChannelStatus",
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint8"
+            }
+        ],
+        "payable": False,
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "constant": False,
+        "inputs": [
+            {
+                "name": "channelId",
+                "type": "bytes32"
+            },
+            {
+                "name": "nonce",
+                "type": "uint256"
+            },
+            {
+                "name": "sender",
+                "type": "address"
+            },
+            {
+                "name": "receiver",
+                "type": "address"
+            },
+            {
+                "name": "lockTime",
+                "type": "uint256"
+            },
+            {
+                "name": "lockAmount",
+                "type": "uint256"
+            },
+            {
+                "name": "lockHash",
+                "type": "bytes32"
+            },
+            {
+                "name": "partnerAsignature",
+                "type": "bytes"
+            },
+            {
+                "name": "partnerBsignature",
+                "type": "bytes"
+            },
+            {
+                "name": "secret",
+                "type": "bytes32"
+            }
+        ],
+        "name": "withdraw",
         "outputs": [],
         "payable": False,
         "stateMutability": "nonpayable",
@@ -839,11 +1020,11 @@ eth_contract_abi = [
                 "type": "uint256"
             },
             {
-                "name": "funder",
+                "name": "founder",
                 "type": "address"
             },
             {
-                "name": "funderBalance",
+                "name": "founderBalance",
                 "type": "uint256"
             },
             {
@@ -863,7 +1044,7 @@ eth_contract_abi = [
                 "type": "bytes"
             }
         ],
-        "name": "withdrawBalance",
+        "name": "closeChannel",
         "outputs": [],
         "payable": False,
         "stateMutability": "nonpayable",
@@ -890,6 +1071,22 @@ eth_contract_abi = [
         "payable": False,
         "stateMutability": "nonpayable",
         "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "name": "_dataAddress",
+                "type": "address"
+            }
+        ],
+        "payable": False,
+        "stateMutability": "nonpayable",
+        "type": "constructor"
+    },
+    {
+        "payable": False,
+        "stateMutability": "nonpayable",
+        "type": "fallback"
     },
     {
         "anonymous": False,
@@ -920,7 +1117,7 @@ eth_contract_abi = [
                 "type": "uint256"
             }
         ],
-        "name": "UpdateTransaction",
+        "name": "Deposit",
         "type": "event"
     },
     {
@@ -933,48 +1130,26 @@ eth_contract_abi = [
             },
             {
                 "indexed": False,
-                "name": "hashLock",
-                "type": "bytes32"
-            },
-            {
-                "indexed": False,
-                "name": "nonce",
-                "type": "uint256"
-            },
-            {
-                "indexed": False,
-                "name": "balance",
-                "type": "uint256"
-            }
-        ],
-        "name": "WithdrawUpdate",
-        "type": "event"
-    },
-    {
-        "anonymous": False,
-        "inputs": [
-            {
-                "indexed": False,
-                "name": "channleId",
-                "type": "bytes32"
-            },
-            {
-                "indexed": False,
-                "name": "invoker",
+                "name": "partnerA",
                 "type": "address"
             },
             {
                 "indexed": False,
-                "name": "nonce",
+                "name": "amountA",
                 "type": "uint256"
             },
             {
                 "indexed": False,
-                "name": "blockNumber",
+                "name": "partnerB",
+                "type": "address"
+            },
+            {
+                "indexed": False,
+                "name": "amountB",
                 "type": "uint256"
             }
         ],
-        "name": "CloseChannel",
+        "name": "UpdateDeposit",
         "type": "event"
     },
     {
@@ -1019,16 +1194,53 @@ eth_contract_abi = [
             },
             {
                 "indexed": False,
-                "name": "hashLock",
+                "name": "invoker",
+                "type": "address"
+            },
+            {
+                "indexed": False,
+                "name": "nonce",
+                "type": "uint256"
+            },
+            {
+                "indexed": False,
+                "name": "blockNumber",
+                "type": "uint256"
+            }
+        ],
+        "name": "CloseChannel",
+        "type": "event"
+    },
+    {
+        "anonymous": False,
+        "inputs": [
+            {
+                "indexed": False,
+                "name": "channleId",
                 "type": "bytes32"
             },
             {
                 "indexed": False,
-                "name": "balance",
+                "name": "partnerA",
+                "type": "address"
+            },
+            {
+                "indexed": False,
+                "name": "amountA",
+                "type": "uint256"
+            },
+            {
+                "indexed": False,
+                "name": "partnerB",
+                "type": "address"
+            },
+            {
+                "indexed": False,
+                "name": "amountB",
                 "type": "uint256"
             }
         ],
-        "name": "WithdrawSettle",
+        "name": "UpdateTransaction",
         "type": "event"
     },
     {
@@ -1105,26 +1317,21 @@ eth_contract_abi = [
             },
             {
                 "indexed": False,
-                "name": "partnerA",
-                "type": "address"
+                "name": "hashLock",
+                "type": "bytes32"
             },
             {
                 "indexed": False,
-                "name": "amountA",
+                "name": "nonce",
                 "type": "uint256"
             },
             {
                 "indexed": False,
-                "name": "partnerB",
-                "type": "address"
-            },
-            {
-                "indexed": False,
-                "name": "amountB",
+                "name": "balance",
                 "type": "uint256"
             }
         ],
-        "name": "UpdateDeposit",
+        "name": "WithdrawUpdate",
         "type": "event"
     },
     {
@@ -1137,223 +1344,16 @@ eth_contract_abi = [
             },
             {
                 "indexed": False,
-                "name": "partnerA",
-                "type": "address"
+                "name": "hashLock",
+                "type": "bytes32"
             },
             {
                 "indexed": False,
-                "name": "amountA",
-                "type": "uint256"
-            },
-            {
-                "indexed": False,
-                "name": "partnerB",
-                "type": "address"
-            },
-            {
-                "indexed": False,
-                "name": "amountB",
+                "name": "balance",
                 "type": "uint256"
             }
         ],
-        "name": "Deposit",
+        "name": "WithdrawSettle",
         "type": "event"
-    },
-    {
-        "constant": False,
-        "inputs": [
-            {
-                "name": "channelId",
-                "type": "bytes32"
-            },
-            {
-                "name": "nonce",
-                "type": "uint256"
-            },
-            {
-                "name": "sender",
-                "type": "address"
-            },
-            {
-                "name": "receiver",
-                "type": "address"
-            },
-            {
-                "name": "lockTime",
-                "type": "uint256"
-            },
-            {
-                "name": "lockAmount",
-                "type": "uint256"
-            },
-            {
-                "name": "lockHash",
-                "type": "bytes32"
-            },
-            {
-                "name": "partnerAsignature",
-                "type": "bytes"
-            },
-            {
-                "name": "partnerBsignature",
-                "type": "bytes"
-            },
-            {
-                "name": "secret",
-                "type": "bytes32"
-            }
-        ],
-        "name": "withdraw",
-        "outputs": [],
-        "payable": False,
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "constant": False,
-        "inputs": [
-            {
-                "name": "channelId",
-                "type": "bytes32"
-            },
-            {
-                "name": "nonce",
-                "type": "uint256"
-            },
-            {
-                "name": "sender",
-                "type": "address"
-            },
-            {
-                "name": "receiver",
-                "type": "address"
-            },
-            {
-                "name": "lockTime",
-                "type": "uint256"
-            },
-            {
-                "name": "lockAmount",
-                "type": "uint256"
-            },
-            {
-                "name": "lockHash",
-                "type": "bytes32"
-            },
-            {
-                "name": "partnerAsignature",
-                "type": "bytes"
-            },
-            {
-                "name": "partnerBsignature",
-                "type": "bytes"
-            }
-        ],
-        "name": "withdrawUpdate",
-        "outputs": [],
-        "payable": False,
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "name": "_dataAddress",
-                "type": "address"
-            }
-        ],
-        "payable": False,
-        "stateMutability": "nonpayable",
-        "type": "constructor"
-    },
-    {
-        "payable": False,
-        "stateMutability": "nonpayable",
-        "type": "fallback"
-    },
-    {
-        "constant": True,
-        "inputs": [
-            {
-                "name": "channelId",
-                "type": "bytes32"
-            }
-        ],
-        "name": "getChannelBalance",
-        "outputs": [
-            {
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "payable": False,
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "constant": True,
-        "inputs": [
-            {
-                "name": "channelId",
-                "type": "bytes32"
-            }
-        ],
-        "name": "getChannelStatus",
-        "outputs": [
-            {
-                "name": "",
-                "type": "uint8"
-            }
-        ],
-        "payable": False,
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "constant": True,
-        "inputs": [
-            {
-                "name": "channelId",
-                "type": "bytes32"
-            }
-        ],
-        "name": "getTimeoutBlock",
-        "outputs": [
-            {
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "payable": False,
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "constant": True,
-        "inputs": [],
-        "name": "owner",
-        "outputs": [
-            {
-                "name": "",
-                "type": "address"
-            }
-        ],
-        "payable": False,
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "constant": True,
-        "inputs": [],
-        "name": "trinityDataContract",
-        "outputs": [
-            {
-                "name": "",
-                "type": "address"
-            }
-        ],
-        "payable": False,
-        "stateMutability": "view",
-        "type": "function"
     }
 ]
