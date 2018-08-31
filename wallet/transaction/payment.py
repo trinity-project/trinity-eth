@@ -120,12 +120,24 @@ class Payment(metaclass=SingletonClass):
     @classmethod
     def confirm_payment(cls, channel_name, hashcode, payment=0):
         try:
-            if cls.is_valid_hash_r(hashcode):
+            # if cls.is_valid_hash_r(hashcode):
+            if not hashcode:
                 payment_hash = Channel.query_payment(channel_name, hashcode=hashcode)[0]
                 # Todo: verify the payment count
                 #
                 # update the payment to confirm
                 Channel.update_payment(channel_name, hashcode, state=EnumTradeState.confirmed.name)
+
+                # Todo update the HTLC state
+                keyword = 'htlc.'+hashcode+'.state'
+                trade_list = Channel.batch_query_trade(channel_name, {keyword:EnumTradeState.confirming.name})
+                for _trade_item in trade_list:
+                    _trade_rsmc = _trade_item.rsmc
+                    _trade_rsmc.update({'state': EnumTradeState.confirmed.name})
+                    _trade_htlc = _trade_item.htlc
+                    _trade_htlc[hashcode]['state'] = EnumTradeState.confirmed.name
+
+                    Channel.update_trade(channel_name, _trade_item.nonce, rsmc=_trade_rsmc, htlc=_trade_htlc)
 
             return
         except Exception as error:
