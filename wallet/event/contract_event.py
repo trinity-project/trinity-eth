@@ -24,6 +24,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 from common.singleton import SingletonClass
 from common.log import LOG
+from common.number import TrinityNumber
 from blockchain.ethInterface import Interface as EthInterface
 from blockchain.web3client import Client as EthWebClient
 from lightwallet.Settings import settings
@@ -33,7 +34,6 @@ class ContractEventInterface(metaclass=SingletonClass):
     """
 
     """
-    _trinity_coef = pow(10, 8)
     _eth_interface = None
     _eth_client = None
 
@@ -60,10 +60,6 @@ class ContractEventInterface(metaclass=SingletonClass):
         valueList = args[1] if 1 < len(args) else kwargs.get('valueList')
         privtKey = args[2] if 2 < len(args) else kwargs.get('privtKey')
 
-        for idx in range(start, len(typeList)):
-            if typeList[idx] in ['uint256']:
-                valueList[idx] = cls.multiply(valueList[idx])
-
         content = cls._eth_client.sign_args(typeList, valueList, privtKey).decode()
         return '0x' + content
 
@@ -71,13 +67,13 @@ class ContractEventInterface(metaclass=SingletonClass):
     def approve(cls, address, deposit, private_key, gwei_coef=1):
         approved_asset = cls.get_approved_asset(address)
 
-        if float(approved_asset) >= float(deposit):
-            LOG.info('Has been approved asset count: {}'.format(approved_asset))
+        if approved_asset >= deposit:
+            LOG.info('Has been approved asset count: {}'.format(TrinityNumber.restore_number(approved_asset)))
             return True
 
         try:
             # return tx_id
-            return cls._eth_interface.approve(address, cls.multiply(deposit), private_key, gwei_coef=gwei_coef)
+            return cls._eth_interface.approve(address, deposit, private_key, gwei_coef=gwei_coef)
         except Exception as error:
             LOG.error('authorized deposit error: {}'.format(error))
 
@@ -88,7 +84,11 @@ class ContractEventInterface(metaclass=SingletonClass):
         try:
             result = cls._eth_interface.get_approved_asset(settings.TNC, settings.TNC_abi,
                                                            address, settings.ETH_Data_Contract_address)
-            return float(result) if result else 0
+
+            if result:
+                result = TrinityNumber(str(result)).number
+
+            return result
         except Exception as error:
             LOG.error('get_approved_asset error: {}'.format(error))
             return 0
@@ -109,8 +109,8 @@ class ContractEventInterface(metaclass=SingletonClass):
                         founder_sign, partner_sign, private_key, gwei_coef=1):
         try:
             return cls._eth_interface.deposit(address,channel_id, nonce,
-                                       founder, cls.multiply(founder_amount),
-                                       partner, cls.multiply(partner_amount),
+                                       founder, founder_amount,
+                                       partner, partner_amount,
                                        founder_sign, partner_sign, private_key, gwei_coef=gwei_coef)
         except Exception as error:
             LOG.error('approve_deposit error: {}'.format(error))
@@ -139,8 +139,8 @@ class ContractEventInterface(metaclass=SingletonClass):
         """
         try:
             return cls._eth_interface.quick_close_channel(invoker, channel_id, nonce,
-                                                   founder, cls.multiply(founder_balance),
-                                                   partner, cls.multiply(partner_balance),
+                                                   founder, founder_balance,
+                                                   partner, partner_balance,
                                                    founder_signature, partner_signature, invoker_key,
                                                           gwei_coef=gwei_coef)
         except Exception as error:
@@ -152,8 +152,8 @@ class ContractEventInterface(metaclass=SingletonClass):
                       founder_signature, partner_signature, invoker_key, gwei_coef=1):
         try:
             result = cls._eth_interface.close_channel(invoker, channel_id, nonce,
-                                                      founder, cls.multiply(founder_balance),
-                                                      partner, cls.multiply(partner_balance),
+                                                      founder, founder_balance,
+                                                      partner, partner_balance,
                                                       founder_signature, partner_signature, invoker_key,
                                                       gwei_coef=gwei_coef)
             LOG.debug('close_channel result: {}'.format(result))
@@ -167,8 +167,8 @@ class ContractEventInterface(metaclass=SingletonClass):
                       founder_signature, partner_signature, invoker_key, gwei_coef=1):
         try:
             result = cls._eth_interface.update_transaction(invoker, channel_id, nonce,
-                                                           founder, cls.multiply(founder_balance),
-                                                           partner, cls.multiply(partner_balance),
+                                                           founder, founder_balance,
+                                                           partner, partner_balance,
                                                            founder_signature, partner_signature, invoker_key,
                                                            gwei_coef= gwei_coef)
             LOG.debug('update_close_channel result: {}'.format(result))
@@ -187,10 +187,3 @@ class ContractEventInterface(metaclass=SingletonClass):
             LOG.error('end force_settle error: {}'.format(error))
             return None
 
-    @classmethod
-    def multiply(cls, asset_count):
-        return int(float(asset_count) * cls._trinity_coef)
-
-    @classmethod
-    def divide(cls, asset_count):
-        return float(asset_count) / cls._trinity_coef

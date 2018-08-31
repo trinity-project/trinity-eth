@@ -148,7 +148,7 @@ class Message(object):
             expected_balance = channel_set.balance.get(address).get(asset_type)
             expected_peer_balance = channel_set.balance.get(peer_address).get(asset_type)
 
-            return float(balance) == float(expected_balance) and float(peer_balance) == float(expected_peer_balance)
+            return int(balance) == int(expected_balance) and int(peer_balance) == int(expected_peer_balance)
         except Exception as error:
             LOG.error('Channel<{}> was not found. Exception: {}'.format(channel_name, error))
             return False
@@ -187,10 +187,10 @@ class Message(object):
     def verify_channel_balance(self, balance, peer_balance, payment):
         try:
             channel = Channel(self.channel_name)
-            sender_balance = float(channel.balance.get(self.sender_address)) - float(payment)
-            receiver_balance = float(channel.balance.get(self.receiver_address)) + float(payment)
+            sender_balance = int(channel.balance.get(self.sender_address)) - int(payment)
+            receiver_balance = int(channel.balance.get(self.receiver_address)) + int(payment)
 
-            if sender_balance != float(balance) or receiver_balance != float(peer_balance):
+            if sender_balance != int(balance) or receiver_balance != int(peer_balance):
                 return False, 'Balances of peers DO NOT matched. sender<self: {}, peer {}>, receiver<self: {}, peer {}>'\
                     .format(sender_balance, balance, receiver_balance, peer_balance)
             pass
@@ -200,32 +200,14 @@ class Message(object):
             return True, None
 
     @classmethod
-    def float_to_int(cls, number:str):
-        coef = 8
-        if number.__contains__('e'):
-            number_list = number.split('e')
-            return math.ceil(float(number_list[0]) * pow(10, int(number_list[1])+coef))
-        elif number.__contains__('.'):
-            number_list = number.split('.')
-            integer = int(number_list[0]) * pow(10, coef)
-            fragment = int(number_list[1]) * pow(10, 8 - len(number_list[1]))
-            return integer + fragment
-        else:
-            return int(number) * pow(10, 8)
-
-    @classmethod
-    def float_calculate(cls, balance, payment, add=True):
-        trinity_coef = 100000000   # pow(10, 8)
-        balance = cls.float_to_int(balance.__str__())
-        payment = cls.float_to_int(payment.__str__())
-
+    def big_number_calculate(cls, balance, payment, add=True):
         # calculate
         if add:
-            result = balance + payment
+            result = int(balance) + int(payment)
         else:
-            result = balance - payment
+            result = int(balance) - int(payment)
 
-        return result/trinity_coef
+        return result
 
     @classmethod
     def hashr_is_valid_format(cls, hashcode):
@@ -245,10 +227,10 @@ class Message(object):
             channel_balance = Channel(channel_name).balance
             balance = channel_balance.get(address).get(asset_type.upper())
 
-            if not 0 < float(payment) <= float(balance):
+            if not 0 < int(payment) <= int(balance):
                 raise GoTo('Invalid payment')
 
-            return True, float(balance)
+            return True, int(balance)
         except Exception as error:
             LOG.error('check payment error: {}.'.format(error))
             LOG.error('Parameters: channel<{}>, address<{}>, asset_type<{}>, payment<{}>'.format(channel_name,
@@ -297,18 +279,18 @@ class Message(object):
 
         try:
             asset_type = asset_type.upper()
-            payment = float(payment)
+            payment = int(payment)
             channel_balance = channel.balance
             payer_balance = channel_balance.get(payer_address).get(asset_type)
             payee_balance = channel_balance.get(payee_address).get(asset_type)
 
-            payer_balance = cls.float_calculate(payer_balance, payment, False)
-            payee_balance = cls.float_calculate(payee_balance, payment)
+            payer_balance = cls.big_number_calculate(payer_balance, payment, False)
+            payee_balance = cls.big_number_calculate(payee_balance, payment)
 
             if payer_balance >= 0 and payee_balance >= 0:
                 Channel.update_channel(channel_name,
-                                       balance={payer_address: {asset_type: payer_balance},
-                                                payee_address: {asset_type: payee_balance}})
+                                       balance={payer_address: {asset_type: str(payer_balance)},
+                                                payee_address: {asset_type: str(payee_balance)}})
             else:
                 raise Exception('Payer has not enough balance for this payment<{}>'.format(payment))
 

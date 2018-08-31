@@ -19,6 +19,7 @@ pythonpath = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(pythonpath)
 
 from common.log import LOG
+from common.number import TrinityNumber
 from common.console import console_log
 from lightwallet.Utils import get_arg, get_asset_id
 from lightwallet.Settings import settings

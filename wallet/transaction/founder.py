@@ -120,9 +120,10 @@ class FounderMessage(Message):
                                                        channel_name, asset_type, nonce)
         message = message.message_header
 
-        founder_deposit = float(founder_deposit)
+        founder_deposit = int(founder_deposit)
         if not partner_deposit:
             partner_deposit = founder_deposit
+        partner_deposit = int(partner_deposit)
 
         # check the deposit
         if not 0 <= partner_deposit <= founder_deposit:
@@ -139,8 +140,8 @@ class FounderMessage(Message):
             privtKey = wallet._key.private_key_string )
 
         message_body = {
-            "FounderDeposit": founder_deposit,
-            "PartnerDeposit": partner_deposit,
+            "FounderDeposit": str(founder_deposit),
+            "PartnerDeposit": str(partner_deposit),
             "Commitment": commitment,
             "AssetType": asset_type.upper(),
         }
@@ -151,8 +152,8 @@ class FounderMessage(Message):
             message.update({"Comments": comments})
 
         # add channel
-        deposit = {founder_address: {asset_type.upper(): founder_deposit},
-                   partner_address: {asset_type.upper(): partner_deposit}}
+        deposit = {founder_address: {asset_type.upper(): str(founder_deposit)},
+                   partner_address: {asset_type.upper(): str(partner_deposit)}}
         Channel.add_channel(channel=channel_name, src_addr=founder, dest_addr=partner,
                             state=EnumChannelState.INIT.name, deposit=deposit, balance=deposit, magic=get_magic())
 
@@ -311,8 +312,8 @@ class FounderResponsesMessage(Message):
         message = message.message_header
 
         # check the deposit
-        founder_deposit = float(founder_deposit)
-        partner_deposit = float(partner_deposit)
+        founder_deposit = int(founder_deposit)
+        partner_deposit = int(partner_deposit)
         if not 0 <= partner_deposit <= founder_deposit:
             raise GoTo('Invalid deposit. founder<{}> should not be less than partner<{}>.'.format(founder_deposit,
                                                                                                   partner_deposit))
@@ -353,8 +354,8 @@ class FounderResponsesMessage(Message):
                                     asset_type=asset_type)
 
         # start add channel
-        deposit = {founder_address: {asset_type: founder_deposit},
-                   partner_address: {asset_type: partner_deposit}}
+        deposit = {founder_address: {asset_type: str(founder_deposit)},
+                   partner_address: {asset_type: str(partner_deposit)}}
         Channel.add_channel(
             channel=channel_name, src_addr=founder, dest_addr=partner, state=EnumChannelState.OPENING.name,
             deposit=deposit, balance=deposit, magic=get_magic()

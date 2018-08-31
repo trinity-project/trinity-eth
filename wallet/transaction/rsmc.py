@@ -28,6 +28,7 @@ from .payment import Payment
 
 from common.log import LOG
 from common.common import uri_parser
+from common.number import TrinityNumber
 from common.exceptions import GoTo, GotoIgnore
 from wallet.channel import Channel
 from wallet.channel import EnumTradeType, EnumTradeRole, EnumTradeState
@@ -136,7 +137,7 @@ class RsmcMessage(Message):
             raise GoTo('Void balance<{}> for asset <{}>.'.format(channel.balance, asset_type))
         balance = channel.balance
 
-        payment = float(payment)
+        payment = int(payment)
         sender_address, _, _ = uri_parser(sender)
         receiver_address, _, _ = uri_parser(receiver)
         asset_type = asset_type.upper()
@@ -146,15 +147,15 @@ class RsmcMessage(Message):
         if not checked:
             raise GoTo('RsmcMessage::create: Payment<{}> should be satisfied 0 < payment <= {}'.format(payment,
                                                                                                        sender_balance))
-        sender_balance = RsmcMessage.float_calculate(sender_balance, payment, False)
-        receiver_balance = RsmcMessage.float_calculate(balance.get(receiver_address, {}).get(asset_type, 0), payment)
+        sender_balance = RsmcMessage.big_number_calculate(sender_balance, payment, False)
+        receiver_balance = RsmcMessage.big_number_calculate(balance.get(receiver_address, {}).get(asset_type, 0), payment)
 
         # create message
         message_body = {
             "AssetType":asset_type.upper(),
-            "PaymentCount": payment,
-            "SenderBalance": sender_balance,
-            "ReceiverBalance": receiver_balance,
+            "PaymentCount": str(payment),
+            "SenderBalance": str(sender_balance),
+            "ReceiverBalance": str(receiver_balance),
         }
 
         # start to create message
@@ -359,14 +360,15 @@ class RsmcResponsesMessage(Message):
 
         # calculate the balance
         balance = channel.balance
-        self_balance = RsmcResponsesMessage.float_calculate(self_balance, payment, False)
-        peer_balance = RsmcResponsesMessage.float_calculate(balance.get(receiver_address, {}).get(asset_type, 0), payment)
+        self_balance = RsmcResponsesMessage.big_number_calculate(self_balance, payment, False)
+        peer_balance = RsmcResponsesMessage.big_number_calculate(balance.get(receiver_address, {}).get(asset_type, 0), payment)
         LOG.debug('#################balance: self<{}>, receiver<{}>'.format(self_balance, peer_balance))
 
         # sign the trade
         commitment = RsmcResponsesMessage.sign_content(
             typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
-            valueList=[channel_name, nonce, sender_address, self_balance, receiver_address, peer_balance],
+            valueList=[channel_name, nonce, sender_address, int(self_balance),
+                       receiver_address, int(peer_balance)],
             privtKey = wallet._key.private_key_string)
 
         # # just record the payment for the partner

@@ -98,7 +98,7 @@ class SettleMessage(Message):
             # To create settle response message
             SettleResponseMessage.create(self.wallet, self.channel_name, self.nonce,
                                          self.asset_type, self.sender, self.receiver,
-                                         float(self.sender_balance), float(self.receiver_balance), self.commitment)
+                                         self.sender_balance, self.receiver_balance, self.commitment)
 
             # TODO: monitor event to set channel closed state
             channel_event = ChannelQuickSettleEvent(self.channel_name, False)
@@ -151,7 +151,7 @@ class SettleMessage(Message):
 
         commitment = SettleMessage.sign_content(
             typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
-            valueList=[channel_name, nonce, sender_address, sender_balance, receiver_address, receiver_balance],
+            valueList=[channel_name, nonce, sender_address, int(sender_balance), receiver_address, int(receiver_balance)],
             privtKey = wallet._key.private_key_string)
 
         message_body = {
@@ -295,7 +295,7 @@ class SettleResponseMessage(Message):
         # sign the contents
         self_commitment = SettleResponseMessage.sign_content(
             typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
-            valueList=[channel_name, nonce, sender_address, sender_balance, receiver_address, receiver_balance],
+            valueList=[channel_name, nonce, sender_address, int(sender_balance), receiver_address, (receiver_balance)],
             privtKey = wallet._key.private_key_string)
         message.update({"MessageBody": {"Commitment": self_commitment}})
 

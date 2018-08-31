@@ -22,20 +22,24 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
-from .exceptions import UnsupportedTrinityNumber, GoTo
+from exceptions import UnsupportedTrinityNumber
+from log import LOG
 import re
 
 
 def trinity_operator(callback):
     def wrapper(*args):
-        if not isinstance(args[0], TrinityNumber):
+        if not (isinstance(args[0], TrinityNumber) or isinstance(args[0], int)):
             raise UnsupportedTrinityNumber('number<{}> should be TrinityNumber type. Type<{}>'.format(args[0], type(args[0])))
         result = callback(*args)
+
+        if 0 == result:
+            return str(result)
 
         integer = int(result // TrinityNumber._trinity_unit)
         fragment = int(result % TrinityNumber._trinity_unit)
 
-        return '{}.{}'.format(integer, fragment)
+        return '{}.{}'.format(integer, fragment).strip(' ').strip('0')
     return wrapper
 
 
@@ -46,13 +50,16 @@ class TrinityNumber(object):
     _trinity_coef = 8
     _trinity_unit = 1e+8
 
-    def __init__(self, number: str):
+    def __init__(self, number: str, asset_type='TNC'):
         """
 
         :param number:
         """
+        self.number = None
+
         if not isinstance(number, str) or not re.match(r'1[0]{9}$|\d{1,9}$|\d{1,9}\.\d+$', number):
-            raise Exception('Number must be string type<{}>. Current is {}'.format(number, type(number)))
+            LOG.warn('Number must be string type<{}>. Current is {}'.format(number, type(number)))
+            return
 
         number_list = number.split('.')
 
@@ -92,3 +99,11 @@ class TrinityNumber(object):
         else:
             return -1
 
+    @staticmethod
+    @trinity_operator
+    def restore_number(number):
+        return number
+
+
+
+print(TrinityNumber.restore_number(1900000001000))

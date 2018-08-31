@@ -30,6 +30,7 @@ from .payment import Payment
 from blockchain.interface import get_block_count
 from common.log import LOG
 from common.console import console_log
+from common.number import TrinityNumber
 from common.common import uri_parser
 from common.exceptions import GoTo, GotoIgnore
 from wallet.channel import Channel
@@ -321,8 +322,8 @@ class HtlcMessage(Message):
                 channel_set = channel_set[0]
 
                 # calculate fee and transfer to next jump
-                fee = self.get_fee(self.wallet.url)
-                payment = self.float_calculate(self.payment, fee, False)
+                fee = TrinityNumber(str(self.get_fee(self.wallet.url))).number
+                payment = self.big_number_calculate(self.payment, fee, False)
                 receiver = next_router
                 HtlcMessage.create(channel_set.channel, self.wallet, self.wallet.url, receiver, self.asset_type,
                                    payment, self.hashcode, self.router, next_router)
@@ -408,7 +409,7 @@ class HtlcMessage(Message):
         asset_type = asset_type.upper()
 
         # check whether the balance is enough or not
-        payment = float(payment)
+        payment = int(payment)
         channel = Channel(channel_name)
         balance = channel.balance
         verified, sender_balance = HtlcMessage.check_payment(channel_name, sender_address, asset_type, payment)
@@ -417,7 +418,7 @@ class HtlcMessage(Message):
                                                                                                        sender_balance))
 
         # calculate the balance after payment
-        sender_balance = HtlcMessage.float_calculate(sender_balance, payment, False)
+        sender_balance = HtlcMessage.big_number_calculate(sender_balance, payment, False)
         receiver_balance = balance.get(receiver_address, {}).get(asset_type)
         if receiver_balance is None:
             raise GoTo('Why could not get the balance from channel<{}>?'.format(channel_name))
@@ -433,7 +434,7 @@ class HtlcMessage(Message):
         # ToDo:
         conclusive_commitment = HtlcMessage.sign_content(
             typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
-            valueList=[channel_name, nonce, sender_address, sender_balance, receiver_address, receiver_balance],
+            valueList=[channel_name, nonce, sender_address, int(sender_balance), receiver_address, int(receiver_balance)],
             privtKey = wallet._key.private_key_string)
 
         # inconclusive part
@@ -441,7 +442,7 @@ class HtlcMessage(Message):
             start=5,
             typeList=['bytes32', 'uint256', 'address', 'address', 'uint256', 'uint256', 'bytes32'],
             valueList=[channel_name, nonce, sender_address, receiver_address,
-                       end_block_height, payment, hashcode],
+                       end_block_height, int(payment), hashcode],
             privtKey = wallet._key.private_key_string)
 
         # # add trade to database
@@ -622,21 +623,21 @@ class HtlcResponsesMessage(Message):
                                                                                                         sender_balance))
 
         # update balance
-        sender_balance = HtlcResponsesMessage.float_calculate(sender_balance, payment, False)
-        receiver_balance = float(balance.get(receiver_address, {}).get(asset_type, 0))
+        sender_balance = HtlcResponsesMessage.big_number_calculate(sender_balance, payment, False)
+        receiver_balance = int(balance.get(receiver_address, {}).get(asset_type, 0))
 
         # 2 parts in htlc message: conclusive and inconclusive part
         # ToDo:
         conclusive_commitment = HtlcResponsesMessage.sign_content(
             typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
-            valueList=[channel_name, nonce, sender_address, sender_balance, receiver_address, receiver_balance],
+            valueList=[channel_name, nonce, sender_address, int(sender_balance), receiver_address, int(receiver_balance)],
             privtKey = wallet._key.private_key_string)
 
         inconclusive_commitment = HtlcResponsesMessage.sign_content(
             start=5,
             typeList=['bytes32', 'uint256', 'address', 'address', 'uint256', 'uint256', 'bytes32'],
             valueList=[channel_name, nonce, sender_address, receiver_address,
-                       delay_block, float(payment), hashcode],
+                       delay_block, int(payment), hashcode],
             privtKey = wallet._key.private_key_string)
 
         # record the payment

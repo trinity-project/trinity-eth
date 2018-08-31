@@ -47,7 +47,7 @@ class Payment(metaclass=SingletonClass):
     @classmethod
     def generate_payment_code(cls, receiver, asset_type, value, hashcode, comments='', cli=False):
         """"""
-        if 0 >= float(value):
+        if 0 >= int(value):
             console_log.error('Not support negative number.')
             return
 

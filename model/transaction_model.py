@@ -31,7 +31,7 @@ class TBLTransaction(DBManager):
         Created         : 2018-02-13
         Modified        : 2018-03-21
     """
-    def add_one(self, nonce:int or float, founder={}, rsmc={}, htlc={}, settle={}):
+    def add_one(self, nonce:int, founder={}, rsmc={}, htlc={}, settle={}):
         """
 
         :param nonce:

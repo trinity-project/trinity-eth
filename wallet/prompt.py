@@ -14,6 +14,7 @@ from prompt_toolkit import prompt
 from twisted.internet import reactor, endpoints, protocol
 from common.log import LOG, init_logger
 from common.console import console_log
+from common.number import TrinityNumber
 from lightwallet.Settings import settings
 from wallet.utils import get_arg, \
     get_asset_type_name,\
@@ -298,9 +299,9 @@ class UserPromptInterface(PromptInterface):
             return None
 
         try:
-            deposit = float(get_arg(arguments, 3).strip())
-            partner_deposit = get_arg(arguments, 4)
-            partner_deposit = float(float(partner_deposit.strip())) if partner_deposit is not None else deposit
+            deposit = TrinityNumber(get_arg(arguments, 3).strip()).number
+            partner_deposit = TrinityNumber(get_arg(arguments, 4).strip()).number
+            partner_deposit = partner_deposit if partner_deposit is not None else deposit
             if 0 >= deposit:
                 console_log.error("Founder's Deposit MUST be larger than 0")
             elif 0 > partner_deposit or partner_deposit > deposit:
@@ -310,12 +311,12 @@ class UserPromptInterface(PromptInterface):
             console_log.error("Founder's Deposit should not be less than Partner'")
             return None
 
-        if not check_onchain_balance(self.Wallet.address, asset_type, deposit):
-            console_log.error("Now the balance on-chain is less than the deposit.")
-            return None
-
         if not check_partner(self.Wallet, partner):
             console_log.error("Partner URI is not correct, Please check the partner uri")
+            return None
+
+        if not check_onchain_balance(self.Wallet.address, asset_type, deposit):
+            console_log.error("Now the balance on-chain is less than the deposit.")
             return None
 
         if not check_onchain_balance(partner.strip().split("@")[0], asset_type, partner_deposit):
@@ -357,7 +358,7 @@ class UserPromptInterface(PromptInterface):
         else:
             receiver = get_arg(arguments, 1)
             asset_type = get_arg(arguments, 2)
-            count = get_arg(arguments, 3)
+            count = TrinityNumber(get_arg(arguments, 3).strip()).number
             hashcode = get_arg(arguments, 4)
             if not receiver or not asset_type or not count:
                 self.help()
@@ -368,7 +369,7 @@ class UserPromptInterface(PromptInterface):
                 console_log.error("No support asset, current just support {}".format(str(SupportAssetType.SupportAssetType)))
                 return None
 
-            if 0 >= float(count):
+            if 0 >= count:
                 console_log.warn('Not support negative number or zero.')
                 return None
 
@@ -412,17 +413,17 @@ class UserPromptInterface(PromptInterface):
             LOG.info("Get Next {}".format(str(next_jump)))
             fee_router = [i for i in full_path if i[0] not in (self.Wallet.url, receiver)]
             if fee_router:
-                fee = reduce(lambda x, y:x+y,[float(i[1]) for i in fee_router])
+                fee = reduce(lambda x, y:x+y,[TrinityNumber(str(i[1]).strip()).number for i in fee_router])
             else:
                 fee = 0
 
-            count = HtlcMessage.float_calculate(count, fee)
+            count = count + fee
             receiver = full_path[1][0]
             channel_set = Channel.get_channel(self.Wallet.url, receiver, EnumChannelState.OPENED)
             if not(channel_set and channel_set[0]):
                 print('No OPENED channel was found for HTLC trade.')
                 return
-            LOG.info("Get Fee {}".format(str(fee)))
+            LOG.info("Get Fee {}".format(TrinityNumber.restore_number(fee)))
             answer = prompt("You will pay extra fee {}. Do you wish continue this transaction? [Yes/No]>".format(fee))
             if answer.upper() in["YES", "Y"]:
                 channel_name = channel_set[0].channel
@@ -526,12 +527,12 @@ class UserPromptInterface(PromptInterface):
         if not check_support_asset_type(asset_type):
             console_log.error("No support asset, current just support {}".format(SupportAssetType.SupportAssetType))
             return None
-        value = get_arg(arguments, 2)
+        value = TrinityNumber(get_arg(arguments, 2).strip()).number
         if not value:
             console_log.error("command not give the count")
             return None
         try:
-            if float(value) <=0 or not check_float_decimals(value, asset_type):
+            if 0 >= value or not check_float_decimals(value, asset_type):
                 console_log.error("value should not be less than 0")
                 return None
         except ValueError:

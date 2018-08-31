@@ -27,6 +27,7 @@ from blockchain.interface import get_balance
 import re
 import hashlib
 from common.log import LOG
+from common.number import TrinityNumber
 from lightwallet.Settings import settings
 import datetime
 import requests
@@ -224,43 +225,11 @@ def check_onchain_balance(pubkey, asset_type, deposit):
     """
     asset_symbol, asset_abi = SupportAssetType.get_asset(asset_type)
     balance = get_balance(pubkey, asset_type, asset_symbol, asset_abi)
-    if float(deposit) <= float(balance):
+    balance = TrinityNumber(str(balance)).number
+    if balance is not None and deposit <= balance:
         return True
     else:
         return False
-
-
-def check_max_deposit(deposit):
-    maxd = Configure.get("CommitMaxDeposit")
-    if maxd is None or str(maxd).upper() == "NULL":
-        return True, None
-    else:
-        try:
-            maxd = float(maxd)
-        except ValueError as e:
-            return False, str(e)
-
-        return float(deposit) <= maxd, maxd
-
-
-def check_mix_deposit(deposit):
-    mixd = Configure.get("CommitMinDeposit")
-    if mixd is None or float(mixd) == 0:
-        return True, None
-    else:
-        try:
-            mixd = float(mixd)
-        except ValueError as e:
-            return False, str(e)
-        return float(deposit) >= mixd, mixd
-
-
-def check_deposit(deposit):
-    try:
-        de = float(deposit)
-    except ValueError as e:
-        return False, str(e)
-    return de > 0, de
 
 
 def is_correct_uri(uri):
@@ -317,13 +286,9 @@ def get_wallet_info(wallet):
 
 
 def convert_number_auto(asset_type, number: int or float or str):
-    if asset_type in ['NEO']:
-        LOG.warning('Convert number<{}> to integer for asset<{}> just support integer type transaction.'.format(number, asset_type))
-        if isinstance(number, str):
-            number = float(number)
-        return int(number)
-
-    return number
+    if isinstance(number, str):
+        number = float(number)
+    return int(number)
 
 
 def convert_float(number, asset_type="TNC"):

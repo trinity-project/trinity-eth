@@ -30,7 +30,7 @@ from model.channel_model import APIChannel
 from model.base_enum import EnumChannelState
 from model.transaction_model import APITransaction
 from model.payment_model import APIPayment
-from wallet.utils import convert_number_auto, get_magic
+from wallet.utils import get_magic
 from wallet.Interface.gate_way import sync_channel
 from common.console import console_log
 from common.common import LOG
@@ -218,7 +218,7 @@ class Channel(object):
         return APITransaction(channel_name).add_transaction(*args, **kwargs)
 
     @staticmethod
-    def update_trade(channel_name, nonce:int or float, **kwargs):
+    def update_trade(channel_name, nonce:int, **kwargs):
         return APITransaction(channel_name).update_transaction(nonce, **kwargs)
 
     @staticmethod
@@ -226,7 +226,7 @@ class Channel(object):
         return APITransaction(channel_name).query_transaction(int(nonce), *args, **kwargs)
 
     @staticmethod
-    def delete_trade(channel_name, nonce:int or float):
+    def delete_trade(channel_name, nonce:int):
         return APITransaction(channel_name).delete_transaction(nonce)
 
     @staticmethod
@@ -330,8 +330,8 @@ class Channel(object):
 
         channel_name = cls.new_channel_name(founder, partner)
         if cli:
-            deposit = convert_number_auto(asset_type.upper(), deposit)
-            partner_deposit = convert_number_auto(asset_type.upper(), partner_deposit)
+            deposit = int(asset_type.upper(), deposit)
+            partner_deposit = int(asset_type.upper(), partner_deposit)
             if 0 >= deposit or 0 >= partner_deposit:
                 LOG.error('Could not register channel because of illegal deposit<{}:{}>.'.format(deposit,
                                                                                                  partner_deposit))
@@ -470,9 +470,9 @@ class Channel(object):
         return {
             'role': role.name,
             'asset_type': asset_type.upper(),
-            'payment': float(payment),
-            'balance': float(balance),
-            'peer_balance': float(peer_balance),
+            'payment': str(payment),
+            'balance': str(balance),
+            'peer_balance': str(peer_balance),
             'commitment': commitment,
             'peer_commitment': peer_commitment,
             'state': state.name
@@ -487,8 +487,8 @@ class Channel(object):
                 'role': role.name,
                 'asset_type': asset_type.upper(),
                 'rcode': rcode,
-                'payment': float(payment),
-                'delay_block': float(delay_block),
+                'payment': str(payment),
+                'delay_block': str(delay_block),
                 'commitment': commitment,
                 'peer_commitment': peer_commitment,
                 'state': state.name,

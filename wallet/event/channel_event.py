@@ -30,6 +30,7 @@ from wallet.event.chain_event import event_monitor_settle, \
     event_test_state
 from common.log import LOG
 from common.console import console_log
+from common.number import TrinityNumber
 
 
 class ChannelEventBase(EventBase):
@@ -84,9 +85,11 @@ class ChannelDepositEvent(ChannelEventBase):
             approved_deposit = self.contract_event_api.get_approved_asset(founder)
             peer_approved_deposit = self.contract_event_api.get_approved_asset(partner)
 
-            if approved_deposit >= float(deposit) and peer_approved_deposit >= float(partner_deposit):
-                LOG.debug('Approved asset: self<{}:{}>, peer<{}:{}>'.format(address, approved_deposit,
-                                                                            partner, peer_approved_deposit))
+            if approved_deposit >= deposit and peer_approved_deposit >= partner_deposit:
+                LOG.debug('Approved asset: self<{}:{}>, peer<{}:{}>'.format(address,
+                                                                            TrinityNumber.restore_number(approved_deposit),
+                                                                            partner,
+                                                                            TrinityNumber.restore_number(peer_approved_deposit)))
 
                 # update the founder and partner deposit
                 self.deposit = deposit
@@ -144,8 +147,8 @@ class ChannelQuickSettleEvent(ChannelEventBase):
         super(ChannelQuickSettleEvent, self).prepare(block_height, *args, **kwargs)
         self.next_stage()
 
-    def execute(self, block_height, invoker='', channel_id='', nonce='', founder='', founder_balance=0.0,
-                partner='', partner_balance=0.0, founder_signature='', partner_signature='', invoker_key=''):
+    def execute(self, block_height, invoker='', channel_id='', nonce='', founder='', founder_balance=0,
+                partner='', partner_balance=0, founder_signature='', partner_signature='', invoker_key=''):
         super(ChannelQuickSettleEvent, self).execute(block_height)
 
         if self.is_event_founder:
