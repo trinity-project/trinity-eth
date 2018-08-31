@@ -483,13 +483,6 @@ class UserPromptInterface(PromptInterface):
         """
         channel_name = get_arg(arguments, 1)
 
-        # if 'debug' in arguments:
-        #     nonce = get_arg(arguments, 2, True)
-        #     is_debug = True
-        # else:
-        #     nonce = None
-        #     is_debug = False
-
         console_log.console("Force to close channel {}".format(channel_name))
         if channel_name:
             channel_event = ChannelForceSettleEvent(channel_name, True)
