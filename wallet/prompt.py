@@ -304,7 +304,11 @@ class UserPromptInterface(PromptInterface):
             partner_deposit = partner_deposit if partner_deposit is not None else deposit
             if 0 >= deposit:
                 console_log.error("Founder's Deposit MUST be larger than 0")
-            elif 0 > partner_deposit or partner_deposit > deposit:
+                return None
+            elif 0 >= partner_deposit:
+                console_log.error("Partner's Deposit should be larger than 0")
+                return None
+            elif partner_deposit > deposit:
                 console_log.error("Founder's Deposit should not be less than Partner's")
                 return None
         except ValueError:
