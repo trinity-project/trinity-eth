@@ -26,7 +26,7 @@ from trinity import SUPPORTED_ASSET_TYPE
 
 Configure = {
     "alias": "TrinityEthNode",# you can rename your node
-    "GatewayURL": "http://localhost:8077",
+    "GatewayURL": "http://localhost:8177",
     "AutoCreate": True, # if the wallet accept the create channel request automatically
     "Channel":{
                "TNC":{"CommitMinDeposit": 1,   # the min commit deposit
@@ -37,8 +37,8 @@ Configure = {
     "MaxChannel":100, # the max number to create channel, if 0 , no limited
     "NetAddress":"localhost",
     "RpcListenAddress":"0.0.0.0",
-    "NetPort":"20556",
-    "GatewayTCP":"localhost:8089",
+    "NetPort":"21556",
+    "GatewayTCP":"localhost:8189",
     "AssetType":{
         "TNC": SUPPORTED_ASSET_TYPE['TNC']
     },

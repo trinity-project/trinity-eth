@@ -239,7 +239,7 @@ class UserPromptInterface(PromptInterface):
                     spv = json.loads(result).get("MessageBody").get("Spv")
                     spv_port = spv.strip().split(":")[1]
                 except:
-                    spv_port = "8766"
+                    spv_port = "8866"
                 gate_way.GatewayInfo.update_spv_port(spv_port)
                 self.Channel = True
                 print("Channel Function Enabled")
@@ -736,7 +736,7 @@ def main():
     UserPrompt = UserPromptInterface()
     port = Configure.get("NetPort")
     address = Configure.get("RpcListenAddress")
-    port = port if port else "20556"
+    port = port if port else "21556"
     address = address if address else "0.0.0.0"
     api_server_rpc = RpcInteraceApi(port)
     endpoint_rpc = "tcp:port={0}:interface={1}".format(port, address)
