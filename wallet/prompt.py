@@ -420,7 +420,7 @@ class UserPromptInterface(PromptInterface):
                 fee = 0
 
             fee = TrinityNumber(str(fee)).number
-            count = count + fee
+            count = int(count) + fee
             receiver = full_path[1][0]
             channel_set = Channel.get_channel(self.Wallet.url, receiver, EnumChannelState.OPENED)
             if not(channel_set and channel_set[0]):
