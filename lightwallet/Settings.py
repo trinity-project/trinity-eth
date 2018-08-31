@@ -24,8 +24,12 @@ class SettingsHolder:
 
     def setup_mainnet(self):
         self.NET_NAME = "MainNet"
-        self.NODEURL = "http://main:"
-        self.TNC = "0x08e8c4400f1af2c20c28e0018f29535eb85d15b6"
+        self.NODEURL = "https://mainnet.infura.io"
+        self.TNC = SUPPORTED_ASSET_TYPE['TNC']
+        self.TNC_abi = erc20_asset_abi
+        self.Eth_Contract_address = "0x7A332beF593d6bd6B9d314959295239c46D5C127"
+        self.Eth_Contract_abi = eth_contract_abi
+        self.ETH_Data_Contract_address = "0xF8ac6d07e825338720bC7D3ee119B3C88560FaF5"
 
         self.create_client()
     def setup_testnet(self):
