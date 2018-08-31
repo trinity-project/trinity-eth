@@ -23,7 +23,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 
 import requests
-from wallet.configure import Configure
+from trinity import Configure
 from common.log import LOG
 import json
 from wallet.utils import get_wallet_info, get_magic

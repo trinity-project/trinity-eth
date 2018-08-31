@@ -46,7 +46,7 @@ from blockchain.interface import get_block_count
 from blockchain.monitor import monitorblock,EventMonitor
 import requests
 import qrcode_terminal
-from wallet.configure import Configure
+from trinity import Configure
 
 
 GateWayIP = Configure.get("GatewayIP")

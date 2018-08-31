@@ -22,7 +22,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 from .web3client import Client
-from wallet.configure import Configure
+from trinity import Configure
 from common.log import LOG
 from lightwallet.Settings import settings
 from tokenconf import TokenConfigure

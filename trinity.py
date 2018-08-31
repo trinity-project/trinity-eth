@@ -70,3 +70,32 @@ EVENT_WS_SERVER = {
     'timeout': None
 }
 
+Configure = {
+    "alias": "TrinityEthNode",# you can rename your node
+    "GatewayURL": "http://localhost:8177",
+    "AutoCreate": True, # if the wallet accept the create channel request automatically
+    "Channel":{
+        "TNC":{"CommitMinDeposit": 1,   # the min commit deposit
+               "CommitMaxDeposit": 5000,# the max commit deposit
+               "Fee": 0.01 # gateway fee
+               }
+    },#
+    "MaxChannel":100, # the max number to create channel, if 0 , no limited
+    "NetAddress":"localhost",
+    "RpcListenAddress":"0.0.0.0",
+    "NetPort":"21556",
+    "GatewayTCP":"localhost:8189",
+    "AssetType":{
+        "TNC": SUPPORTED_ASSET_TYPE['TNC']
+    },
+    "BlockChain":{
+        "EthNetUrl" : "https://ropsten.infura.io"
+    },
+    "DataBase":{"url": "http://localhost:20554"
+                },
+    "Version":"v0.2.1",
+    "Magic":{
+        "Block":5274657374,##binascii.b2a_hex(u"Rtest".encode("utf8"))
+        "Trinity":19990331
+    }
+}

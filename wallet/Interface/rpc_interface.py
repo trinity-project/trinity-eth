@@ -28,7 +28,7 @@ from klein import Klein
 from wallet.Interface.rpc_utils import json_response, cors_header
 from wallet.channel import get_channel_via_name, query_channel_list
 from common.log import LOG
-from wallet.configure import Configure
+from trinity import Configure
 from blockchain.interface import get_balance
 
 

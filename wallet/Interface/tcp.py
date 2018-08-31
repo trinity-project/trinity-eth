@@ -24,7 +24,7 @@ SOFTWARE."""
 
 
 from twisted.internet import reactor, protocol
-from wallet.configure import Configure
+from trinity import Configure
 from wallet.Interface.gate_way import join_gateway,get_gw_bytes_encoding
 from wallet.Interface.rpc_interface import CurrentLiveWallet
 from common.log import LOG
