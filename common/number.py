@@ -57,6 +57,9 @@ class TrinityNumber(object):
         """
         self.number = None
 
+        if not number:
+            return
+
         if not isinstance(number, str) or not re.match(r'1[0]{9}$|\d{1,9}$|\d{1,9}\.\d+$', number):
             LOG.warn('Number must be string type<{}>. Current is {}'.format(number, type(number)))
             return
