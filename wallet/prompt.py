@@ -305,7 +305,7 @@ class UserPromptInterface(PromptInterface):
             partner_deposit = TrinityNumber(get_arg(arguments, 4)).number
             partner_deposit = partner_deposit if partner_deposit is not None else deposit
             if deposit_cmp > deposit:
-                console_log.error("Founder's Deposit MUST be larger than deposit_limit".format(deposit_limit))
+                console_log.error("Founder's Deposit MUST be larger than {}".format(deposit_limit))
                 return None
             elif deposit_cmp > partner_deposit:
                 console_log.error("Partner's Deposit should be larger than {}".format(deposit_limit))
