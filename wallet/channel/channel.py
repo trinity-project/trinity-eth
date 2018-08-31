@@ -330,8 +330,8 @@ class Channel(object):
 
         channel_name = cls.new_channel_name(founder, partner)
         if cli:
-            deposit = int(asset_type.upper(), deposit)
-            partner_deposit = int(asset_type.upper(), partner_deposit)
+            deposit = int(deposit)
+            partner_deposit = int(partner_deposit)
             if 0 >= deposit or 0 >= partner_deposit:
                 LOG.error('Could not register channel because of illegal deposit<{}:{}>.'.format(deposit,
                                                                                                  partner_deposit))
