@@ -141,8 +141,8 @@ class Payment(metaclass=SingletonClass):
 
             return
         except Exception as error:
-            LOG.error('Payment for channel<{}> with HashR<{}> Not found from the DB'.format(channel_name, hashcode),
-                          'Exception: {}'.format(error))
+            LOG.error('Payment for channel<{}> with HashR<{}> Not found from the DB'.format(channel_name, hashcode))
+            LOG.error('confirm payament Exception: {}'.format(error))
 
         return
 
