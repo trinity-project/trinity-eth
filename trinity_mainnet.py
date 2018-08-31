@@ -50,7 +50,7 @@ DATABASE_CONFIG = {
 GWEI_COEFFICIENT = 20
 
 # Asset Type configuration
-SUPPORTED_ASSET_TYPE = {'TNC': '0x65096f2B7A8dc1592479F1911cd2B98dae4d2218'}
+SUPPORTED_ASSET_TYPE = {'TNC': '0xC9Ad73D11d272C95B5A2C48780A55b6b3C726Cac'}
 IS_SUPPORTED_ASSET_TYPE = lambda asset_type: \
     isinstance(asset_type, str) and \
     (asset_type.upper() in ['TNC'] or \
@@ -66,7 +66,7 @@ else:
 
 # WebSocket server configuration
 EVENT_WS_SERVER = {
-    'uri': 'ws://47.104.81.20:9000',
+    'uri': 'ws://47.97.96.192:9000',
     'timeout': None
 }
 
@@ -89,13 +89,13 @@ Configure = {
         "TNC": SUPPORTED_ASSET_TYPE['TNC']
     },
     "BlockChain":{
-        "EthNetUrl" : "https://ropsten.infura.io"
+        "EthNetUrl" : "https://mainnet.infura.io"
     },
     "DataBase":{"url": "http://localhost:20554"
                 },
     "Version":"v0.2.1",
     "Magic":{
-        "Block":5274657374,##binascii.b2a_hex(u"Rtest".encode("utf8"))
-        "Trinity":19990331
+        "Block":40616960,##binascii.b2a_hex(u"Rtest".encode("utf8"))
+        "Trinity":20030515
     }
 }
