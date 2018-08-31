@@ -109,6 +109,6 @@ class TrinityNumber(object):
 
     @classmethod
     def convert_to_number(cls, number, asset_type='TNC'):
-        return number / cls._trinity_unit
+        return int(number) / cls._trinity_unit
 
 
