@@ -39,7 +39,7 @@ def trinity_operator(callback):
         integer = int(result // TrinityNumber._trinity_unit)
         fragment = int(result % TrinityNumber._trinity_unit)
 
-        return '{}.{}'.format(integer, fragment).strip(' ').strip('0')
+        return '{}.{}'.format(integer, fragment).strip()
     return wrapper
 
 
