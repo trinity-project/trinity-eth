@@ -67,6 +67,7 @@ class ContractEventInterface(metaclass=SingletonClass):
     def approve(cls, address, deposit, private_key, gwei_coef=1):
         approved_asset = cls.get_approved_asset(address)
 
+        deposit = int(deposit)
         if approved_asset >= deposit:
             LOG.info('Has been approved asset count: {}'.format(TrinityNumber.restore_number(approved_asset)))
             return True
@@ -109,8 +110,8 @@ class ContractEventInterface(metaclass=SingletonClass):
                         founder_sign, partner_sign, private_key, gwei_coef=1):
         try:
             return cls._eth_interface.deposit(address,channel_id, nonce,
-                                       founder, founder_amount,
-                                       partner, partner_amount,
+                                       founder, int(founder_amount),
+                                       partner, int(partner_amount),
                                        founder_sign, partner_sign, private_key, gwei_coef=gwei_coef)
         except Exception as error:
             LOG.error('approve_deposit error: {}'.format(error))
@@ -139,8 +140,8 @@ class ContractEventInterface(metaclass=SingletonClass):
         """
         try:
             return cls._eth_interface.quick_close_channel(invoker, channel_id, nonce,
-                                                   founder, founder_balance,
-                                                   partner, partner_balance,
+                                                   founder, int(founder_balance),
+                                                   partner, int(partner_balance),
                                                    founder_signature, partner_signature, invoker_key,
                                                           gwei_coef=gwei_coef)
         except Exception as error:
@@ -152,8 +153,8 @@ class ContractEventInterface(metaclass=SingletonClass):
                       founder_signature, partner_signature, invoker_key, gwei_coef=1):
         try:
             result = cls._eth_interface.close_channel(invoker, channel_id, nonce,
-                                                      founder, founder_balance,
-                                                      partner, partner_balance,
+                                                      founder, int(founder_balance),
+                                                      partner, int(partner_balance),
                                                       founder_signature, partner_signature, invoker_key,
                                                       gwei_coef=gwei_coef)
             LOG.debug('close_channel result: {}'.format(result))
@@ -167,8 +168,8 @@ class ContractEventInterface(metaclass=SingletonClass):
                       founder_signature, partner_signature, invoker_key, gwei_coef=1):
         try:
             result = cls._eth_interface.update_transaction(invoker, channel_id, nonce,
-                                                           founder, founder_balance,
-                                                           partner, partner_balance,
+                                                           founder, int(founder_balance),
+                                                           partner, int(partner_balance),
                                                            founder_signature, partner_signature, invoker_key,
                                                            gwei_coef= gwei_coef)
             LOG.debug('update_close_channel result: {}'.format(result))

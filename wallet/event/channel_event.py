@@ -81,6 +81,8 @@ class ChannelDepositEvent(ChannelEventBase):
 
         # execute stage of channel event
         try:
+            deposit = int(deposit)
+            partner_deposit = int(partner_deposit)
 
             approved_deposit = self.contract_event_api.get_approved_asset(founder)
             peer_approved_deposit = self.contract_event_api.get_approved_asset(partner)
