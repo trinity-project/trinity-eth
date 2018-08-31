@@ -300,7 +300,7 @@ class UserPromptInterface(PromptInterface):
 
         try:
             deposit = TrinityNumber(get_arg(arguments, 3).strip()).number
-            partner_deposit = TrinityNumber(get_arg(arguments, 4).strip()).number
+            partner_deposit = TrinityNumber(get_arg(arguments, 4)).number
             partner_deposit = partner_deposit if partner_deposit is not None else deposit
             if 0 >= deposit:
                 console_log.error("Founder's Deposit MUST be larger than 0")

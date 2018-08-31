@@ -103,4 +103,4 @@ class TrinityNumber(object):
     @trinity_operator
     def restore_number(number):
         return number
-    
+
