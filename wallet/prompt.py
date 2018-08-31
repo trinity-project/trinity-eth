@@ -414,10 +414,12 @@ class UserPromptInterface(PromptInterface):
             LOG.info("Get Next {}".format(str(next_jump)))
             fee_router = [i for i in full_path if i[0] not in (self.Wallet.url, receiver)]
             if fee_router:
-                fee = reduce(lambda x, y:x+y,[TrinityNumber(str(i[1]).strip()).number for i in fee_router])
+                # fee = reduce(lambda x, y:x+y,[TrinityNumber(str(i[1]).strip()).number for i in fee_router])
+                fee = reduce(lambda x, y:x+y,[float(i[1]) for i in fee_router])
             else:
                 fee = 0
 
+            fee = TrinityNumber(str(fee)).number
             count = count + fee
             receiver = full_path[1][0]
             channel_set = Channel.get_channel(self.Wallet.url, receiver, EnumChannelState.OPENED)
@@ -425,7 +427,7 @@ class UserPromptInterface(PromptInterface):
                 print('No OPENED channel was found for HTLC trade.')
                 return
             LOG.info("Get Fee {}".format(TrinityNumber.restore_number(fee)))
-            answer = prompt("You will pay extra fee {}. Do you wish continue this transaction? [Yes/No]>".format(fee))
+            answer = prompt("You will pay extra fee {}. Do you wish continue this transaction? [Yes/No]>".format(TrinityNumber.restore_number(fee)))
             if answer.upper() in["YES", "Y"]:
                 channel_name = channel_set[0].channel
                 Channel.transfer(channel_name, self.Wallet, receiver, asset_type, count, hashcode, router=full_path,
