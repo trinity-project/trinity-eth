@@ -252,7 +252,7 @@ class SettleResponseMessage(Message):
         except GoTo as error:
             LOG.error(error)
         except Exception as error:
-            LOG.error('Transaction with none<{}> not found. Error: {}'.format(self.nonce, error))
+            LOG.error('Transaction with nonce<{}> not found. Error: {}'.format(self.nonce, error))
         else:
             # successful action
             LOG.debug('Succeed to quick-close channel<{}>'.format(self.channel_name))

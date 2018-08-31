@@ -34,7 +34,7 @@ from wallet.event.event import EnumEventAction
 from wallet.event.chain_event import event_init_wallet
 from wallet.event.offchain_event import ChannelForceSettleEvent
 from wallet.connection.websocket import ws_instance
-from wallet.utils import get_magic
+from wallet.utils import get_magic, DepositAuth
 from twisted.web.server import Site
 from lightwallet.prompt import PromptInterface
 
@@ -299,14 +299,16 @@ class UserPromptInterface(PromptInterface):
             return None
 
         try:
+            deposit_limit = DepositAuth.deposit_limit()
+            deposit_cmp = TrinityNumber(str(DepositAuth.deposit_limit())).number
             deposit = TrinityNumber(get_arg(arguments, 3).strip()).number
             partner_deposit = TrinityNumber(get_arg(arguments, 4)).number
             partner_deposit = partner_deposit if partner_deposit is not None else deposit
-            if 0 >= deposit:
-                console_log.error("Founder's Deposit MUST be larger than 0")
+            if deposit_cmp > deposit:
+                console_log.error("Founder's Deposit MUST be larger than deposit_limit".format(deposit_limit))
                 return None
-            elif 0 >= partner_deposit:
-                console_log.error("Partner's Deposit should be larger than 0")
+            elif deposit_cmp > partner_deposit:
+                console_log.error("Partner's Deposit should be larger than {}".format(deposit_limit))
                 return None
             elif partner_deposit > deposit:
                 console_log.error("Founder's Deposit should not be less than Partner's")
@@ -481,20 +483,20 @@ class UserPromptInterface(PromptInterface):
         """
         channel_name = get_arg(arguments, 1)
 
-        if 'debug' in arguments:
-            nonce = get_arg(arguments, 2, True)
-            is_debug = True
-        else:
-            nonce = None
-            is_debug = False
+        # if 'debug' in arguments:
+        #     nonce = get_arg(arguments, 2, True)
+        #     is_debug = True
+        # else:
+        #     nonce = None
+        #     is_debug = False
 
         console_log.console("Force to close channel {}".format(channel_name))
         if channel_name:
             channel_event = ChannelForceSettleEvent(channel_name, True)
             channel_event.register_args(EnumEventAction.EVENT_EXECUTE,
                                         invoker_uri=self.Wallet.url, channel_name=channel_name,
-                                        nonce=nonce, invoker_key=self.Wallet._key.private_key_string,
-                                        is_debug=is_debug)
+                                        nonce=None, invoker_key=self.Wallet._key.private_key_string,
+                                        is_debug=False)
             ws_instance.register_event(channel_event)
         else:
             console_log.warn("No Channel Create")
@@ -598,7 +600,6 @@ class UserPromptInterface(PromptInterface):
         :param arguments:
         :return:
         """
-        from wallet.utils import DepositAuth
         deposit = DepositAuth.deposit_limit()
         console_log.info("Current Deposit limit is %s TNC" % deposit)
         return None

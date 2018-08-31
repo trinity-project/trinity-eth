@@ -81,7 +81,7 @@ class DepositAuth(object):
             return None
 
     @classmethod
-    def caculate_depositusd(cls):
+    def calculate_deposit_by_usd(cls):
         """
 
         :return:
@@ -89,7 +89,7 @@ class DepositAuth(object):
         return 800*1.03**(abs((datetime.date.today()-datetime.date(2018,1,15)).days)//365)
 
     @classmethod
-    def caculate_deposit(cls):
+    def calculate_deposit(cls):
         """
 
         :return:
@@ -98,7 +98,7 @@ class DepositAuth(object):
         deposit_info = cls.query_deposit()
         try:
             tnc_price_usdt = deposit_info["quotes"]["USD"]["price"]
-            deposit_limit = int(cls.caculate_depositusd()/tnc_price_usdt)
+            deposit_limit = int(cls.calculate_deposit_by_usd() / tnc_price_usdt)
             return deposit_limit if deposit_limit >0 else 1
         except Exception as e:
             LOG.error(str(e))
@@ -112,7 +112,7 @@ class DepositAuth(object):
         :return:
         """
 
-        deposit = cls.caculate_deposit()
+        deposit = cls.calculate_deposit()
         cls.DefaultDeposit = deposit
         cls.LastGetTime = datetime.date.today()
 
@@ -362,24 +362,26 @@ def is_valid_deposit(asset_type, deposit, spv_wallet=False):
             LOG.warn(str(e))
             min_deposit_configure = 0
 
-        max_deposit = float(max_deposit_configure)
-        min_deposit = float(min_deposit_configure)
+        max_deposit = TrinityNumber(str(max_deposit_configure)).number
+        min_deposit = TrinityNumber(str(min_deposit_configure)).number
 
         if min_deposit > 0 and max_deposit > 0:
             return min_deposit <= deposit <= max_deposit, None
 
         elif 0 >= min_deposit:
-            LOG.warn('CommitMinDeposit is set as an illegal value<{}>.'.format(str(min_deposit)))
+            LOG.warn('CommitMinDeposit is set as an illegal value<{}>.'.format(str(min_deposit_configure)))
             return deposit <= max_deposit, None
         elif 0 >= max_deposit:
-            LOG.warn('CommitMaxDeposit is set as an illegal value<{}>.'.format(str(max_deposit)))
+            LOG.warn('CommitMaxDeposit is set as an illegal value<{}>.'.format(str(max_deposit_configure)))
             return deposit >= min_deposit, None
     else:
         if asset_type == "TNC":
             deposit_l = DepositAuth.deposit_limit()
-            if deposit <= deposit_l:
+            deposit_cmp = TrinityNumber(str(deposit_l)).number
+
+            if deposit <= deposit_cmp:
                 return False, "Node wallet channel deposit should larger than {}, " \
-                              "but now is {}".format(str(deposit_l),str(deposit))
+                              "but now is {}".format(str(deposit_l),str(deposit/pow(10, 8)))
         return True, None
 
 

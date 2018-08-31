@@ -34,7 +34,7 @@ from wallet.channel import Channel
 from wallet.channel import EnumTradeType, EnumTradeRole, EnumTradeState
 from wallet.event.channel_event import ChannelDepositEvent
 from wallet.event.event import EnumEventAction, event_machine
-from wallet.utils import get_magic
+from wallet.utils import get_magic, DepositAuth
 
 
 class FounderMessage(Message):
