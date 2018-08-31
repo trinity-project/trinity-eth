@@ -163,11 +163,14 @@ class Channel(object):
         if not balance:
             return
 
-        temp_balance = {}
-        for address, asset_value in balance.items():
-            for asset_type, count in asset_value.items():
-                temp_value = TrinityNumber.convert_to_number(int(count))
-                temp_balance[address][asset_type] = temp_value
+        try:
+            temp_balance = {}
+            for address, asset_value in balance.items():
+                for asset_type, count in asset_value.items():
+                    temp_value = TrinityNumber.convert_to_number(int(count))
+                    temp_balance.update({address: {asset_type: temp_value}})
+        except Exception:
+            pass
 
         return temp_balance
 
