@@ -421,13 +421,14 @@ class UserPromptInterface(PromptInterface):
 
             fee = TrinityNumber(str(fee)).number
             count = int(count) + fee
+            fee = fee/pow(10, 8)
             receiver = full_path[1][0]
             channel_set = Channel.get_channel(self.Wallet.url, receiver, EnumChannelState.OPENED)
             if not(channel_set and channel_set[0]):
                 print('No OPENED channel was found for HTLC trade.')
                 return
-            LOG.info("Get Fee {}".format(TrinityNumber.restore_number(fee)))
-            answer = prompt("You will pay extra fee {}. Do you wish continue this transaction? [Yes/No]>".format(TrinityNumber.restore_number(fee)))
+            LOG.info("Get Fee {}".format(fee))
+            answer = prompt("You will pay extra fee {}. Do you wish continue this transaction? [Yes/No]>".format(fee))
             if answer.upper() in["YES", "Y"]:
                 channel_name = channel_set[0].channel
                 Channel.transfer(channel_name, self.Wallet, receiver, asset_type, count, hashcode, router=full_path,
