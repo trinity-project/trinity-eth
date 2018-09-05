@@ -903,7 +903,7 @@ pragma solidity ^0.4.18;
 	  event BoughtToken(address indexed buyer, uint256 tokenId);
 	  event SetNFTbyTokenId(uint256 tokenId, bool result);
 
-	  constructor() ERC721Token("WorldOfBlockchain", "WOB") public {
+	  constructor() ERC721Token("WBA", "WBA") public {
 		// any init code when you deploy the contract would run here
 	  }
 
@@ -968,4 +968,7 @@ pragma solidity ^0.4.18;
 	  {
 		return ownedTokens[_owner];
 	  }
+	function setTokenURI(uint256 _tokenId, string _uri) public onlyOwner {
+		super._setTokenURI(_tokenId, _uri);
+	  }     
 }
