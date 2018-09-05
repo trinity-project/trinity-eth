@@ -1,16 +1,14 @@
 pragma solidity ^0.4.18;
 
-interface token {
-    function transferFrom (address _from,address _to, uint256 _value) external returns (bool success);
-}
-
 interface trinityData{
     
     function getChannelBalance(bytes32 channelId) external view returns (uint256);
     function getChannelStatus(bytes32 channelId) external view returns(uint8);
     function getChannelExist(bytes32 channelId) external view returns(bool);
     function getChannelClosingSettler(bytes32 channelId) external view returns (address);
+    function getSettlingTimeoutBlock(bytes32 channelId) external view returns(uint256);
     
+    function getChannelPartners(bytes32 channelId) external view returns (address,address);
     function getClosingSettle(bytes32 channelId)external view returns (uint256,uint256,address,address,uint256,uint256);
     function getTimeLock(bytes32 channelId, bytes32 lockHash) external view returns(address,address,uint256,uint256, uint256, bool);
 }
@@ -20,13 +18,12 @@ contract TrinityEvent{
     event Deposit(bytes32 channleId, address partnerA, uint256 amountA,address partnerB, uint256 amountB);
     event UpdateDeposit(bytes32 channleId, address partnerA, uint256 amountA, address partnerB, uint256 amountB);    
     event QuickCloseChannel(bytes32 channleId, address closer, uint256 amount1, address partner, uint256 amount2);
-    event CloseChannel(bytes32 channleId, address closer, address partner);
+    event CloseChannel(bytes32 channleId, address invoker, uint256 nonce, uint256 blockNumber);
     event UpdateTransaction(bytes32 channleId, address partnerA, uint256 amountA, address partnerB, uint256 amountB);
     event Settle(bytes32 channleId, address partnerA, uint256 amountA, address partnerB, uint256 amountB);
-    event Withdraw(bytes32 channleId, bytes32 hashLock);
-    event WithdrawUpdate(bytes32 channleId, bytes32 hashLock, uint256 balance);
-    event WithdrawSettle(bytes32 channleId, bytes32 hashLock, uint256 balance);   
-    event SetSettleTimeout(uint256 timeoutBlock);
+    event Withdraw(bytes32 channleId, address invoker, uint256 nonce, bytes32 hashLock, bytes32 secret);
+    event WithdrawUpdate(bytes32 channleId, bytes32 hashLock, uint256 nonce, uint256 balance);
+    event WithdrawSettle(bytes32 channleId, bytes32 hashLock, uint256 balance);
 }
 
 contract Owner{
@@ -206,13 +203,9 @@ contract TrinityContractCore is Owner, VerifySignature, TrinityEvent{
     uint8 constant CLOSING = 2;
     uint8 constant LOCKING = 3;
     
-
     trinityData public trinityDataContract;
-    token public Mytoken;
-    string public debugInfo;
     
-    constructor(address _tokenAddress, address _dataAddress) public{
-        Mytoken = token(_tokenAddress);
+    constructor(address _dataAddress) public{
         trinityDataContract = trinityData(_dataAddress);
     }
     
@@ -224,16 +217,13 @@ contract TrinityContractCore is Owner, VerifySignature, TrinityEvent{
         return trinityDataContract.getChannelStatus(channelId);
     }
 
+    function getTimeoutBlock(bytes32 channelId) public view returns (uint256){
+        return trinityDataContract.getSettlingTimeoutBlock(channelId);
+    }
+
     function setDataContract(address _dataContract) external onlyOwner {
         trinityDataContract = trinityData(_dataContract);
     }
-    
-    /*
-     * Function: Set asset token address by contract owner only
-    */
-    function setToken(address tokenAddress) external onlyOwner{
-        Mytoken=token(tokenAddress);
-    }    
 
     /*
       * Function: 1. Lock both participants assets to the contract
@@ -274,10 +264,7 @@ contract TrinityContractCore is Owner, VerifySignature, TrinityEvent{
         //if channel have existed, can not create it again
         require(channelExist == false, "check whether channel exist");
         
-        require(Mytoken.transferFrom(funderAddress,trinityDataContract,funderAmount) == true, "deposit from funder");
-        require(Mytoken.transferFrom(partnerAddress,trinityDataContract,partnerAmount) == true, "deposit from partner");        
-        
-        bool callResult = address(trinityDataContract).call(bytes4(keccak256("createChannel(bytes32,address,uint256,address,uint256)")),
+        bool callResult = address(trinityDataContract).call(bytes4(keccak256("depositData(bytes32,address,uint256,address,uint256)")),
                                                 channelId,
                                                 funderAddress,
                                                 funderAmount,
@@ -303,18 +290,54 @@ contract TrinityContractCore is Owner, VerifySignature, TrinityEvent{
         
         require(getChannelStatus(channelId) == OPENING, "check channel status");
 
-        require(Mytoken.transferFrom(funderAddress,trinityDataContract,funderAmount) == true, "deposit from funder");
-        require(Mytoken.transferFrom(partnerAddress,trinityDataContract,partnerAmount) == true, "deposit from partner");
-
-        bool callResult = address(trinityDataContract).call(bytes4(keccak256("updateDeposit(bytes32,uint256,uint256)")),
+        bool callResult = address(trinityDataContract).call(bytes4(keccak256("updateDeposit(bytes32,address,uint256,address,uint256)")),
                                                 channelId,
+                                                funderAddress,
                                                 funderAmount,
+                                                partnerAddress,
                                                 partnerAmount);
 
         require(callResult == true, "call result");
         
         emit UpdateDeposit(channelId, funderAddress, funderAmount, partnerAddress, partnerAmount);
     }
+    
+    function withdrawBalance(bytes32 channelId,
+                               uint256 nonce,
+                               address funder,
+                               uint256 funderBalance,
+                               address partner,
+                               uint256 partnerBalance,
+                               bytes closerSignature,
+                               bytes partnerSignature) external whenNotPaused{
+
+        uint256 totalBalance = 0;
+
+        //verify both signatures to check the behavious is valid
+        require(verifyTransaction(channelId, nonce, funder, funderBalance, partner, partnerBalance, closerSignature, partnerSignature) == true, "verify signature");
+
+        require(nonce == 0, "check nonce");
+
+        require((msg.sender == funder || msg.sender == partner), "verify caller");
+
+        //channel should be opening
+        require(getChannelStatus(channelId) == OPENING, "check channel status");
+        
+        //sum of both balance should not larger than total deposited assets
+        totalBalance = funderBalance.add256(partnerBalance);
+        require(totalBalance <= getChannelBalance(channelId),"check channel balance");
+ 
+        bool callResult = address(trinityDataContract).call(bytes4(keccak256("withdrawBalance(bytes32,address,uint256,address,uint256)")),
+                                                channelId,
+                                                funder,
+                                                funderBalance,
+                                                partner,
+                                                partnerBalance);
+
+        require(callResult == true, "call result");
+        
+        emit QuickCloseChannel(channelId, funder, funderBalance, partner, partnerBalance);
+    }    
 
     function quickCloseChannel(bytes32 channelId,
                                uint256 nonce,
@@ -349,7 +372,6 @@ contract TrinityContractCore is Owner, VerifySignature, TrinityEvent{
                                                 partnerBalance);
 
         require(callResult == true, "call result");
-        
         
         emit QuickCloseChannel(channelId, funder, funderBalance, partner, partnerBalance);
     }
@@ -421,7 +443,7 @@ contract TrinityContractCore is Owner, VerifySignature, TrinityEvent{
             require(callResult == true);              
         }
         
-        emit CloseChannel(channelId, founder, partner);
+        emit CloseChannel(channelId, msg.sender, nonce, getTimeoutBlock(channelId));
     }
 
     /*
@@ -440,11 +462,6 @@ contract TrinityContractCore is Owner, VerifySignature, TrinityEvent{
      * Return:
      *    Null;
     */
-    uint256 gclosingNonce;
-    uint256 gcloserBalance;
-    uint256 gsettlerBalance;
-    uint256 gchannelTotalBalance;
-    
     function updateTransaction(bytes32 channelId,
                                uint256 nonce,
                                address partnerA,
@@ -454,15 +471,11 @@ contract TrinityContractCore is Owner, VerifySignature, TrinityEvent{
                                bytes signedStringA,
                                bytes signedStringB) external whenNotPaused{
 
-        address channelCloser;
-        address channelSettler;
         uint256 updateTotalBalance = 0;
         
         require(verifyTransaction(channelId, nonce, partnerA, updateBalanceA, partnerB, updateBalanceB, signedStringA, signedStringB) == true, "verify signature");
 
         require(nonce != 0, "check nonce");
-
-        require((msg.sender == partnerA || msg.sender == partnerB), "check caller");
 
         // only when channel status is closing, node can call it
         require(getChannelStatus(channelId) == CLOSING, "check channel status");
@@ -472,45 +485,57 @@ contract TrinityContractCore is Owner, VerifySignature, TrinityEvent{
 
         //sum of both balance should not larger than total deposited asset
         updateTotalBalance = updateBalanceA.add256(updateBalanceB);
-        gchannelTotalBalance = getChannelBalance(channelId);
-        require(updateTotalBalance == gchannelTotalBalance, "check total balance");
+        require(updateTotalBalance == getChannelBalance(channelId), "check total balance");
+    
+        verifyUpdateTransaction(channelId, nonce, partnerA, updateBalanceA, partnerB, updateBalanceB);
+    }    
+    
+    function verifyUpdateTransaction(bytes32 channelId,
+                                     uint256 nonce,
+                                     address partnerA,
+                                     uint256 updateBalanceA,
+                                     address partnerB,
+                                     uint256 updateBalanceB) internal{
         
-        (gclosingNonce, ,channelCloser,channelSettler,gcloserBalance,gsettlerBalance) = trinityDataContract.getClosingSettle(channelId);
+        address channelSettler;
+        address channelCloser;
+        uint256 closingNonce;
+        uint256 closerBalance;
+        uint256 settlerBalance;
+        bool callResult;
+        
+        (closingNonce, ,channelCloser,channelSettler,closerBalance,settlerBalance) = trinityDataContract.getClosingSettle(channelId);
         // if updated nonce is less than (or equal to) closer provided nonce, folow closer provided balance allocation
-        if (nonce <= gclosingNonce){
+        if (nonce <= closingNonce){
             
         }
 
         // if updated nonce is equal to nonce+1 that closer provided nonce, folow partner provided balance allocation
-        else if (nonce == (gclosingNonce + 1)){
+        else if (nonce == (closingNonce + 1)){
             channelCloser = partnerA;
-            gcloserBalance = updateBalanceA;
+            closerBalance = updateBalanceA;
             channelSettler = partnerB;
-            gsettlerBalance = updateBalanceB;
+            settlerBalance = updateBalanceB;
         }
 
         // if updated nonce is larger than nonce+1 that closer provided nonce, determine closer provided invalid transaction, partner will also get closer assets
-        else if (nonce > (gclosingNonce + 1)){
-            gcloserBalance = 0;
-            gsettlerBalance = gchannelTotalBalance;
+        else if (nonce > (closingNonce + 1)){
+            closerBalance = 0;
+            settlerBalance = getChannelBalance(channelId);
         }        
         
-        bool callResult = address(trinityDataContract).call(bytes4(keccak256("closingSettle(bytes32,address,uint256,address,uint256)")),
+        callResult = address(trinityDataContract).call(bytes4(keccak256("closingSettle(bytes32,address,uint256,address,uint256)")),
                                                 channelId,
                                                 channelCloser,
-                                                gcloserBalance,
+                                                closerBalance,
                                                 channelSettler,
-                                                gsettlerBalance);
+                                                settlerBalance);
 
         require(callResult == true);
         
-        emit UpdateTransaction(channelId, channelCloser, gcloserBalance, channelSettler, gsettlerBalance);
-        
-        gsettlerBalance = 0;
-        gcloserBalance = 0;
-        gclosingNonce = 0;
-        gchannelTotalBalance = 0;
-}
+        emit UpdateTransaction(channelId, channelCloser, closerBalance, channelSettler, settlerBalance);        
+    }
+
     
     /*
      * Function: after apply close channnel, closer can withdraw assets until special settle window period time over
@@ -548,13 +573,8 @@ contract TrinityContractCore is Owner, VerifySignature, TrinityEvent{
         
         emit Settle(channelId, channelCloser, closerBalance, channelSettler, settlerBalance);
     }
-    
-    address gwithdrawer;
-    address gwithdrawVerifier;
-    uint256 gupdateNonce;
-    bool gwithdrawLocked;
-
-    function withdraw(bytes32 channelId,
+ 
+     function withdraw(bytes32 channelId,
                       uint256 nonce,
                       address sender,
                       address receiver,
@@ -568,19 +588,16 @@ contract TrinityContractCore is Owner, VerifySignature, TrinityEvent{
         require(verifyTimelock(channelId, nonce, sender, receiver, lockTime,lockAmount,lockHash,partnerAsignature,partnerBsignature) == true, "verify signature");
 
         require(nonce != 0, "check nonce");
-
-        (, , gupdateNonce, , ,gwithdrawLocked) = trinityDataContract.getTimeLock(channelId,lockHash);
-        require(nonce >= gupdateNonce, "check nonce");
+        
+        require(msg.sender == receiver, "check caller");
         
         require(lockTime > block.number, "check lock time");        
 
         require(lockHash == keccak256(secret), "verify hash");
         
-        require(msg.sender == receiver, "check caller");
-        
-        require(lockAmount <= getChannelBalance(channelId));
+        require(lockAmount <= getChannelBalance(channelId));        
 
-        require(gwithdrawLocked == false, "check withdraw status");
+        require(verifyWithdraw(channelId,lockHash) == true);
 
         bool callResult = address(trinityDataContract).call(bytes4(keccak256("withdrawLocks(bytes32,uint256,uint256,uint256,bytes32)")),
                                                 channelId,
@@ -597,11 +614,22 @@ contract TrinityContractCore is Owner, VerifySignature, TrinityEvent{
                                                 
         require(callResult == true && result == true);
         
-        emit Withdraw(channelId, lockHash);
+        emit Withdraw(channelId, msg.sender, nonce, lockHash, secret);
         
-        gupdateNonce = 0;
-        gwithdrawLocked = false;
     }
+    
+    function verifyWithdraw(bytes32 channelId,
+                            bytes32 lockHash) internal view returns(bool){
+        
+        bool withdrawLocked;
+        
+        (, , , , ,withdrawLocked) = trinityDataContract.getTimeLock(channelId,lockHash);
+
+        require(withdrawLocked == false, "check withdraw status");
+        
+        return true;
+    }
+
 
     function withdrawUpdate(bytes32 channelId,
                       uint256 nonce,
@@ -609,58 +637,69 @@ contract TrinityContractCore is Owner, VerifySignature, TrinityEvent{
                       address receiver,
                       uint256 lockTime ,
                       uint256 lockAmount,
+                      bytes32 lockHash,
                       bytes partnerAsignature,
-                      bytes partnerBsignature,
-                      bytes32 lockHash) external whenNotPaused{
+                      bytes partnerBsignature) external whenNotPaused{
 
-
-        bool callResult;
-        bool withdrawLocked;
+        address withdrawVerifier;
         
         require(verifyTimelock(channelId, nonce, sender, receiver, lockTime,lockAmount,lockHash,partnerAsignature,partnerBsignature) == true, "verify signature");
 
         require(nonce != 0, "check nonce");
 
         require(lockTime > block.number, "check lock time"); 
-
-        (gwithdrawVerifier,gwithdrawer,gupdateNonce, , ,withdrawLocked) = trinityDataContract.getTimeLock(channelId,lockHash);
         
+        (withdrawVerifier, , , , , ) = trinityDataContract.getTimeLock(channelId,lockHash);
+        
+        require(msg.sender == withdrawVerifier, "check verifier");
+        
+        verifyWithdrawUpdate(channelId, lockHash, nonce, lockAmount);
+        
+    }
+
+    function verifyWithdrawUpdate(bytes32 channelId, 
+                                bytes32 lockHash,
+                                uint256 nonce,
+                                uint256 lockAmount) internal{
+        
+        address withdrawVerifier;
+        address withdrawer;
+        uint256 updateNonce;
+        uint256 channelTotalBalance;
+        bool withdrawLocked;
+        bool callResult = false;
+        
+        (withdrawVerifier,withdrawer, updateNonce, , ,withdrawLocked) = trinityDataContract.getTimeLock(channelId,lockHash);
+
         require(withdrawLocked == true, "check withdraw status");
         
-        require(msg.sender == gwithdrawVerifier, "check verifier");
-        
-        gchannelTotalBalance = getChannelBalance(channelId);
-        require(lockAmount <= gchannelTotalBalance);
-        
-        if (nonce <= gupdateNonce){
-            gchannelTotalBalance = gchannelTotalBalance.sub256(lockAmount);
+        channelTotalBalance = getChannelBalance(channelId);
+        require(lockAmount <= channelTotalBalance);
+              
+        if (nonce <= updateNonce){
+            channelTotalBalance = channelTotalBalance.sub256(lockAmount);
             
             callResult = address(trinityDataContract).call(bytes4(keccak256("withdrawSettle(bytes32,address,uint256,uint256,bytes32)")),
                                                 channelId,
-                                                gwithdrawer,
+                                                withdrawer,
                                                 lockAmount,
-                                                gchannelTotalBalance,
+                                                channelTotalBalance,
                                                 lockHash);            
         }
-        else if(nonce > gupdateNonce){
+        else if(nonce > updateNonce){
 
             callResult = address(trinityDataContract).call(bytes4(keccak256("withdrawSettle(bytes32,address,uint256,uint256,bytes32)")),
                                                 channelId,
-                                                gwithdrawVerifier,
-                                                gchannelTotalBalance,
+                                                withdrawVerifier,
+                                                channelTotalBalance,
                                                 0,
                                                 lockHash);   
-            gchannelTotalBalance = 0;                                    
-        }    
-
+            channelTotalBalance = 0;                                    
+        }  
+        
         require(callResult == true);        
         
-        emit WithdrawUpdate(channelId, lockHash, gchannelTotalBalance);
-        
-        gwithdrawVerifier = address(0);
-        gwithdrawer = address(0);
-        gchannelTotalBalance = 0;
-        gupdateNonce = 0;
+        emit WithdrawUpdate(channelId, lockHash, nonce, channelTotalBalance); 
     }
 
     function withdrawSettle(bytes32 channelId,

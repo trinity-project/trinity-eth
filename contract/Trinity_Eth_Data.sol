@@ -2,6 +2,7 @@ pragma solidity ^0.4.18;
 
 interface token {
     function transfer(address _to, uint256 _value) external;
+    function transferFrom (address _from,address _to, uint256 _value) external returns (bool success);
 }
 
 contract Owner{
@@ -159,6 +160,16 @@ contract TrinityContractData is Owner{
                channelInfo.withdrawn_locks[lockHash]);
     }
     
+    function getSettlingTimeoutBlock(bytes32 channelId) external view returns(uint256){
+        ChannelData storage channelInfo = trinityData.channelInfo[channelId];
+        return(channelInfo.expectedSettleBlock);
+    }
+    
+    function getChannelPartners(bytes32 channelId) external view returns (address,address){
+        ChannelData memory channelInfo = trinityData.channelInfo[channelId];
+        return(channelInfo.partner1, channelInfo.partner2);
+    }     
+    
     function getAllAddress(bytes32 channelId) external view returns (address,address,address,address){
         ChannelData memory channelInfo = trinityData.channelInfo[channelId];
         return(channelInfo.channelCloser, channelInfo.channelSettler, channelInfo.partner1, channelInfo.partner2);
@@ -215,7 +226,7 @@ contract TrinityContractData is Owner{
                             address funderAddress,
                             uint256 funderAmount,
                             address partnerAddress,
-                            uint256 partnerAmount) external onlyLimitedAccessor{
+                            uint256 partnerAmount) public onlyLimitedAccessor{
 
         uint256 totalBalance = funderAmount.add256(partnerAmount);
 
@@ -231,7 +242,7 @@ contract TrinityContractData is Owner{
                                                          OPEING,
                                                          true,
                                                          0);
-	    trinityData.channelNumber += 1;
+	    trinityData.channelNumber = (trinityData.channelNumber).add256(1);
     }
 
     /*
@@ -248,8 +259,8 @@ contract TrinityContractData is Owner{
       * Return:
       *    Null;
     */
-    /*
-    function deposit(bytes32 channelId,
+    
+    function depositData(bytes32 channelId,
                      address funderAddress,
                      uint256 funderAmount,
                      address partnerAddress,
@@ -261,13 +272,18 @@ contract TrinityContractData is Owner{
         
         createChannel(channelId,funderAddress,funderAmount,partnerAddress,partnerAmount);
     }
-    */
+    
 
     function updateDeposit(bytes32 channelId,
+                           address funderAddress,
                            uint256 funderAmount,
+                           address partnerAddress,
                            uint256 partnerAmount) payable external onlyLimitedAccessor{
 
         ChannelData storage channelInfo = trinityData.channelInfo[channelId];
+        
+        require(Mytoken.transferFrom(funderAddress,this,funderAmount) == true, "deposit from funder");
+        require(Mytoken.transferFrom(partnerAddress,this,partnerAmount) == true, "deposit from partner");        
         
         uint256 detlaBalance = funderAmount.add256(partnerAmount);
         channelInfo.channelTotalBalance = detlaBalance.add256(channelInfo.channelTotalBalance);
@@ -283,7 +299,7 @@ contract TrinityContractData is Owner{
         Mytoken.transfer(closer, closerBalance);
         Mytoken.transfer(partner, partnerBalance);
 
-	    trinityData.channelNumber -= 1;
+	    trinityData.channelNumber = (trinityData.channelNumber).sub256(1);
         delete trinityData.channelInfo[channelId];
         
     }
@@ -306,7 +322,7 @@ contract TrinityContractData is Owner{
         channelInfo.partnerSettleBalance = partnerBalance;
         channelInfo.channelSettler = partner;
             
-        channelInfo.expectedSettleBlock = block.number + trinityData.settleTimeout;
+        channelInfo.expectedSettleBlock = (block.number).add256(trinityData.settleTimeout);
         
     }
 
@@ -383,6 +399,7 @@ contract TrinityContractData is Owner{
         ChannelData storage channelInfo = trinityData.channelInfo[channelId];
         
         Mytoken.transfer(receiver, lockAmount);
+        
         channelInfo.channelTotalBalance = totalBalance;
         channelInfo.timeLockVerifier[lockHash] = address(0);
         channelInfo.timeLockWithdrawer[lockHash] = address(0);           
@@ -396,17 +413,27 @@ contract TrinityContractData is Owner{
         }
     }
     
-    function withdrawChannelBalance(address partnerA,
-                                    uint256 partnerABalance,
-                                    address partnerB,
-                                    uint256 partnerBBalance) payable external onlyLimitedAccessor{
+    function withdrawBalance(bytes32 channelId,
+                            address partnerA,
+                            uint256 partnerABalance,
+                            address partnerB,
+                            uint256 partnerBBalance) payable external onlyLimitedAccessor{
+        
+        uint256 updatedBalance = partnerABalance.add256(partnerBBalance);
+                                        
+        ChannelData storage channelInfo = trinityData.channelInfo[channelId];
+        channelInfo.channelTotalBalance = (channelInfo.channelTotalBalance).sub256(updatedBalance);
                                     
         Mytoken.transfer(partnerA, partnerABalance);
-        Mytoken.transfer(partnerB, partnerBBalance);                            
+        Mytoken.transfer(partnerB, partnerBBalance);
     }
     
-    function withdrawForPartner(address partner,
+    function withdrawForPartner(bytes32 channelId,
+                                address partner,
                                 uint256 balance) payable external onlyLimitedAccessor{
+
+        ChannelData storage channelInfo = trinityData.channelInfo[channelId];
+        channelInfo.channelTotalBalance = channelInfo.channelTotalBalance.sub256(balance);
                                     
         Mytoken.transfer(partner, balance);
     }
