@@ -60,7 +60,7 @@ IS_SUPPORTED_ASSET_TYPE = lambda asset_type: \
 # Some configuration related to the logs
 LOG_TO_CONSOLE = False
 if __os_platform__ in ['LINUX', 'DARWIN']:
-    TRINITY_LOG_PATH = os.path.join(r'/var/log', r'trinity')
+    TRINITY_LOG_PATH = os.path.join(r'./temp', r'trinity')
 else:
     TRINITY_LOG_PATH = os.getcwd().split(os.sep)[0]+os.sep+r'temp'
 

@@ -69,7 +69,7 @@ def init_logger(log_path = None, file_name=None):
 
     # create the common.log path
     if not os.path.exists(init_log_path):
-        os.mkdir(init_log_path)
+        os.makedirs(init_log_path)
 
     # load logger configuration
     log_settings['handlers']['file']['filename'] = '{}{}{}'.format(init_log_path, os.sep, init_filename)
