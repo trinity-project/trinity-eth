@@ -134,8 +134,12 @@ class PromptInterface(object):
                     print("File already exists")
                     return
 
-                passwd1 = prompt("[Password 1]> ", is_password=True)
-                passwd2 = prompt("[Password 2]> ", is_password=True)
+                if sys.stdout.isatty():
+                    passwd1 = prompt("[Password 1]> ", is_password=True)
+                    passwd2 = prompt("[Password 2]> ", is_password=True)
+                else:
+                    passwd1 = input("[Password 1]> ")
+                    passwd2 = input("[Password 2]> ")
 
                 if passwd1 != passwd2 or len(passwd1) < 1:
                     print("please provide matching passwords that are at least 1 characters long")
