@@ -92,11 +92,25 @@ class PromptInterface(object):
     def quit(self):
         self.go_on = False
 
-    def help(self):
+    def help_color(self):
+        """
+
+        :return:
+        """
         tokens = []
         for c in self.commands:
             tokens.append(("class:command", "%s\n" % c))
         print_formatted_text(FormattedText(tokens), style=self.token_style)
+
+    def help_sample(self):
+        for c in self.commands:
+            print(c)
+
+    def help(self):
+        if sys.stdout.isatty():
+            self.help_color()
+        else:
+            self.help_sample()
 
     def do_create(self, arguments):
         """
@@ -469,8 +483,9 @@ class PromptInterface(object):
 
         return prompt_completer
 
-    def run(self):
+    def toolkit_run(self):
         """
+        the cli use the prompt_toolkit
 
         :return:
         """
@@ -529,6 +544,35 @@ class PromptInterface(object):
                 else:
                     self.handle_commands(command, arguments)
 
+    def sample_run(self):
+        """
+        use sample cli
+        :return:
+        """
+        while self.go_on:
+            result = input("trinity> ")
+            command, arguments = self.parse_result(result)
+
+            if command is not None and len(command) > 0:
+                command = command.lower()
+
+                if PromptInterface.locked:
+                    self.handle_locked_command(command, arguments)
+                    continue
+
+                else:
+                    self.handle_commands(command, arguments)
+
+
+    def run(self):
+        """
+
+        :return:
+        """
+        if sys.stdout.isatty():
+            self.toolkit_run()
+        else:
+            self.sample_run()
 
 def main():
     parser = argparse.ArgumentParser()
