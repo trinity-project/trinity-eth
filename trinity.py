@@ -57,12 +57,7 @@ IS_SUPPORTED_ASSET_TYPE = lambda asset_type: \
      (SUPPORTED_ASSET_TYPE['TNC'].__contains__(asset_type.replace('0x', ''))))
 
 
-# Some configuration related to the logs
-LOG_TO_CONSOLE = False
-if __os_platform__ in ['LINUX', 'DARWIN']:
-    TRINITY_LOG_PATH = os.path.join(r'./temp', r'trinity')
-else:
-    TRINITY_LOG_PATH = os.getcwd().split(os.sep)[0]+os.sep+r'temp'
+
 
 # WebSocket server configuration
 EVENT_WS_SERVER = {
@@ -71,7 +66,7 @@ EVENT_WS_SERVER = {
 }
 
 Configure = {
-    "alias": "TrinityEthNode",# you can rename your node
+    "alias": os.getenv("TR_ALIAS","TrinityEthNode"),# you can rename your node
     "GatewayURL": "http://localhost:8177",
     "AutoCreate": True, # if the wallet accept the create channel request automatically
     "Channel":{
@@ -83,7 +78,7 @@ Configure = {
     "MaxChannel":100, # the max number to create channel, if 0 , no limited
     "NetAddress":"localhost",
     "RpcListenAddress":"0.0.0.0",
-    "NetPort":"21556",
+    "NetPort":os.getenv("TR_NETPORT","21556"),
     "GatewayTCP":"localhost:8189",
     "AssetType":{
         "TNC": SUPPORTED_ASSET_TYPE['TNC']
@@ -99,3 +94,11 @@ Configure = {
         "Trinity":19990331
     }
 }
+
+
+# Some configuration related to the logs
+LOG_TO_CONSOLE = False
+if __os_platform__ in ['LINUX', 'DARWIN']:
+    TRINITY_LOG_PATH = os.path.join(r'./temp', r'trinity'+Configure["NetPort"])
+else:
+    TRINITY_LOG_PATH = os.getcwd().split(os.sep)[0]+os.sep+r'temp'
