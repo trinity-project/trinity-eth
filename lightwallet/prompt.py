@@ -177,7 +177,10 @@ class PromptInterface(object):
                 if not os.path.exists(path):
                     print("wallet file not found")
                     return
-                passwd = prompt("[Password]> ", is_password=True)
+                if sys.stdout.isatty():
+                    passwd = prompt("[Password]> ", is_password=True)
+                else:
+                    passwd = input("[Password]> ")
                 try:
                     self.Wallet = Wallet.Open(path, passwd)
                     print("Opened wallet at %s" % path)

@@ -107,5 +107,5 @@ if __name__ == '__main__':   #那么我们来开始使用它吧
         e.write("ww")
         e.write("wallet")
 
-    e = SwPipe("python /Users/weiwu/workdir/trinity-eth/lightwallet/prompt.py",event,exit,ready)
+    e = SwPipe("python /Users/weiwu/workdir/trinity-eth/wallet/prompt.py",event,exit,ready)
     e.start()
