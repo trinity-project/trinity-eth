@@ -179,11 +179,49 @@ class Interface(object):
                                                      founder_signature, partner_signature], invoker_key,
                                                      gwei_coef=gwei_coef)
 
+    def withdraw_balance(self, invoker, channel_id, nonce, founder, founder_balance,
+                            partner, partner_balance, founder_signature, partner_signature, invoker_key, gwei_coef=1):
+        """
+        Description: channel partners have agreed to withdraw channel balance, but don't close the channel
+        :param invoker: sender that trigger the transaction
+        :param channel_id: channel identification code
+        :param nonce: transaction nonce
+        :param founder: closer that close the channel
+        :param founder_balance: founder remaining assets amount
+        :param partner: another partner address
+        :param partner_balance: the partner remaining assets amount
+        :param founder_signature: founder signature for above information
+        :param partner_signature: partner signature for above information
+        :param invoker_key: sender's key
+        :return: transaction id
+        """
+        founder = checksum_encode(founder)
+        partner = checksum_encode(partner)
+        return self.eth_client.contruct_Transaction(invoker, self.contract, "withdrawBalance",
+                                                    [channel_id, nonce,
+                                                     founder, founder_balance,
+                                                     partner, partner_balance,
+                                                     founder_signature, partner_signature], invoker_key,
+                                                     gwei_coef=gwei_coef)
+
     def close_channel(self, invoker, channel_id, nonce, founder, founder_balance,
-                      partner, partner_balance, founder_signature, partner_signature, invoker_key, gwei_coef=1):
+                      partner, partner_balance, lock_hask, lock_secret, founder_signature, partner_signature, invoker_key, gwei_coef=1):
         """
         Description: one side of the channel dismantle the channel unilaterally
-        :param meaning reference "quick_close_channel"
+        Description: channel partners have agreed to withdraw channel balance, but don't close the channel
+        :param invoker: sender that trigger the transaction
+        :param channel_id: channel identification code
+        :param nonce: transaction nonce
+        :param founder: closer that close the channel
+        :param founder_balance: founder remaining assets amount
+        :param partner: another partner address
+        :param partner_balance: the partner remaining assets amount
+        :param lock_hask: hash of lock_secret
+        :param lock_secret: R value in HTLC transaction, default is all zero
+        :param founder_signature: founder signature for above information
+        :param partner_signature: partner signature for above information
+        :param invoker_key: sender's key
+        :return: transaction id
         """
         founder = checksum_encode(founder)
         partner = checksum_encode(partner)
@@ -192,6 +230,7 @@ class Interface(object):
                                                          [channel_id, nonce,
                                                          founder, founder_balance,
                                                          partner, partner_balance,
+                                                         lock_hask, lock_secret,
                                                          founder_signature, partner_signature],
                                                          invoker_key, gwei_coef=gwei_coef)
             tx_msg = 'success'
@@ -205,11 +244,11 @@ class Interface(object):
         }
 
     def update_transaction(self, invoker, channel_id, nonce, founder, founder_balance,
-                           partner, partner_balance, founder_signature, partner_signature,
+                           partner, partner_balance, lock_hask, lock_secret, founder_signature, partner_signature,
                            invoker_key, gwei_coef=1):
         """
         Description: the partner will confirm shutter transaction whether it is valid
-        :param meaning reference "quick_close_channel"
+        :param meaning reference "close_channel"
         """
         founder = checksum_encode(founder)
         partner = checksum_encode(partner)
@@ -218,6 +257,7 @@ class Interface(object):
                                                         [channel_id, nonce,
                                                          founder, founder_balance,
                                                          partner, partner_balance,
+                                                         lock_hask, lock_secret,
                                                          founder_signature, partner_signature],invoker_key,
                                                          gwei_coef=gwei_coef)
             tx_msg = 'success'
@@ -251,13 +291,12 @@ class Interface(object):
             "txMessage":tx_msg
         }
 
-    def withdraw(self, invoker, channel_id, nonce, founder, partner, lockPeriod, lock_amount, lock_hash,
+    def withdraw(self, invoker, channel_id, founder, partner, lock_period, lock_amount, lock_hash,
                  founder_signature, partner_signature, secret, invoker_key):
         """
         Description: it's for HLTC tranction, partner that have secret apply for withdraw asset
         :param invoker: applicant address
         :param channel_id: channel identification code
-        :param nonce: transaction nonce
         :param founder: the transaction sender
         :param partner: the transaction receiver
         :param lockPeriod: absolute block height of the lock
@@ -265,7 +304,7 @@ class Interface(object):
         :param lock_hash: secret's hash
         :param founder_signature: sender signature
         :param partner_signature: receiver signature
-        :param secret:
+        :param secret: R value in HTLC transaction
         :param invoker_key: applicant's key
         :return:
         """
@@ -273,8 +312,8 @@ class Interface(object):
         partner = checksum_encode(partner)
         try:
             tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "withdraw",
-                                                          [channel_id, nonce, founder, partner,
-                                                          lockPeriod, lock_amount, lock_hash,
+                                                          [channel_id, founder, partner,
+                                                          lock_period, lock_amount, lock_hash,
                                                           founder_signature, partner_signature, secret],invoker_key)
             tx_msg = 'success'
         except Exception as e:
@@ -286,37 +325,17 @@ class Interface(object):
             "txMessage":tx_msg
         }
 
-    def withdraw_update(self, invoker, channel_id, nonce, founder, partner, lock_period, lock_amount, lock_hash,
-                        founder_signature, partner_signature, invoker_key):
+    def withdraw_settle(self, invoker, channel_id, lock_hash, invoker_key):
         """
-        Description: the partner will confirm whether the HLTC transaction is valid
-        :param meaning reference "withdraw"
-        """
-        founder = checksum_encode(founder)
-        partner = checksum_encode(partner)
-        try:
-            tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "withdrawUpdate",
-                                                          [channel_id, nonce, founder, partner,
-                                                          lock_period, lock_amount, lock_hash,
-                                                          founder_signature, partner_signature], invoker_key)
-            tx_msg = 'success'
-        except Exception as e:
-            tx_id = 'none'
-            tx_msg = e
-
-        return {
-            "txData":tx_id,
-            "txMessage":tx_msg
-        }
-
-    def withdraw_settle(self, invoker, channel_id, lock_hash, secret, invoker_key):
-        """
-        Description: HTLC receiver can apply for withdraw the lock assets after lock period timeout
-        :param meaning reference "withdraw"
+        Description: withdrawer of HTLC transaction can apply for withdraw the lock assets after lock period timeout
+        :param invoker: applicant address
+        :param channel_id: channel identification code
+        :param lock_hash: secret's hash
+        :param invoker_key: applicant's key
         """
         try:
             tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "withdrawSettle",
-                                                          [channel_id, lock_hash, secret], invoker_key)
+                                                          [channel_id, lock_hash], invoker_key)
             tx_msg = 'success'
         except Exception as e:
             tx_id = 'none'
