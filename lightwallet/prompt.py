@@ -553,6 +553,7 @@ class PromptInterface(object):
         use sample cli
         :return:
         """
+        print("EthTrinity cli. Type 'help' to get started")
         while self.go_on:
             result = input("trinity> ")
             command, arguments = self.parse_result(result)
