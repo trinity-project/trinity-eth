@@ -103,3 +103,11 @@ ENV/
 .idea/
 
 .DS_Store
+
+# wallet path
+.wp/
+wp/
+
+# log
+temp/
+*.history

@@ -38,9 +38,9 @@ DATABASE_CONFIG = {
         'password': os.getenv('DB_PASSWORD'),
     },
     'type': os.getenv('DB_TYPE', 'mongodb'),
-    'channel': os.getenv('DB_CHANNEL', 'Channel') if __running_mode__ else 'beta-channel',
-    'trans': os.getenv('DB_TRANS','Transaction') if __running_mode__ else 'beta-trans',
-    'history': os.getenv('DB_HISTORY','History') if __running_mode__ else 'beta-history',
+    'channel': os.getenv('DB_CHANNEL', 'Channel'),
+    'trans': os.getenv('DB_TRANS','Transaction'),
+    'history': os.getenv('DB_HISTORY','History'),
     'host': os.getenv('DB_HOST', '127.0.0.1'),
     'port': int(os.getenv('DB_PORT', 27017))
 }
