@@ -37,9 +37,9 @@ class SettingsHolder:
         self.NODEURL = "https://ropsten.infura.io"
         self.TNC = SUPPORTED_ASSET_TYPE['TNC']
         self.TNC_abi = erc20_asset_abi
-        self.Eth_Contract_address = "0x8f15529c17C8f2DADB598A77a3dAC76bA601B2e8"
+        self.Eth_Contract_address = "0x5046e99df90bA2D396cEA85432141ba8Db4AD84B"
         self.Eth_Contract_abi = eth_contract_abi
-        self.ETH_Data_Contract_address = "0x011F99A96786e777311bBCb13BE7d37f0799161A"
+        self.ETH_Data_Contract_address = "0xD634eFCA91cA716A46C3C603e29200b3907e4524"
         self.create_client()
     def setup_privnet(self):
         self.NET_NAME = "PrivateNet"
@@ -803,6 +803,29 @@ eth_contract_abi = [
         "type": "function"
     },
     {
+        "constant": True,
+        "inputs": [
+            {
+                "name": "channelId",
+                "type": "bytes32"
+            },
+            {
+                "name": "lockHash",
+                "type": "bytes32"
+            }
+        ],
+        "name": "getHtlcTimeoutBlock",
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "payable": False,
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
         "constant": False,
         "inputs": [],
         "name": "pause",
@@ -1295,6 +1318,11 @@ eth_contract_abi = [
                 "indexed": False,
                 "name": "secret",
                 "type": "bytes32"
+            },
+            {
+                "indexed": False,
+                "name": "paymentBlock",
+                "type": "uint256"
             }
         ],
         "name": "Withdraw",
@@ -1310,13 +1338,8 @@ eth_contract_abi = [
             },
             {
                 "indexed": False,
-                "name": "hashLock",
-                "type": "bytes32"
-            },
-            {
-                "indexed": False,
-                "name": "balance",
-                "type": "uint256"
+                "name": "invoker",
+                "type": "address"
             }
         ],
         "name": "WithdrawUpdate",
@@ -1337,18 +1360,13 @@ eth_contract_abi = [
             },
             {
                 "indexed": False,
-                "name": "lockAmount",
-                "type": "uint256"
-            },
-            {
-                "indexed": False,
-                "name": "balance",
-                "type": "uint256"
-            },
-            {
-                "indexed": False,
                 "name": "hashLock",
                 "type": "bytes32"
+            },
+            {
+                "indexed": False,
+                "name": "lockAmount",
+                "type": "uint256"
             }
         ],
         "name": "WithdrawSettle",
