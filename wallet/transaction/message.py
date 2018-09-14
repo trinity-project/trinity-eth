@@ -23,19 +23,18 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 # system and 3rd party libs
-import math
-
 # self modules import
 from wallet.utils import get_magic
 from common.common import uri_parser
 from common.log import LOG
 from common.exceptions import GoTo
-from wallet.channel import Channel
+from wallet.channel import Channel, EnumTradeType, Payment
 from wallet.Interface.gate_way import send_message
 from .response import EnumResponseStatus
 from trinity import IS_SUPPORTED_ASSET_TYPE
 from wallet.event import event_machine
 from wallet.event.contract_event import ContractEventInterface
+from common.number import TrinityNumber
 
 class MessageHeader(object):
     """
@@ -110,17 +109,6 @@ class Message(object):
         pass
 
     @classmethod
-    def check_nonce(cls, channel_name, nonce):
-        """
-
-        :param channel_name:
-        :param nonce:
-        :return:
-        """
-        new_nonce = Channel.new_nonce(channel_name)
-        return Message._FOUNDER_NONCE < int(nonce) == new_nonce, new_nonce
-
-    @classmethod
     def contract_event_api(cls):
         if not cls._contract_event_api:
             cls._contract_event_api = ContractEventInterface()
@@ -132,72 +120,295 @@ class Message(object):
         return cls.contract_event_api().sign_content(start, *args, **kwargs)
 
     @classmethod
-    def check_balance(cls, channel_name, asset_type, address, balance, peer_address, peer_balance):
+    def check_asset_type(cls, asset_type):
         """
 
-        :param address:
-        :param balance:
-        :param peer_address:
-        :param peer_balance:
+        :param asset_type:
+        :return:
+        """
+        if not IS_SUPPORTED_ASSET_TYPE(asset_type):
+            raise GoTo(EnumResponseStatus.RESPONSE_ASSET_TYPE_NOT_SUPPORTED,
+                       'Unsupported Asset type: \'{}\''.format(asset_type))
+
+        return True, None
+
+    @classmethod
+    def check_url_format(cls, wallet_url):
+        """
+
+        :param wallet_url:
+        :return:
+        """
+        # TODO: it's better to use regex expression to check the url's validity
+        if not wallet_url.__contains__('@'):
+            raise GoTo(EnumResponseStatus.RESPONSE_INVALID_URL_FORMAT,
+                       'Invalid format of url<{}>. Should be like 0xYYYY@ip:port'.format(wallet_url))
+
+    @classmethod
+    def check_both_urls(cls, sender, receiver):
+        """
+
+        :param sender:
+        :param receiver:
+        :return:
+        """
+        # check whether the sender and receiver are correct url or not
+        # TODO: it's better to use regex expression to check the url's validity
+        try:
+            return (sender.__contains__('@') and receiver.__contains__('@'))
+        except Exception as error:
+            LOG.error('Illegal URL is found. Exception: {}'.format(error))
+            raise GoTo(EnumResponseStatus.RESPONSE_INVALID_URL_FORMAT,
+                       'Invalid format of sender<{}> or receiver<{}>. Should be like 0xYYYY@ip:port' \
+                       .format(sender, receiver))
+
+    @classmethod
+    def check_network_magic(cls, magic):
+        """
+
+        :param magic:
+        :return:
+        """
+        net_magic = get_magic()
+        if net_magic != magic:
+            raise GoTo(EnumResponseStatus.RESPONSE_INVALID_NETWORK_MAGIC,
+                       'Invalid network ID<{}>. should be equal to {}'.format(magic, net_magic))
+
+        return True, net_magic
+
+    @classmethod
+    def check_signature(cls):
+        return True
+
+    @classmethod
+    def check_nonce(cls, nonce, channel_name=''):
+        """
+
+        :param channel_name:
+        :param nonce:
+        :return:
+        """
+        new_nonce = Channel.new_nonce(channel_name)
+
+        if not (TransactionBase._FOUNDER_NONCE < int(nonce) == new_nonce):
+            GoTo(EnumResponseStatus.RESPONSE_TRADE_WITH_INCOMPATIBLE_NONCE,
+                 '{}::Channel<{}> has incompatible nonce<self: {}, peer: {}>'.format(cls.__name__,
+                                                                                     channel_name, new_nonce, nonce))
+        else:
+            return True, new_nonce
+
+    @classmethod
+    def calculate_balance_after_payment(cls, balance, peer_balance, payment, hlock_to_rsmc=False, is_htlc_type=False):
+        """
+
+        :param balance: payer's balance
+        :param peer_balance: payee's balance
+        :param payment:
+        :param hlock_to_rsmc: exchange htlc lock part to rsmc transaction
+        :return:
+        """
+        # if payment has occurred, calculate the balance after payment
+        payment = int(payment)
+        if 0 < payment <= int(balance):
+            if hlock_to_rsmc:
+                return True, int(balance), int(peer_balance) + payment
+            elif is_htlc_type:
+                return True, int(balance) - payment, int(peer_balance)
+            else:
+                return True, int(balance) - payment, int(peer_balance) + payment
+        elif payment > int(balance):
+            raise GoTo(EnumResponseStatus.RESPONSE_TRADE_NO_ENOUGH_BALANCE_FOR_PAYMENT,
+                       'Sender has not enough balance<{}> for payment<{}>'.format(balance, payment))
+        else:
+            raise GoTo(EnumResponseStatus.RESPONSE_TRADE_NEGATIVE_PAYMENT,
+                       'Payment<{}> should not be negative number.'.format(payment))
+
+    @classmethod
+    def check_balance(cls, channel_name, asset_type, address, balance, peer_address, peer_balance,
+                      hlock_to_rsmc=False, is_htcl_type=False, **kwargs):
+        """
+
+        :param channel_name:
+        :param asset_type:
+        :param address: payer's address
+        :param balance: payer's balance
+        :param peer_address: payee's address
+        :param peer_balance: payee's balance
+        :param payment:
         :return:
         """
         try:
             # get channel if trade has already existed
             channel_set = Channel.query_channel(channel_name)[0]
 
-            expected_balance = channel_set.balance.get(address).get(asset_type)
-            expected_peer_balance = channel_set.balance.get(peer_address).get(asset_type)
+            expected_balance = int(channel_set.balance.get(address).get(asset_type))
+            expected_peer_balance = int(channel_set.balance.get(peer_address).get(asset_type))
 
-            return int(balance) == int(expected_balance) and int(peer_balance) == int(expected_peer_balance)
+            # to calculate the balance after payment
+            if not kwargs and kwargs.__contains__('payment'):
+                _, expected_balance, expected_peer_balance = \
+                    cls.calculate_balance_after_payment(expected_balance, expected_peer_balance,
+                                                        kwargs.get('payment'), hlock_to_rsmc, is_htcl_type)
+
+            if int(balance) == expected_balance and int(peer_balance) == expected_peer_balance:
+                return True, expected_balance, expected_peer_balance
+            else:
+                raise GoTo(EnumResponseStatus.RESPONSE_TRADE_BALANCE_UNMATCHED_BETWEEN_PEERS,
+                           'Channel<{}> balances are unmatched between channel \
+                           peers<self: {}, expected: {}. peers: {}, expected: {}>' \
+                           .format(channel_name, balance, expected_balance, peer_balance, expected_peer_balance))
         except Exception as error:
-            LOG.error('Channel<{}> was not found. Exception: {}'.format(channel_name, error))
-            return False
+            raise GoTo(EnumResponseStatus.RESPONSE_TRADE_BALANCE_ERROR,
+                       'Channel<{}> not found or balance error. Exception: {}'.format(channel_name, error))
+
+    @classmethod
+    def common_check(cls, sender, receiver, asset_type, net_magic):
+        """
+
+        :param sender:
+        :param receiver:
+        :param asset_type:
+        :param net_magic:
+        :return:
+        """
+        cls.check_asset_type(asset_type)
+        cls.check_network_magic(net_magic)
+        cls.check_both_urls(sender, receiver)
 
     def verify(self):
         """
 
         :return:
         """
-        # to validate the parameters
-        try:
-            if not IS_SUPPORTED_ASSET_TYPE(self.asset_type):
-                return False, 'Unsupported Asset type: \'{}\''.format(self.asset_type)
-
-            # check whether the sender and receiver are correct url or not
-            # TODO: it's better to use regex expression to check the url's validity
-            if not(self.sender.__contains__('@') and self.receiver.__contains__('@')):
-                return False, 'Invalid format of sender or receiver. Should be like 0xYYYY@ip:port'
-
-            if self.network_magic != self.net_magic:
-                return False, 'Invalid network ID. {} != {}'.format(self.network_magic, self.net_magic)
-
-        except Exception as error:
-            return False, error
-        else:
-            return True, None
-
-    def verify_response_status(self):
-        if self.status is not None \
-                and (self.status != EnumResponseStatus.RESPONSE_OK.name
-                     or self.status != EnumResponseStatus.RESPONSE_OK.value):
-            return False, '{}'.format(self.status)
-
+        self.common_check(self.sender, self.receiver, self.asset_type, self.net_magic)
         return True, None
 
-    def verify_channel_balance(self, balance, peer_balance, payment):
-        try:
-            channel = Channel(self.channel_name)
-            sender_balance = int(channel.balance.get(self.sender_address)) - int(payment)
-            receiver_balance = int(channel.balance.get(self.receiver_address)) + int(payment)
+    @classmethod
+    def check_response_status(cls, status):
+        """
 
-            if sender_balance != int(balance) or receiver_balance != int(peer_balance):
-                return False, 'Balances of peers DO NOT matched. sender<self: {}, peer {}>, receiver<self: {}, peer {}>'\
-                    .format(sender_balance, balance, receiver_balance, peer_balance)
-            pass
+        :param status:
+        :return:
+        """
+        if EnumResponseStatus.RESPONSE_OK != status:
+            LOG.error('Message {} with error status<{}>'.format(cls._message_name, status))
+            return False
+
+        return True
+
+    @classmethod
+    def send_error_response(cls, sender:str, receiver:str, channel_name:str, asset_type:str,
+                       nonce:int, status=EnumResponseStatus.RESPONSE_FAIL):
+        message = cls.create_message_header(receiver, sender, cls._message_name, channel_name, asset_type, nonce)
+        message = message.message_header
+        message.update({'MessageBody': {}})
+
+        if status:
+            message.update({'Status': status.name})
+
+        cls.send(message)
+
+class TransactionBase(Message):
+    """
+        Descriptions: for RSMC or HTLC transaction
+    """
+    @classmethod
+    def check_rcode(cls, hashcode, rcode):
+        """
+
+        :param hashcode:
+        :param rcode:
+        :return:
+        """
+        if Payment.verify_hr(hashcode, rcode):
+            return True
+        else:
+            raise GoTo(EnumResponseStatus.RESPONSE_TRADE_HASHR_NOT_MATCHED_WITH_RCODE,
+                       'HashR<{}> is not compatible with Rcode<{}>'.format(hashcode, rcode))
+
+    @classmethod
+    def check_channel_state(cls, channel_name):
+        channel = Channel(channel_name)
+
+        if not channel.is_opened:
+            raise GoTo(EnumResponseStatus.RESPONSE_CHANNEL_NOT_OPENED,
+                       'Channel is not OPENED. Current tate<{}>'.format(channel.state))
+
+        return channel
+
+    @classmethod
+    def check_payment(cls, channel_name, address, asset_type, payment):
+        """
+
+        :param channel_name:
+        :param address:
+        :param asset_type:
+        :param payment:
+        :return:
+        """
+        channel_balance = Channel(channel_name).balance
+        balance = channel_balance.get(address).get(asset_type.upper())
+
+        if not 0 < int(payment) <= int(balance):
+            raise GoTo(EnumResponseStatus.RESPONSE_TRADE_NO_ENOUGH_BALANCE_FOR_PAYMENT,
+                       'Invalid payment<{}>, payer balance<{}>'.format(payment, balance))
+
+        return True, int(balance)
+
+    @classmethod
+    def update_balance_for_channel(cls, channel_name, asset_type, payer_address, payee_address, payment,
+                                   is_hlock_to_rsmc=False, is_htlc_type=False):
+        """
+
+        :param channel_name:
+        :param payer_address:
+        :param payee_address:
+        :param asset_type:
+        :param payment:
+        :param is_hlock_to_rsmc:
+        :return:
+        """
+        channel = Channel(channel_name)
+
+        try:
+            asset_type = asset_type.upper()
+            channel_balance = channel.balance
+            channel_hlock = channel.hlock
+
+            # calculate the left balance
+            payer_balance = channel_balance.get(payer_address).get(asset_type)
+            payee_balance = channel_balance.get(payee_address).get(asset_type)
+
+            if is_hlock_to_rsmc:
+                payer_hlock = channel_hlock.get(payer_address).get(asset_type)
+                payer_hlock = cls.big_number_calculate(payer_hlock, payment, False)
+                if 0 > payer_hlock:
+                    raise GoTo(EnumResponseStatus.RESPONSE_TRADE_LOCKED_ASSET_LESS_THAN_PAYMENT,
+                               'Why here? Payment<{}> should less than locked asset'.format(payment))
+                channel_hlock.update({payer_address: {asset_type: payer_hlock}})
+                payee_balance = cls.big_number_calculate(payee_balance, payment)
+            elif is_htlc_type:
+                payer_hlock = channel_hlock.get(payer_address).get(asset_type)
+                payer_hlock = cls.big_number_calculate(payer_hlock, payment)
+                channel_hlock.update({payer_address: {asset_type: payer_hlock}})
+                payer_balance = cls.big_number_calculate(payer_balance, payment, False)
+            else:
+                payer_balance = cls.big_number_calculate(payer_balance, payment, False)
+                payee_balance = cls.big_number_calculate(payee_balance, payment)
+
+            if payer_balance >= 0 and payee_balance >= 0:
+                Channel.update_channel(channel_name,
+                                       balance={payer_address: {asset_type: str(payer_balance)},
+                                                payee_address: {asset_type: str(payee_balance)}},
+                                       hlock=channel_hlock)
+            else:
+                raise GoTo(EnumResponseStatus.RESPONSE_TRADE_NO_ENOUGH_BALANCE_FOR_PAYMENT,
+                           'Payer has not enough balance for this payment<{}>'.format(payment))
+
         except Exception as error:
-            return False, 'Error to verify balance. Exception{}'.format(error)
-        finally:
-            return True, None
+            raise GoTo(EnumResponseStatus.RESPONSE_TRADE_BALANCE_UPDATE_FAILED,
+                       'Update channel<{}> balance error. payment<{}>. Exception: {}'.format(channel_name,
+                                                                                             payment, error))
 
     @classmethod
     def big_number_calculate(cls, balance, payment, add=True):
@@ -222,36 +433,6 @@ class Message(object):
         return peer if peer != source else channel_set.dest_addr
 
     @classmethod
-    def check_payment(cls, channel_name, address, asset_type, payment):
-        try:
-            channel_balance = Channel(channel_name).balance
-            balance = channel_balance.get(address).get(asset_type.upper())
-
-            if not 0 < int(payment) <= int(balance):
-                raise GoTo('Invalid payment')
-
-            return True, int(balance)
-        except Exception as error:
-            LOG.error('check payment error: {}.'.format(error))
-            LOG.error('Parameters: channel<{}>, address<{}>, asset_type<{}>, payment<{}>'.format(channel_name,
-                                                                                                 address,
-                                                                                                 asset_type,
-                                                                                                 payment))
-            return False, None
-
-    @classmethod
-    def send_error_response(cls, sender:str, receiver:str, channel_name:str, asset_type:str,
-                       nonce:int, status=EnumResponseStatus.RESPONSE_FAIL):
-        message = cls.create_message_header(receiver, sender, cls._message_name, channel_name, asset_type, nonce)
-        message = message.message_header
-        message.update({'MessageBody': {}})
-
-        if status:
-            message.update({'Status': status.name})
-
-        cls.send(message)
-
-    @classmethod
     def rollback_resource(cls, channel_name, nonce, payment=None, status=None):
         """
 
@@ -261,38 +442,46 @@ class Message(object):
         :return:
         """
         # failure action
-        if status == EnumResponseStatus.RESPONSE_TRADE_INCOMPATIBLE_NONCE.name:
-            Channel.delete_trade(channel_name, int(nonce))
+        # if status == EnumResponseStatus.RESPONSE_TRADE_WITH_INCOMPATIBLE_NONCE.name:
+        #     Channel.delete_trade(channel_name, int(nonce))
 
         if status is not None and status != EnumResponseStatus.RESPONSE_OK.name:
             event_machine.unregister_event(channel_name)
 
     @classmethod
-    def check_channel_state(cls, channel_name):
-        channel = Channel(channel_name)
-        assert channel.is_opened, 'Channel is not OPENED. State<{}>'.format(channel.state)
-        return channel.is_opened
+    def is_hlock_to_rsmc(cls, hashcode):
+        return hashcode not in [None, Channel._trade_hash_rcode_default]
 
     @classmethod
-    def update_balance_for_channel(cls, channel_name, payer_address, payee_address, asset_type, payment):
-        channel = Channel(channel_name)
+    def get_rcode(cls, channel_name, hashcode):
+        """
 
+        :param hashcode:
+        :return:
+        """
+        if cls.is_hlock_to_rsmc(hashcode):
+            htlc_trade = Channel.batch_query_trade(channel_name,
+                                                   filters={'type': EnumTradeType.TRADE_TYPE_HTLC.name,
+                                                            'hashcode': hashcode})
+            if not htlc_trade:
+                raise GoTo(EnumResponseStatus.RESPONSE_TRADE_HASHR_NOT_FOUND,
+                           'Htlc trade with HashR<{}> NOT found'.format(hashcode))
+            htlc_trade = htlc_trade[0]
+            return hashcode, htlc_trade.rcode
+        else:
+            return Channel._trade_hash_rcode_default, Channel._trade_hash_rcode_default
+
+    @classmethod
+    def get_htlc_trade_by_hashr(cls, channel_name, hashcode):
+        """
+
+        :param channel_name:
+        :param hashcode:
+        :return:
+        """
         try:
-            asset_type = asset_type.upper()
-            payment = int(payment)
-            channel_balance = channel.balance
-            payer_balance = channel_balance.get(payer_address).get(asset_type)
-            payee_balance = channel_balance.get(payee_address).get(asset_type)
-
-            payer_balance = cls.big_number_calculate(payer_balance, payment, False)
-            payee_balance = cls.big_number_calculate(payee_balance, payment)
-
-            if payer_balance >= 0 and payee_balance >= 0:
-                Channel.update_channel(channel_name,
-                                       balance={payer_address: {asset_type: str(payer_balance)},
-                                                payee_address: {asset_type: str(payee_balance)}})
-            else:
-                raise Exception('Payer has not enough balance for this payment<{}>'.format(payment))
-
+            return Channel.batch_query_trade(channel_name, filters={'type': EnumTradeType.TRADE_TYPE_HTLC.name,
+                                                                    'hashcode': hashcode})[0]
         except Exception as error:
-            LOG.error('Update channel<{}> balance error. payment<{}>. Exception: {}'.format(channel_name, payment, error))
+            raise GoTo(EnumResponseStatus.RESPONSE_TRADE_HASHR_NOT_FOUND,
+                       'Htlc trade not found by the HashR<{}> in channel<{}>'.format(hashcode, channel_name))

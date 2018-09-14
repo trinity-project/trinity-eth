@@ -24,12 +24,22 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 
 
-class GoTo(Exception):
+class TrinityException(Exception):
+    """ Unicode encoding error. """
+
+    def __str__(self):
+        return str(self.args[-1]) if 0 < len(self.args) else ''
+
+    reason = property(lambda self: self.args[0])
+
+
+class GoTo(TrinityException):
     """simulator goto sentences"""
     pass
 
 
-class GotoIgnore(Exception):
+class ChannelException(TrinityException):
+    """channel related exception"""
     pass
 
 

@@ -39,7 +39,11 @@ def trinity_operator(callback):
         integer = int(result // TrinityNumber._trinity_unit)
         fragment = int(result % TrinityNumber._trinity_unit)
 
-        return '{}.{}'.format(integer, fragment).strip()
+        if 0 == fragment:
+            return '{}'.format(integer)
+        else:
+            return '{}.{}'.format(integer, fragment).strip(r' 0')
+
     return wrapper
 
 
@@ -73,7 +77,7 @@ class TrinityNumber(object):
         else:
             fragment = 0
 
-        # calulate
+        # calculate
         self.number = integer * pow(10, self._trinity_coef) + fragment
 
     @trinity_operator
@@ -105,7 +109,7 @@ class TrinityNumber(object):
     @staticmethod
     @trinity_operator
     def restore_number(number):
-        return number
+        return int(number)
 
     @classmethod
     def convert_to_number(cls, number, asset_type='TNC'):

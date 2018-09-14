@@ -32,7 +32,8 @@ class EnumTradeType(IntEnum):
     TRADE_TYPE_FOUNDER = 0x0
     TRADE_TYPE_RSMC = 0x10
     TRADE_TYPE_HTLC = 0x20
-    TRADE_TYPE_SETTLE = 0x30
+    TRADE_TYPE_QIUCK_SETTLE = 0x30
+    TRADE_TYPE_SETTLE = 0x40    # destroy channel in case of the peer is offline
 
 
 class EnumTradeRole(IntEnum):
@@ -49,7 +50,12 @@ class EnumTradeState(IntEnum):
     """
     confirming = 0x10
     confirmed = 0x20
+    confirmed_onchain = 0x21
 
     # error transaction state
     stuck_by_error_deposit = 0x80
     failed = 0xFF
+
+
+class EnumTradeStatus(IntEnum):
+    TRADE_NOT_FOUND = 0x01

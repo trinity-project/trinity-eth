@@ -23,7 +23,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 from .event import EventBase, EnumEventType, EnumEventAction
-from wallet.channel import Channel, sync_channel_info_to_gateway
+from wallet.channel import Channel, sync_channel_info_to_gateway, EnumTradeState
 from model.base_enum import EnumChannelState
 from wallet.event.chain_event import event_monitor_settle, \
     event_monitor_close_channel, \
@@ -56,17 +56,30 @@ class ChannelTestEvent(ChannelEventBase):
 
 
 class ChannelDepositEvent(ChannelEventBase):
+    """
+    Descriptions: Creating Channel event.
+    """
     def __init__(self, channel_name, is_event_founder=True):
         super(ChannelDepositEvent, self).__init__(channel_name, EnumEventType.EVENT_TYPE_DEPOSIT, is_event_founder)
 
         self.deposit = 0.0
         self.partner_deposit = 0.0
 
+        self.nonce = 1  # thins must be equal to _founder_NONCE
+
         pass
 
     def prepare(self, block_height, address='', deposit=0.0, key=''):
         super(ChannelDepositEvent, self).prepare(block_height)
 
+        # update the channel OPENING State after trigger the deposit event, wait for OPENED state
+        if self.retry is False:
+            LOG.debug('Start to create channel<{}>'.format(self.channel_name))
+            Channel.update_channel(self.channel_name, state=EnumChannelState.OPENING.name)
+            LOG.info('Channel<{}> in opening state.'.format(self.channel_name))
+            console_log.info('Channel<{}> is opening'.format(self.channel_name))
+
+        # provide the authorized right to eth contract
         result = self.contract_event_api.approve(address, deposit, key, gwei_coef=self.gwei_coef)
         if result:
             self.next_stage()
@@ -87,38 +100,42 @@ class ChannelDepositEvent(ChannelEventBase):
             approved_deposit = self.contract_event_api.get_approved_asset(founder)
             peer_approved_deposit = self.contract_event_api.get_approved_asset(partner)
 
-            if approved_deposit >= deposit and peer_approved_deposit >= partner_deposit:
-                LOG.debug('Approved asset: self<{}:{}>, peer<{}:{}>'.format(address,
-                                                                            TrinityNumber.restore_number(approved_deposit),
-                                                                            partner,
-                                                                            TrinityNumber.restore_number(peer_approved_deposit)))
-
-                # update the founder and partner deposit
-                self.deposit = deposit
-                self.partner_deposit = partner_deposit
-            else:
+            # has approved the asset amount which is authorized to be used by the eth contract
+            if not (approved_deposit >= deposit and peer_approved_deposit >= partner_deposit):
                 return False
 
+            LOG.debug('Approved asset: self<{}:{}>, peer<{}:{}>' \
+                      .format(address, approved_deposit, partner, peer_approved_deposit))
+
+            # update the founder and partner deposit
+            self.deposit = deposit
+            self.partner_deposit = partner_deposit
+
+            # Trigger deposit action if is_event_founder is True
             if self.is_event_founder:
                 self.contract_event_api.approve_deposit(
                     address, channel_id, nonce, founder, deposit, partner, partner_deposit,
                     founder_sign, partner_sign, private_key, gwei_coef=self.gwei_coef)
+
+            # Goto next stage
+            self.next_stage()
+
+            return True
         except Exception as error:
             LOG.warning('Failed to approve deposit of Channel<{}>. Exception: {}'.format(self.channel_name, error))
-        else:
-            self.next_stage()
 
         return False
 
-    def terminate(self, block_height, state='', asset_type='TNC'):
-        super(ChannelDepositEvent, self).terminate(block_height)
+    def terminate(self, block_height, *args, asset_type='TNC'):
+        super(ChannelDepositEvent, self).terminate(block_height, *args)
 
         # check the deposit of the contract address
         total_deposit = self.contract_event_api.get_channel_total_balance(self.channel_name)
         if total_deposit >= self.deposit + self.partner_deposit:
-            Channel.update_channel(self.channel_name, state=state)
+            Channel.update_channel(self.channel_name, state=EnumChannelState.OPENED.name)
+            Channel.update_trade(self.channel_name, self.nonce, state=EnumTradeState.confirmed.name)
             sync_channel_info_to_gateway(self.channel_name, 'AddChannel', asset_type)
-            console_log.info('Channel {} state is {}'.format(self.channel_name, state))
+            console_log.info('Channel {} state is {}'.format(self.channel_name, EnumChannelState.OPENED.name))
 
             # to trigger event
             event_monitor_close_channel(self.channel_name)
@@ -136,6 +153,9 @@ class ChannelDepositEvent(ChannelEventBase):
 
 
 class ChannelQuickSettleEvent(ChannelEventBase):
+    """
+        Descriptions: Quick close channel event
+    """
     def __init__(self, channel_name, is_event_founder=True):
         super(ChannelQuickSettleEvent, self).__init__(channel_name, EnumEventType.EVENT_TYPE_QUICK_SETTLE,
                                                       is_event_founder)
@@ -147,6 +167,15 @@ class ChannelQuickSettleEvent(ChannelEventBase):
 
     def prepare(self, block_height, *args, **kwargs):
         super(ChannelQuickSettleEvent, self).prepare(block_height, *args, **kwargs)
+
+        # update the channel OPENING State after trigger the deposit event, wait for OPENED
+        if self.retry is False:
+            LOG.debug('Start to quick-close channel<{}>'.format(self.channel_name))
+            Channel.update_channel(self.channel_name, state=EnumChannelState.CLOSING.name)
+            LOG.info('Channel<{}> in closing state.'.format(self.channel_name))
+            console_log.info('Channel<{}> is closing'.format(self.channel_name))
+
+        # go to next stage
         self.next_stage()
 
     def execute(self, block_height, invoker='', channel_id='', nonce='', founder='', founder_balance=0,
@@ -161,13 +190,13 @@ class ChannelQuickSettleEvent(ChannelEventBase):
         # set next stage
         self.next_stage()
 
-    def terminate(self, block_height, state='', asset_type='TNC'):
+    def terminate(self, block_height, *args, asset_type='TNC'):
         super(ChannelQuickSettleEvent, self).terminate(block_height)
 
         # to check the total deposit of the channel
         total_deposit = self.contract_event_api.get_channel_total_balance(self.channel_name)
         if 0 >= total_deposit:
-            Channel.update_channel(self.channel_name, state=state)
+            Channel.update_channel(self.channel_name, state=EnumChannelState.CLOSED.name)
             sync_channel_info_to_gateway(self.channel_name, 'DeleteChannel', asset_type)
-            console_log.info('Channel {} state is {}'.format(self.channel_name, state))
+            console_log.info('Channel {} state is {}'.format(self.channel_name, EnumChannelState.CLOSED.name))
             self.next_stage()

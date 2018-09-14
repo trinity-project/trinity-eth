@@ -31,16 +31,14 @@ class TBLTransaction(DBManager):
         Created         : 2018-02-13
         Modified        : 2018-03-21
     """
-    def add_one(self, nonce:int, founder={}, rsmc={}, htlc={}, settle={}):
+    def add_one(self, nonce:int, **kwargs):
         """
 
         :param nonce:
-        :param deposit: record founder transaction trade
-        :param rsmc: record rsmc transaction trade,
-        :param htlc: record htlc transaction trade
+        :param kwargs:
         :return:
         """
-        return super(TBLTransaction, self).add(nonce=nonce, founder=founder, rsmc=rsmc, htlc=htlc, settle=settle)
+        return super(TBLTransaction, self).add(nonce=nonce, **kwargs)
 
     @property
     @connection_singleton

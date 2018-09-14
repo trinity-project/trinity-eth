@@ -22,46 +22,84 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
-from .message import Message
+from .message import TransactionBase
 from .response import EnumResponseStatus
 from .payment import Payment
 
 from common.log import LOG
 from common.common import uri_parser
 from common.number import TrinityNumber
-from common.exceptions import GoTo, GotoIgnore
+from common.exceptions import GoTo, TrinityException
 from wallet.channel import Channel
 from wallet.channel import EnumTradeType, EnumTradeRole, EnumTradeState
 
 
-class RsmcMessage(Message):
+class RsmcBase(TransactionBase):
+    """
+    Description:
+    """
+    def __init__(self, message, wallet=None):
+        super(RsmcBase, self).__init__(message)
+
+        self.payment = self.message_body.get('PaymentCount')
+        self.sender_balance = self.message_body.get('SenderBalance')
+        self.receiver_balance = self.message_body.get('ReceiverBalance')
+        self.commitment = self.message_body.get('Commitment')
+        self.role_index = int(self.message_body.get('RoleIndex', 0xFF))
+        self.hashcode = self.message_body.get('HashR')
+        self.wallet = wallet
+
+    @classmethod
+    def get_payer_and_payee(cls, role_index, sender, receiver):
+        """
+
+        :param role_index:
+        :param sender:
+        :param receiver:
+        :return:
+        """
+        role = int(role_index)
+        cls.check_role(role)
+
+        # reverse the sender and receiver by role
+        if 0 == role:
+            return receiver, sender
+        else:
+            return sender, receiver
+
+    @classmethod
+    def check_role(cls, role):
+        # row index related check
+        if int(role) not in [0, 1]:
+            raise GoTo(EnumResponseStatus.RESPONSE_TRADE_INCORRECT_ROLE,
+                       'RsmcSign with illegal role index<{}>'.format(role))
+
+        return True
+
+
+class RsmcMessage(RsmcBase):
     """
     {
-        "MessageType":"Rsmc",
-        "Sender": sender,
-        "Receiver": receiver,
-        "TxNonce": nonce,
-        "ChannelName":channel_name,
-        "NetMagic": RsmcMessage.get_magic(),
-        "AssetType":asset_type.upper(),
-        "MessageBody": {
-            "PaymentCount": payment,
-            "SenderBalance": sender_balance,
-            "ReceiverBalance": receiver_balance
+        'MessageType':'Rsmc',
+        'Sender': sender,
+        'Receiver': receiver,
+        'TxNonce': nonce,
+        'ChannelName':channel_name,
+        'NetMagic': RsmcMessage.get_magic(),
+        'AssetType':asset_type.upper(),
+        'MessageBody': {
+            'PaymentCount': payment,
+            'SenderBalance': sender_balance,
+            'ReceiverBalance': receiver_balance,
+            'HashR': hasr, default: '0x'+'0'*32
         }
-        "Comments": {}
+        'Comments': {}
     }
     """
     _message_name = 'Rsmc'
 
     def __init__(self, message, wallet=None):
-        super().__init__(message)
-
-        self.payment = self.message_body.get("PaymentCount")
-        self.sender_balance = self.message_body.get("SenderBalance")
-        self.receiver_balance = self.message_body.get("ReceiverBalance")
-
-        self.wallet = wallet
+        super(RsmcMessage, self).__init__(message, wallet)
         self.rsmc_sign_role = 0
 
     def handle_message(self):
@@ -70,93 +108,70 @@ class RsmcMessage(Message):
     def handle(self):
         super(RsmcMessage, self).handle()
 
-        status = EnumResponseStatus.RESPONSE_FAIL
+        status = EnumResponseStatus.RESPONSE_OK
         try:
-            self.check_channel_state(self.channel_name)
-
-            verified, error = self.verify()
-            if not verified:
-                status = EnumResponseStatus.RESPONSE_TRADE_VERIFIED_ERROR
-                raise GoTo('Verify RsmcMessage error: {}'.format(error))
-
-            verified, error = self.verify_channel_balance(self.sender_balance, self.receiver_balance, self.payment)
-            if not verified:
-                status = EnumResponseStatus.RESPONSE_TRADE_BALANCE_ERROR
-                raise GoTo('Verify balance error: {}'.format(error))
-
-            RsmcResponsesMessage.create(self.channel_name, self.wallet, self.sender, self.receiver,
-                                        self.payment, self.sender_balance, self.receiver_balance,
-                                        self.nonce, self.rsmc_sign_role, self.asset_type, comments=self.comments)
-
-            # means the response ok is sent
-            status = EnumResponseStatus.RESPONSE_OK
-        except GoTo as error:
+            # send RsmcSign message to peer
+            RsmcResponsesMessage.create(self.wallet, self.channel_name, self.asset_type, self.nonce, self.net_magic,
+                                        self.sender, self.receiver, self.payment, self.sender_balance,
+                                        self.receiver_balance, self.rsmc_sign_role, self.hashcode, self.comments)
+        except TrinityException as error:
+            status = error.reason
             LOG.error(error)
         except Exception as error:
+            status = EnumResponseStatus.RESPONSE_EXCEPTION_HAPPENED
             LOG.error('Failed to handle RsmcMessage. Exception: {}'.format(error))
         finally:
             if EnumResponseStatus.RESPONSE_OK != status:
                 # nofify error response
                 RsmcResponsesMessage.send_error_response(self.sender, self.receiver, self.channel_name, self.asset_type,
                                                          self.nonce, status)
-
         return
 
     @staticmethod
-    def create(channel_name, wallet, sender, receiver, payment, asset_type="TNC",
-               cli=False, router = None, next_router=None, comments=None):
+    def create(channel_name, asset_type, sender, receiver, payment, hashcode=None, comments=None):
         """
 
         :param channel_name:
-        :param wallet:
+        :param asset_type:
         :param sender:
         :param receiver:
         :param payment:
-        :param nounce:
-        :param asset_type:
-        :param cli:
-        :param router:
-        :param next_router:
-        :param role_index:
+        :param hashcode:
         :param comments:
+        :param hlock_to_rsmc:
         :return:
         """
-        # channel
-        channel = Channel(channel_name)
-        # check state
-        if not channel.is_opened:
-            raise GoTo('Channel<{}> is not OPENED. State: {}.'.format(channel_name, channel.state))
+        # check channel state
+        RsmcMessage.check_asset_type(asset_type)
+        channel = RsmcMessage.check_channel_state(channel_name)
 
         # get nonce in the offline account book
         nonce = Channel.new_nonce(channel_name)
         if RsmcMessage._FOUNDER_NONCE > nonce:
-            raise GoTo('RsmcMessage::create: Incorrect nonce<{}> for channel<{}>'.format(nonce, channel_name))
+            raise GoTo(EnumResponseStatus.RESPONSE_TRADE_WITH_INCORRECT_NONCE,
+                       'RsmcMessage::create: Incorrect nonce<{}> for channel<{}>'.format(nonce, channel_name))
 
         # to get channel balance
-        if not channel.balance:
-            raise GoTo('Void balance<{}> for asset <{}>.'.format(channel.balance, asset_type))
         balance = channel.balance
-
-        payment = int(payment)
-        sender_address, _, _ = uri_parser(sender)
-        receiver_address, _, _ = uri_parser(receiver)
+        payer_address, _, _ = uri_parser(sender)
+        payee_address, _, _ = uri_parser(receiver)
         asset_type = asset_type.upper()
 
-        # check balance is enough
-        checked, sender_balance = RsmcMessage.check_payment(channel_name, sender_address, asset_type, payment)
-        if not checked:
-            raise GoTo('RsmcMessage::create: Payment<{}> should be satisfied 0 < payment <= {}'.format(payment,
-                                                                                                       sender_balance))
-        sender_balance = RsmcMessage.big_number_calculate(sender_balance, payment, False)
-        receiver_balance = RsmcMessage.big_number_calculate(balance.get(receiver_address, {}).get(asset_type, 0), payment)
+        # judge whether it is htlc lock part to rsmc trade or not
+        hlock_to_rsmc = RsmcMessage.is_hlock_to_rsmc(hashcode)
+        _, payer_balance, payee_balance = RsmcBase.calculate_balance_after_payment(
+            balance.get(payer_address).get(asset_type), balance.get(payee_address).get(asset_type), payment, hlock_to_rsmc)
 
         # create message
         message_body = {
-            "AssetType":asset_type.upper(),
-            "PaymentCount": str(payment),
-            "SenderBalance": str(sender_balance),
-            "ReceiverBalance": str(receiver_balance),
+            'AssetType':asset_type.upper(),
+            'PaymentCount': str(payment),
+            'SenderBalance': str(payer_balance),
+            'ReceiverBalance': str(payee_balance),
         }
+
+        if hlock_to_rsmc:
+            message_body.update({'HashR': hashcode})
 
         # start to create message
         message = RsmcMessage.create_message_header(sender, receiver, RsmcMessage._message_name,
@@ -164,65 +179,39 @@ class RsmcMessage(Message):
         message = message.message_header
         message.update({'MessageBody': message_body})
         if comments:
-            message.update({"Comments": comments})
+            message.update({'Comments': comments})
 
         RsmcMessage.send(message)
 
         return None
 
-    def verify(self):
-        verified, error = super(RsmcMessage, self).verify()
-        if not verified:
-            return verified, error
 
-        if Message._FOUNDER_NONCE >= int(self.nonce):
-            return False, 'Nonce MUST be larger than zero'
-
-        verified, balance = self.check_payment(self.channel_name, self.sender_address, self.asset_type, self.payment)
-        if not verified:
-            return verified, \
-                   'RsmcMessage::verify: Payment<{}> should be satisfied 0 < payment <= {}'.format(self.payment,
-                                                                                                   balance)
-
-        return True, None
-
-
-class RsmcResponsesMessage(Message):
+class RsmcResponsesMessage(RsmcBase):
     """
     message = {
-        "MessageType":"RsmcSign",
-        "Sender": receiver,
-        "Receiver": sender,
-        "TxNonce": nonce,
-        "ChannelName":channel_name,
-        "NetMagic": RsmcMessage.get_magic(),
-        "MessageBody": {
-            "AssetType":asset_type.upper(),
-            "PaymentCount": payment,
-            "SenderBalance": this_receiver_balance,
-            "ReceiverBalance": this_sender_balance,
-            "Commitment": commitment,
+        'MessageType':'RsmcSign',
+        'Sender': receiver,
+        'Receiver': sender,
+        'TxNonce': nonce,
+        'ChannelName':channel_name,
+        'NetMagic': RsmcMessage.get_magic(),
+        'MessageBody': {
+            'AssetType':asset_type.upper(),
+            'PaymentCount': payment,
+            'SenderBalance': this_receiver_balance,
+            'ReceiverBalance': this_sender_balance,
+            'Commitment': commitment,
         }
-        "Comments": {},
-        "Status":
+        'Comments': {},
+        'Status':
     }
     """
     _message_name = 'RsmcSign'
 
     def __init__(self, message, wallet):
-        super(RsmcResponsesMessage, self).__init__(message)
-
-        self.channel = Channel(self.channel_name)
-
-        self.payment = self.message_body.get("PaymentCount")
-        self.sender_balance = self.message_body.get("SenderBalance")
-        self.receiver_balance = self.message_body.get("ReceiverBalance")
-        self.commitment = self.message_body.get('Commitment')
-        self.role_index = int(self.message_body.get('RoleIndex', 0xFF))
-        self.wallet = wallet
-
+        super(RsmcResponsesMessage, self).__init__(message, wallet)
         self.rsmc_sign_role = 1
-        self.payer, self.payee = self.reverse_address(self.role_index, self.sender_address, self.receiver_address)
+        self.payer, self.payee = self.get_payer_and_payee(self.role_index, self.sender_address, self.receiver_address)
 
     def handle_message(self):
         self.handle()
@@ -230,55 +219,32 @@ class RsmcResponsesMessage(Message):
     def handle(self):
         super(RsmcResponsesMessage, self).handle()
 
-        status = EnumResponseStatus.RESPONSE_FAIL
+        status = EnumResponseStatus.RESPONSE_OK
         try:
-            self.check_channel_state(self.channel_name)
+            # check the response status
+            if not self.check_response_status(self.status):
+                return
 
-            # get founder and partner address
-            verified, error = self.verify()
-            if not verified:
-                status = EnumResponseStatus.RESPONSE_TRADE_VERIFIED_ERROR
-                raise GoTo(error)
+            # common check
+            self.check_channel_state(self.channel_name)
+            self.verify()
+            self.check_role(self.role_index)
+            self.check_nonce(self.nonce, self.channel_name)
 
             if 0 == self.role_index:
-                self.create(self.channel_name, self.wallet, self.sender, self.receiver, self.payment,
-                            self.sender_balance, self.receiver_balance, self.nonce, role_index=self.rsmc_sign_role,
-                            asset_type=self.asset_type)
-            else:
-                checked, sender_balance = self.check_payment(self.channel_name, self.payer,
-                                                             self.asset_type, self.payment)
-                if not checked:
-                    status = EnumResponseStatus.RESPONSE_TRADE_INCORRECT_PAYMENT
-                    raise GoTo('RsmcResponsesMessage::handle: Payment<{}> should be satisfied 0 < payment <= {}'.format(self.payment,
-                                                                                                               sender_balance))
-
-                # check nonce here for role index = 1
-                nonce = Channel.latest_nonce(self.channel_name)
-                if Message._FOUNDER_NONCE < nonce != self.nonce:
-                    status = EnumResponseStatus.RESPONSE_TRADE_INCOMPATIBLE_NONCE
-                    raise GoTo('Incompatible nonce. self:<{}>, peer<{}>'.format(nonce, self.nonce))
-
-            #
+                self.rsmc_sign(self.wallet, self.channel_name, self.asset_type, self.nonce, self.sender, self.receiver,
+                               self.payment, self.sender_balance, self.receiver_balance, self.rsmc_sign_role,
+                               self.hashcode, self.comments)
+            
             # update transaction
-            trade_rsmc = Channel.query_trade(self.channel_name, self.nonce)[0]
-            if not (trade_rsmc and trade_rsmc.rsmc):
-                status = EnumResponseStatus.RESPONSE_TRADE_NOT_FOUND
-                raise GoTo('Not found the trade transaction for channel<{}>, nonce<{}>, role_index'.format(self.channel_name,
-                                                                                                           self.nonce,
-                                                                                                           self.role_index))
-
-            trade_rsmc = trade_rsmc.rsmc
-            trade_rsmc.update({'peer_commitment': self.commitment, 'state': EnumTradeState.confirmed.name})
-            Channel.update_trade(self.channel_name, self.nonce, rsmc=trade_rsmc)
+            is_htlc_to_rsmc = self.is_hlock_to_rsmc(self.hashcode)
+            Payment.confirm_payment(self.channel_name, self.hashcode, is_htlc_to_rsmc)
+            Channel.update_trade(self.channel_name, self.nonce, peer_commitment=self.commitment,
+                                 state=EnumTradeState.confirmed.name)
 
             # update the channel balance
-            self.update_balance_for_channel(self.channel_name, self.payer, self.payee, self.asset_type, self.payment)
-
-            status = EnumResponseStatus.RESPONSE_OK
-
-            # update payment after response OK
-            if 1 == self.role_index:
-                Payment.confirm_payment(self.channel, self.comments, self.payment)
+            self.update_balance_for_channel(self.channel_name, self.asset_type, self.payer, self.payee, self.payment,
+                                            is_htlc_to_rsmc)
         except GoTo as error:
             LOG.error(error)
         except Exception as error:
@@ -299,103 +265,77 @@ class RsmcResponsesMessage(Message):
         return
 
     @classmethod
-    def reverse_address(self, role_index, sender_address, receiver_addrees):
-        if 0 == int(role_index):
-            return receiver_addrees, sender_address
-        elif 1 == int(role_index):
-            return sender_address, receiver_addrees
-        else:
-            return None, None
-
-    @staticmethod
-    def create(channel_name, wallet, sender, receiver, payment, sender_balance, receiver_balance, tx_nonce,
-               role_index=0, asset_type="TNC", cli=False, comments=None):
+    def rsmc_sign(cls, wallet, channel_name, asset_type, nonce, sender, receiver, payment,
+                  sender_balance, receiver_balance, role_index=0, hashcode=None, comments=None):
         """
-
-        :param channel_name:
+        Descriptions: create and send RsmcSign messages.
         :param wallet:
+        :param channel_name:
+        :param asset_type:
+        :param nonce:
         :param sender:
         :param receiver:
         :param payment:
-        :param asset_type:
+        :param sender_balance:
+        :param receiver_balance:
         :param role_index:
-        :param cli:
         :param comments:
+        :param hashcode:
         :return:
         """
-        LOG.debug('#################balance: sender_balance<{}>, receiver_balance<{}>'.format(sender_balance, receiver_balance))
-        # get channel by channel name
-        channel = Channel(channel_name)
-        if not channel.is_opened:
-            raise GoTo('RsmcResponsesMessage::create: Channel<{}> is not OPENED. State: {}.'.format(channel_name, channel.state))
-
-        # get latest nonce
-        checked, nonce = RsmcResponsesMessage.check_nonce(channel_name, tx_nonce)
-        if not checked:
-            raise GoTo('RsmcResponsesMessage::create: channel<{}>'.format(channel_name),
-                       'Incompatible nonce! self<{}>, peer<{}> for role index<{}>'.format(nonce, tx_nonce, role_index))
-
         asset_type = asset_type.upper()
 
         # different ROLE by role index
         role_index = int(role_index)
-        if 0 == role_index:
-            # get address from uri
-            sender_address, _, _ = uri_parser(sender)
-            receiver_address, _, _ = uri_parser(receiver)
-            trade_role = EnumTradeRole.TRADE_ROLE_PARTNER
-        elif 1 == role_index:
-            # get address from uri
-            sender_address, _, _ = uri_parser(receiver)
-            receiver_address, _, _ = uri_parser(sender)
-            trade_role = EnumTradeRole.TRADE_ROLE_FOUNDER
-        else:
-            raise GoTo('Incorrect role index<{}>'.format(role_index))
+        payer, payee = RsmcResponsesMessage.get_payer_and_payee(role_index, sender, receiver)
+        payer_address, _, _ = uri_parser(payer)
+        payee_address, _, _ = uri_parser(payee)
 
-        # check balance is enough
-        checked, self_balance = RsmcResponsesMessage.check_payment(channel_name, sender_address, asset_type, payment)
-        if not checked:
-            raise GoTo('RsmcResponsesMessage::create: Payment<{}> should be satisfied 0 < payment <= {}'.format(payment,
-                                                                                                                self_balance))
-
-        # calculate the balance
-        balance = channel.balance
-        self_balance = RsmcResponsesMessage.big_number_calculate(self_balance, payment, False)
-        peer_balance = RsmcResponsesMessage.big_number_calculate(balance.get(receiver_address, {}).get(asset_type, 0), payment)
-        LOG.debug('#################balance: self<{}>, receiver<{}>'.format(self_balance, peer_balance))
+        # check balance
+        _, payer_balance, payee_balance = RsmcResponsesMessage.check_balance(
+            channel_name, asset_type, payer_address, sender_balance, payee_address, receiver_balance, payment=payment
+        )
 
         # sign the trade
+        sign_hashcode, sign_rcode = cls.get_rcode(channel_name, hashcode)
         commitment = RsmcResponsesMessage.sign_content(
-            typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
-            valueList=[channel_name, nonce, sender_address, int(self_balance),
-                       receiver_address, int(peer_balance)],
+            typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256', 'bytes32', 'byte32'],
+            valueList=[channel_name, nonce, payer_address, payer_balance, payee_address, payee_balance,
+                       sign_hashcode, sign_rcode],
             privtKey = wallet._key.private_key_string)
 
-        # # just record the payment for the partner
-        # # ToDo: uncomment here if needed.
-        # if RsmcResponsesMessage.hashr_is_valid_format(comments):
-        #     channel.add_payment(channel_name, hashcode=comments, payment=payment, state=EnumTradeState.confirming)
 
         # add trade to database
+        if 0 == role_index:
+            trade_role = EnumTradeRole.TRADE_ROLE_PARTNER
+            self_balance = payee_balance
+            peer_balance = payer_balance
+        else:
+            trade_role = EnumTradeRole.TRADE_ROLE_FOUNDER
+            self_balance = payer_balance
+            peer_balance = payee_balance
+
         # ToDo: need re-sign all unconfirmed htlc message later
-        rsmc_trade = Channel.founder_or_rsmc_trade(
-            role=trade_role, asset_type=asset_type, payment=payment,
-            balance=self_balance, peer_balance=peer_balance,
-            commitment=commitment, state=EnumTradeState.confirming
-        )
+        rsmc_trade = Channel.rsmc_trade(
+            type=EnumTradeType.TRADE_TYPE_RSMC, role=trade_role, asset_type=asset_type,
+            balance=self_balance, peer_balance=peer_balance, payment=payment,
+            hashcode=hashcode, rcode=sign_rcode, commitment=commitment)
         if 0 == role_index:
             rsmc_trade.update({'balance': peer_balance, 'peer_balance': self_balance})
         Channel.add_trade(channel_name, nonce=nonce, rsmc=rsmc_trade)
 
         # update message body
         message_body = {
-            "AssetType": asset_type.upper(),
-            "PaymentCount": str(payment),
-            "SenderBalance": str(self_balance),
-            "ReceiverBalance": str(peer_balance),
-            "Commitment": commitment,
-            "RoleIndex": str(role_index),
+            'AssetType': asset_type.upper(),
+            'PaymentCount': str(payment),
+            'SenderBalance': str(payer_balance),
+            'ReceiverBalance': str(payee_balance),
+            'Commitment': commitment,
+            'RoleIndex': str(role_index),
         }
+
+        if not hashcode:
+            message_body.update({'HashR': hashcode})
 
         # generate the message header
         message = RsmcResponsesMessage.create_message_header(receiver, sender, RsmcResponsesMessage._message_name,
@@ -406,27 +346,28 @@ class RsmcResponsesMessage(Message):
         message.update({'MessageBody': message_body})
         message.update({'Status': EnumResponseStatus.RESPONSE_OK.name})
         if comments:
-            message.update({"Comments": comments})
+            message.update({'Comments': comments})
 
         # send RsmcSign message
         RsmcResponsesMessage.send(message)
 
         return
 
-    def verify(self):
-        verified, error = super(RsmcResponsesMessage, self).verify()
-        if not verified:
-            return verified, error
+    @staticmethod
+    def create(wallet, channel_name, asset_type, tx_nonce, network_magic, sender, receiver, payment,
+               sender_balance, receiver_balance, role_index=0, hashcode=None, comments=None, cli=False):
+        """
+        Descriptions: RsmcSign API called by other classes
+        :param cli:
+        :param Other parameters could refer to details of rsmc_sign
+        :return:
+        """
+        # some common checks, such as channe state, role_index, etc.
+        RsmcResponsesMessage.check_channel_state(channel_name)
+        RsmcResponsesMessage.common_check(sender, receiver, asset_type, network_magic)
+        RsmcResponsesMessage.check_nonce(tx_nonce, channel_name)
 
-        # RsmcResponse verification
-        if EnumResponseStatus.RESPONSE_OK.name != self.status:
-            return False, self.status
+        RsmcResponsesMessage.rsmc_sign(wallet, channel_name, asset_type, tx_nonce, sender, receiver, payment,
+                                       sender_balance, receiver_balance, role_index, hashcode, comments)
 
-        # row index related check
-        if self.role_index not in [0, 1]:
-            return False, 'RsmcSign with illegal role index<{}>'.format(self.role_index)
-
-        if not (self.payer, self.payee):
-            return False, 'Not support role index<{}>'.format(self.role_index)
-
-        return True, None
+        return

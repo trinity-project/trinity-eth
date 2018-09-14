@@ -25,7 +25,8 @@ SOFTWARE."""
 import hashlib
 import json
 import time
-from .trade import EnumTradeState, EnumTradeRole
+from enum import IntEnum
+from .trade import EnumTradeState, EnumTradeRole, EnumTradeStatus
 from model.channel_model import APIChannel
 from model.base_enum import EnumChannelState
 from model.transaction_model import APITransaction
@@ -36,6 +37,12 @@ from common.console import console_log
 from common.common import LOG
 from common.common import uri_parser
 from common.number import TrinityNumber
+from common.exceptions import ChannelException
+
+
+class EnumChannelError(IntEnum):
+    CHANNEL_NOT_FOUND = 0x1
+    CHANNEL_ALREADY_EXISTED = 0x2
 
 
 class Channel(object):
@@ -43,6 +50,7 @@ class Channel(object):
 
     """
     _contract_event_api = None
+    _trade_hash_rcode_default = '0x0000000000000000000000000000000000000000000000000000000000000000'
 
     def __init__(self, channel_name):
         self.channel_name = channel_name
@@ -59,8 +67,8 @@ class Channel(object):
         try:
             self.__channel_set = APIChannel.query_channel(channel=self.channel_name)[0]
         except Exception as error:
-            LOG.warning('No opened channel exists, Error: {}'.format(error))
-            return None
+            raise ChannelException(EnumChannelError.CHANNEL_NOT_FOUND,
+                                   'Channel<{}> not found'.format(self.channel_name))
 
         return self.__channel_set
 
@@ -112,7 +120,6 @@ class Channel(object):
                 filter_item.update({'state': state.name})
 
             try:
-                temp_channel = APIChannel.batch_query_channel(filters=filter_item)
                 channels.extend(APIChannel.batch_query_channel(filters=filter_item))
             except Exception as error:
                 LOG.debug('Batch query channels from DB error: {}'.format(error))
@@ -163,8 +170,9 @@ class Channel(object):
         if not balance:
             return
 
+        temp_balance = {}
         try:
-            temp_balance = {}
+
             for address, asset_value in balance.items():
                 for asset_type, count in asset_value.items():
                     temp_value = TrinityNumber.convert_to_number(int(count))
@@ -196,6 +204,14 @@ class Channel(object):
     @property
     def balance(self):
         return self.channel_set.balance
+
+    @property
+    def hlock(self):
+        return self.channel_set.hlock
+
+    @property
+    def peer_hlock(self):
+        return self.channel_set.peer_hlock
 
     @property
     def deposit(self):
@@ -242,7 +258,11 @@ class Channel(object):
 
     @staticmethod
     def query_trade(channel_name, nonce, *args, **kwargs):
-        return APITransaction(channel_name).query_transaction(int(nonce), *args, **kwargs)
+        try:
+            return APITransaction(channel_name).query_transaction(int(nonce), *args, **kwargs)[0]
+        except Exception as error:
+            raise ChannelException(EnumTradeStatus.TRADE_NOT_FOUND,
+                                   'Trade with nonce<{}> NOT found'.format(nonce))
 
     @staticmethod
     def delete_trade(channel_name, nonce:int):
@@ -253,7 +273,7 @@ class Channel(object):
         return APITransaction(channel_name).batch_query_transaction(filters, *args, **kwargs)
 
     @staticmethod
-    def add_payment(channel_name, hashcode='', rcode='', payment=0, state=EnumTradeState.confirming, **kwargs):
+    def add_payment(channel_name, hashcode=None, rcode=None, payment=0, state=EnumTradeState.confirming, **kwargs):
         return APIPayment(channel_name).add_payment(hashcode=hashcode, rcode=rcode, channel=channel_name,
                                                     payment=payment, state=state.name, **kwargs)
 
@@ -357,7 +377,7 @@ class Channel(object):
                 return False
 
             try:
-                trigger(channel_name, founder, partner, asset_type, deposit, partner_deposit, wallet, comments)
+                trigger(wallet, channel_name, asset_type, founder, deposit, partner, partner_deposit, comments)
             except Exception as error:
                 LOG.info('Create channel<{}> failed. Exception: {}'.format(channel_name, error))
                 return False
@@ -367,7 +387,7 @@ class Channel(object):
     # transaction related
     @classmethod
     def transfer(cls, channel_name, wallet, receiver, asset_type, count, hashcode=None, cli=False,
-                 router=None, next_jump=None, trigger=None):
+                 router=None, next_jump=None, comments=None, trigger=None,):
         """
 
         :param sender:
@@ -378,12 +398,16 @@ class Channel(object):
         :param wallet:
         :return:
         """
-        if router:
-            # HTLC transaction
-            trigger(channel_name, wallet, wallet.url, receiver, asset_type, count, hashcode, router, next_jump)
-        else:
-            # RSMC transaction
-            trigger(channel_name, wallet, wallet.url, receiver, count, asset_type, cli, comments=hashcode)
+        try:
+            if router:
+                # HTLC transaction
+                trigger(channel_name, wallet, wallet.url, receiver, asset_type, count, hashcode, router, next_jump)
+            else:
+                # RSMC transaction
+                trigger(channel_name, asset_type, wallet.url, receiver, count, hashcode, comments=comments)
+        except Exception as error:
+            LOG.error('Failed to transfer {} {} to receiver<{}>. Exception: {}' \
+                      .format(count, asset_type, receiver, error))
 
         return
 
@@ -434,8 +458,6 @@ class Channel(object):
             # get records by nonce from the trade history
             if is_debug and nonce is not None:
                 trade = cls.query_trade(channel_name, int(nonce))
-                if trade:
-                    trade = trade[0]
             else:
                 trade = cls.latest_confirmed_trade(channel_name)
                 latest_nonce = int(trade.nonce)
@@ -450,8 +472,8 @@ class Channel(object):
                 trade_rsmc = trade.rsmc
 
         except Exception as error:
-            LOG.info('No trade record could be forced to release. channel<{}>, nonce<{}>. Exception: {}'.\
-                     format(channel_name, nonce, error))
+            LOG.error('No trade record could be forced to release. channel<{}>, nonce<{}>. Exception: {}' \
+                      .format(channel_name, nonce, error))
         else:
             channel = cls(channel_name)
             peer_uri = channel.peer_uri(uri)
@@ -483,13 +505,25 @@ class Channel(object):
         pass
 
     @classmethod
-    def founder_or_rsmc_trade(cls, role, asset_type, payment, balance, peer_balance, commitment=None, peer_commitment=None,
-                              state=EnumTradeState.confirming):
+    def trade_body(cls, type, role, asset_type, balance, peer_balance,
+                   commitment=None, peer_commitment=None, state=EnumTradeState.confirming):
+        """
+
+        :param type:
+        :param role:
+        :param asset_type:
+        :param balance:
+        :param peer_balance:
+        :param commitment:
+        :param peer_commitment:
+        :param state:
+        :return:
+        """
         asset_type = asset_type.upper()
         return {
+            'type': type.name,
             'role': role.name,
-            'asset_type': asset_type.upper(),
-            'payment': str(payment),
+            'asset_type': asset_type,
             'balance': str(balance),
             'peer_balance': str(peer_balance),
             'commitment': commitment,
@@ -498,21 +532,53 @@ class Channel(object):
         }
 
     @classmethod
-    def htlc_trade(cls, role, asset_type, hashcode, rcode, payment, delay_block,
+    def founder_trade(cls, type, role, asset_type, balance, peer_balance,
+                      commitment=None, peer_commitment=None, state=EnumTradeState.confirming):
+        """parameters refers to trade_body"""
+        founder_body = cls.trade_body(type, role, asset_type, balance, peer_balance, commitment, peer_commitment, state)
+        return founder_body
+
+    @classmethod
+    def settle_trade(cls, type, role, asset_type, balance, peer_balance,
+                     commitment=None, peer_commitment=None, state=EnumTradeState.confirming):
+        """parameters refers to trade_body"""
+        settle_body = cls.trade_body(type, role, asset_type, balance, peer_balance, commitment, peer_commitment, state)
+        return settle_body
+
+    @classmethod
+    def rsmc_trade(cls, type, role, asset_type, balance, peer_balance, payment, hashcode, rcode,
                    commitment=None, peer_commitment=None, state=EnumTradeState.confirming):
-        asset_type = asset_type.upper()
-        return {
-            hashcode: {
-                'role': role.name,
-                'asset_type': asset_type.upper(),
-                'rcode': rcode,
-                'payment': str(payment),
-                'delay_block': str(delay_block),
-                'commitment': commitment,
-                'peer_commitment': peer_commitment,
-                'state': state.name,
-            }
+        """parameters refers to trade_body"""
+        rsmc_body = cls.trade_body(type, role, asset_type, balance, peer_balance, commitment, peer_commitment, state)
+        hashcode = hashcode if hashcode else Channel._trade_hash_rcode_default
+        rcode = rcode if rcode else Channel._trade_hash_rcode_default
+        rsmc_body.update({'hashcode': hashcode, 'rcode': rcode, 'payment': payment})
+        return rsmc_body
+
+    @classmethod
+    def htlc_trade(cls, type, role, asset_type, balance, peer_balance, payment, hashcode, rcode, delay_block,
+                   commitment=None, peer_commitment=None, delay_commitment=None, peer_delay_commitment=None,
+                   state=EnumTradeState.confirming, channel=None):
+        """parameters refers to trade_body
+
+        :param channel: Only receiver record current channel name when htlc transaction occurred.
+        :param delay_block:
+        :param delay_commitment:
+        :param peer_delay_commitment:
+        :return:
+        """
+        # rsmc part of htlc trade
+        htlc_body = cls.rsmc_trade(type, role, asset_type, balance, peer_balance, payment, hashcode, rcode, commitment,
+                                   peer_commitment, state)
+        htlc_lock = {
+            'delay_block': str(delay_block),
+            'delay_commitment': delay_commitment,
+            'peer_delay_commitment': peer_delay_commitment,
+            'channel': channel,
         }
+        htlc_body.update(htlc_lock)
+
+        return htlc_body
 
 
 def filter_channel_via_address(address1, address2, state=None):

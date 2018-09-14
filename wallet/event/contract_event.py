@@ -69,12 +69,13 @@ class ContractEventInterface(metaclass=SingletonClass):
 
         deposit = int(deposit)
         if approved_asset >= deposit:
-            LOG.info('Has been approved asset count: {}'.format(TrinityNumber.restore_number(approved_asset)))
+            LOG.info('Has been approved asset count: {}'.format(approved_asset))
             return True
 
         try:
             # return tx_id
-            return cls._eth_interface.approve(address, deposit, private_key, gwei_coef=gwei_coef)
+            tx_id = cls._eth_interface.approve(address, deposit, private_key, gwei_coef=gwei_coef)
+            LOG.debug('ContractEventInterface::approve: txId: {}'.format(tx_id))
         except Exception as error:
             LOG.error('authorized deposit error: {}'.format(error))
 

@@ -34,7 +34,7 @@ class TBLChannel(DBManager):
         Modified        : 2018-03-21
     """
     def add_one(self, channel: str, src_addr: str, dest_addr: str, state: str, alive_block: int,
-                deposit:dict, magic:str, balance={}, **kwargs):
+                deposit:dict, magic:str, hlock={}, **kwargs):
         """
 
         :param channel:
@@ -58,7 +58,7 @@ class TBLChannel(DBManager):
 
         return super(TBLChannel, self).add(channel=channel, src_addr=src_addr, dest_addr=dest_addr,
                                            state=state, alive_block=alive_block,
-                                           deposit=deposit, balance=deposit, magic=magic, **kwargs)
+                                           deposit=deposit, balance=deposit, hlock=hlock, magic=magic, **kwargs)
 
     def remove_unsupported_asset(self, asset):
         if not asset:
