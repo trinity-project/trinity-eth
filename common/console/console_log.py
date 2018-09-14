@@ -41,13 +41,16 @@ class ConsoleLog(object):
         print(*args)
 
     def error(self, *args):
-        print_formatted_text(ANSI(self._fg_red.format(self.text(*args))))
+        print(self.text(*args))
+        # print_formatted_text(ANSI(self._fg_red.format(self.text(*args))))
 
     def info(self, *args):
-        print_formatted_text(ANSI(self._fg_green.format(self.text(*args))))
+        print(self.text(*args))
+        #print_formatted_text(ANSI(self._fg_green.format(self.text(*args))))
 
     def warning(self, *args):
-        print_formatted_text(ANSI(self._fg_yellow.format(self.text(*args))))
+        print(self.text(*args))
+        #print_formatted_text(ANSI(self._fg_yellow.format(self.text(*args))))
 
     def warn(self, value):
         self.warning(value)
