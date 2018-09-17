@@ -24,6 +24,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 from __future__ import unicode_literals, print_function
 from prompt_toolkit import print_formatted_text, ANSI
+import sys
 
 
 class ConsoleLog(object):
@@ -40,17 +41,27 @@ class ConsoleLog(object):
     def console(self, *args):
         print(*args)
 
+    def sample_print(self, *args):
+        print(" ".join([str(i).replace("\r"," ").replace("\n", " ") for i in args]))
+
     def error(self, *args):
-        print(self.text(*args))
-        # print_formatted_text(ANSI(self._fg_red.format(self.text(*args))))
+        if sys.stdout.isatty():
+            print_formatted_text(ANSI(self._fg_red.format(self.text(*args))))
+        else:
+            self.sample_print(*args)
+
 
     def info(self, *args):
-        print(self.text(*args))
-        #print_formatted_text(ANSI(self._fg_green.format(self.text(*args))))
+        if sys.stdout.isatty():
+            print_formatted_text(ANSI(self._fg_green.format(self.text(*args))))
+        else:
+            self.sample_print(*args)
 
     def warning(self, *args):
-        print(self.text(*args))
-        #print_formatted_text(ANSI(self._fg_yellow.format(self.text(*args))))
+        if sys.stdout.isatty():
+            print_formatted_text(ANSI(self._fg_yellow.format(self.text(*args))))
+        else:
+            self.sample_print(*args)
 
     def warn(self, value):
         self.warning(value)

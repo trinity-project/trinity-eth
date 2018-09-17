@@ -107,10 +107,25 @@ class PromptInterface(object):
             print(c)
 
     def help(self):
+        """
+        print help
+        :return:
+        """
         if sys.stdout.isatty():
             self.help_color()
         else:
             self.help_sample()
+
+    def _print_wallet(self):
+        """
+        print wallet json
+        :return:
+        """
+        if sys.stdout.isatty():
+            print("Wallet %s " % json.dumps(self.Wallet.ToJson(), indent=4))
+        else:
+            print("Wallet %s " % json.dumps(self.Wallet.ToJson()))
+
 
     def do_create(self, arguments):
         """
@@ -147,7 +162,7 @@ class PromptInterface(object):
 
                 try:
                     self.Wallet = Wallet.Create(path=path, password=passwd1)
-                    print("Wallet %s " % json.dumps(self.Wallet.ToJson(), indent=4))
+                    self._print_wallet()
                 except Exception as e:
                     print("Exception creating wallet: %s " % e)
                     self.Wallet = None
@@ -201,7 +216,6 @@ class PromptInterface(object):
             self.Wallet = None
             print("closed wallet %s " % path)
 
-
     @command_wapper("wallet")
     def show_wallet(self, arguments):
         """
@@ -218,8 +232,7 @@ class PromptInterface(object):
         item = get_arg(arguments)
 
         if not item:
-            print("Wallet %s " % json.dumps(self.Wallet.ToJson(), indent=4))
-
+            self._print_wallet()
             return
 
         else:
