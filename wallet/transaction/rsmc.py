@@ -299,7 +299,7 @@ class RsmcResponsesMessage(RsmcBase):
         # sign the trade
         sign_hashcode, sign_rcode = cls.get_rcode(channel_name, hashcode)
         commitment = RsmcResponsesMessage.sign_content(
-            typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256', 'bytes32', 'byte32'],
+            typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256', 'bytes32', 'bytes32'],
             valueList=[channel_name, nonce, payer_address, payer_balance, payee_address, payee_balance,
                        sign_hashcode, sign_rcode],
             privtKey = wallet._key.private_key_string)
