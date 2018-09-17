@@ -160,8 +160,8 @@ class FounderMessage(FounderBase):
 
             # send response
             FounderResponsesMessage.create(self.wallet, self.channel_name, self.asset_type,
-                                           self.sender, self.founder_deposit, self.commitment,
-                                           self.receiver, self.partner_deposit)
+                                           self.sender, self.founder_deposit,
+                                           self.receiver, self.partner_deposit, self.commitment,)
         except GoTo as error:
             LOG.error(error)
             status = error.reason
