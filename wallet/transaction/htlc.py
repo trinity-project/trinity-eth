@@ -126,7 +126,7 @@ class RResponse(TransactionBase):
                                 self.hashcode, self.rcode, self.payment, self.comments, status)
 
             # trigger rsmc
-            self.trigger_pay_by_rsmc(htlc_trade.channel)
+            self.trigger_pay_by_rsmc()
 
             # notify rcode to next peer
             self.notify_rcode_to_next_peer(htlc_trade.channel)
@@ -144,7 +144,7 @@ class RResponse(TransactionBase):
 
         return None
 
-    def trigger_pay_by_rsmc(self, next_channel):
+    def trigger_pay_by_rsmc(self):
         try:
             # change htlc to rsmc
             RsmcMessage.create(self.channel_name, self.asset_type, self.wallet.url, self.sender, self.payment,
@@ -327,11 +327,11 @@ class HtlcMessage(HtlcBase):
                 HtlcMessage.create(self.wallet, channel_set.channel, self.asset_type, self.wallet.url, receiver,
                                    payment, self.hashcode, self.router, next_router, self.comments)
             else:
-                htlc_trade = self.get_htlc_trade_by_hashr(self.channel_name, self.hashcode)
+                payment_trade = Channel.query_payment(self.channel_name, self.hashcode)
 
                 # trigger RResponse
                 RResponse.create(self.channel_name, self.asset_type, self.nonce, self.wallet.url, self.sender,
-                                 self.hashcode, htlc_trade.rcode, self.comments)
+                                 self.hashcode, payment_trade.rcode, self.comments)
 
             # send response to receiver
             HtlcResponsesMessage.create(self.wallet, self.channel_name, self.asset_type, nonce, self.sender,
@@ -442,7 +442,7 @@ class HtlcMessage(HtlcBase):
             commitment=rsmc_commitment, delay_commitment=hlock_commitment
         )
 
-        Channel.add_trade(channel_name, nonce=nonce, rsmc=rsmc_trade, htlc=htlc_trade)
+        Channel.add_trade(channel_name, nonce=nonce, **htlc_trade)
 
         # generate the messages
         message_body = {
@@ -463,10 +463,6 @@ class HtlcMessage(HtlcBase):
 
         if comments:
             message.update({'Comments': comments})
-
-        # end this htlc
-        if HtlcMessage.is_first_sender(router, sender):
-            Channel.add_payment(channel_name, hashcode, None, payment)
 
         HtlcMessage.send(message)
 
@@ -615,12 +611,7 @@ class HtlcResponsesMessage(TransactionBase):
             delay_block=delay_block, commitment=rsmc_commitment, peer_commitment=peer_commitment,
             delay_commitment=hlock_commitment, peer_delay_commitment=peer_hlock_commitment, channel=channel_name)
 
-        try:
-            htlc_trade = HtlcResponsesMessage.get_htlc_trade_by_hashr(channel_name, hashcode)
-            htlc_trade.update({'nonce': nonce})
-            Channel.update_trade(channel_name, htlc_trade.nonce, **htlc_trade)
-        except Exception as error:
-            Channel.add_trade(channel_name, nonce=nonce, **htlc_trade)
+        Channel.add_trade(channel_name, nonce=nonce, **htlc_trade)
 
         # create message
         message = HtlcResponsesMessage.create_message_header(receiver, sender, HtlcResponsesMessage._message_name,

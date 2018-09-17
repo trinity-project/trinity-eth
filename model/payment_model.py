@@ -31,18 +31,17 @@ class TBLPayment(DBManager):
         Created         : 2018-02-13
         Modified        : 2018-03-21
     """
-    def add_one(self, hashcode:str, channel, rcode=None, payment=0, state=None):
+    def add_one(self, hashcode:str, channel, rcode=None, payment=0):
         """
 
         :param hashcode:
         :param channel_name:
         :param rcode:
-        :param payment:
         :param state:
         :return:
         """
         return super(TBLPayment, self).add(hashcode=hashcode, channel=channel,
-                                           rcode=rcode, payment=payment, state=state)
+                                           rcode=rcode, payment=payment)
 
     @property
     @connection_singleton

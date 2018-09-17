@@ -557,9 +557,9 @@ class Channel(object):
         return rsmc_body
 
     @classmethod
-    def htlc_trade(cls, type, role, asset_type, balance, peer_balance, payment, hashcode, rcode, delay_block,
+    def htlc_trade(cls, type, role, asset_type, balance, peer_balance, payment, hashcode, delay_block,
                    commitment=None, peer_commitment=None, delay_commitment=None, peer_delay_commitment=None,
-                   state=EnumTradeState.confirming, channel=None):
+                   state=EnumTradeState.confirming, channel=None, rcode=None):
         """parameters refers to trade_body
 
         :param channel: Only receiver record current channel name when htlc transaction occurred.
