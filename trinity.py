@@ -83,7 +83,7 @@ Configure = {
     "MaxChannel":100, # the max number to create channel, if 0 , no limited
     "NetAddress":"localhost",
     "RpcListenAddress":"0.0.0.0",
-    "NetPort":"21556",
+    "NetPort": os.getenv('WALLET_RPC_PORT', "21556"),
     "GatewayTCP":"localhost:8189",
     "AssetType":{
         "TNC": SUPPORTED_ASSET_TYPE['TNC']
