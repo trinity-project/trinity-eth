@@ -245,7 +245,7 @@ class Message(object):
             expected_peer_balance = int(channel_set.balance.get(peer_address).get(asset_type))
 
             # to calculate the balance after payment
-            if not kwargs and kwargs.__contains__('payment'):
+            if kwargs and kwargs.__contains__('payment'):
                 _, expected_balance, expected_peer_balance = \
                     cls.calculate_balance_after_payment(expected_balance, expected_peer_balance,
                                                         kwargs.get('payment'), hlock_to_rsmc, is_htcl_type)
@@ -253,10 +253,10 @@ class Message(object):
             if int(balance) == expected_balance and int(peer_balance) == expected_peer_balance:
                 return True, expected_balance, expected_peer_balance
             else:
-                raise GoTo(EnumResponseStatus.RESPONSE_TRADE_BALANCE_UNMATCHED_BETWEEN_PEERS,
-                           'Channel<{}> balances are unmatched between channel \
-                           peers<self: {}, expected: {}. peers: {}, expected: {}>' \
-                           .format(channel_name, balance, expected_balance, peer_balance, expected_peer_balance))
+                raise GoTo(
+                    EnumResponseStatus.RESPONSE_TRADE_BALANCE_UNMATCHED_BETWEEN_PEERS,
+                    'Channel<{}> balances are unmatched between channel peers<self: {}, expected: {}. peers: {}, expected: {}>' \
+                    .format(channel_name, balance, expected_balance, peer_balance, expected_peer_balance))
         except Exception as error:
             raise GoTo(EnumResponseStatus.RESPONSE_TRADE_BALANCE_ERROR,
                        'Channel<{}> not found or balance error. Exception: {}'.format(channel_name, error))
