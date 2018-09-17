@@ -273,12 +273,13 @@ class Channel(object):
         return APITransaction(channel_name).batch_query_transaction(filters, *args, **kwargs)
 
     @staticmethod
-    def add_payment(channel_name, hashcode=None, rcode=None, payment=0, state=EnumTradeState.confirming, **kwargs):
+    def add_payment(channel_name, hashcode=None, rcode=None, payment=0, **kwargs):
         return APIPayment(channel_name).add_payment(hashcode=hashcode, rcode=rcode, channel=channel_name,
-                                                    payment=payment, state=state.name, **kwargs)
+                                                    payment=payment, **kwargs)
 
     @staticmethod
     def update_payment(channel_name, hashcode, **kwargs):
+        kwargs.update({'channel': channel_name})
         return APIPayment(channel_name).update_payment(hashcode, **kwargs)
 
     @staticmethod

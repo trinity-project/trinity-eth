@@ -327,6 +327,7 @@ class HtlcMessage(HtlcBase):
                 HtlcMessage.create(self.wallet, channel_set.channel, self.asset_type, self.wallet.url, receiver,
                                    payment, self.hashcode, self.router, next_router, self.comments)
             else:
+                Channel.update_payment(self.channel_name, self.hashcode)
                 payment_trade = Channel.query_payment(self.channel_name, self.hashcode)
 
                 # trigger RResponse
