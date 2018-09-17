@@ -290,7 +290,7 @@ class Message(object):
         :param status:
         :return:
         """
-        if EnumResponseStatus.RESPONSE_OK != status:
+        if EnumResponseStatus.RESPONSE_OK.name != status:
             LOG.error('Message {} with error status<{}>'.format(cls._message_name, status))
             return False
 
