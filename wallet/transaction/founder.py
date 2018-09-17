@@ -220,7 +220,7 @@ class FounderMessage(FounderBase):
         hlock = {founder_address: {asset_type: '0'},
                  partner_address: {asset_type: '0'}}
         Channel.add_channel(channel=channel_name, src_addr=founder, dest_addr=partner, state=EnumChannelState.INIT.name,
-                            deposit=deposit, balance=deposit, magic=get_magic(), hlock=hlock)
+                            deposit=deposit, magic=get_magic(), hlock=hlock)
 
         # record the transaction
         founder_trade = Channel.founder_trade(
@@ -321,9 +321,11 @@ class FounderResponsesMessage(FounderBase):
         # start add channel
         deposit = {founder_address: {asset_type: str(founder_deposit)},
                    partner_address: {asset_type: str(partner_deposit)}}
+        hlock = {founder_address: {asset_type: '0'},
+                 partner_address: {asset_type: '0'}}
         Channel.add_channel(
             channel=channel_name, src_addr=founder, dest_addr=partner, state=EnumChannelState.INIT.name,
-            deposit=deposit, balance=deposit, magic=get_magic()
+            deposit=deposit, hlock=hlock, magic=get_magic()
         )
 
         # add trade to database
