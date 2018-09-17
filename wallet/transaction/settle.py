@@ -128,7 +128,7 @@ class SettleMessage(SettleBase):
 
             # To create settle response message
             SettleResponseMessage.create(self.wallet, self.channel_name, self.asset_type, self.nonce,
-                                         self.sender, self.receiver, self.sender_balance,self.receiver_balance,
+                                         self.sender, self.sender_balance, self.receiver, self.receiver_balance,
                                          self.commitment)
         except GoTo as error:
             LOG.error(error)
