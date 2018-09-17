@@ -228,6 +228,9 @@ class SettleResponseMessage(SettleBase):
             self.verify()
             self.check_nonce(self.nonce)
             self.check_signature()
+
+            # update the trade
+            Channel.update_trade(self.channel_name, SettleResponseMessage._SETTLE_NONCE, peer_commitment=self.commitment)
         except GoTo as error:
             LOG.error(error)
         except Exception as error:
