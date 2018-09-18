@@ -525,9 +525,11 @@ class HtlcResponsesMessage(HtlcBase):
         super(HtlcResponsesMessage, self).handle()
         nonce = Channel.latest_nonce(self.channel_name)
 
+        status = EnumResponseStatus.RESPONSE_OK
         try:
             # check the response status
             if not self.check_response_status(self.status):
+                self.rollback_resource(self.channel_name, nonce, self.payment, status=self.status)
                 return
 
             self.check_channel_state(self.channel_name)
@@ -547,15 +549,17 @@ class HtlcResponsesMessage(HtlcBase):
                                             self.sender_address, self.payment, is_htlc_type=True)
         except GoTo as error:
             LOG.error(error)
+            status = error.reason
         except Exception as error:
             LOG.error('Transaction with none<{}> not found. Error: {}'.format(self.nonce, error))
+            status = EnumResponseStatus.RESPONSE_EXCEPTION_HAPPENED
         else:
             # successful action
             LOG.debug('Succeed to htlc for channel<{}>'.format(self.channel_name))
             return
         finally:
             # rollback the resources
-            self.rollback_resource(self.channel_name, nonce, status=self.status)
+            self.rollback_resource(self.channel_name, nonce, self.payment, status=status.name)
 
 
     @classmethod

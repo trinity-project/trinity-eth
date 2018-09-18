@@ -223,6 +223,7 @@ class RsmcResponsesMessage(RsmcBase):
         try:
             # check the response status
             if not self.check_response_status(self.status):
+                self.rollback_resource(self.channel_name, self.nonce, self.payment, self.status)
                 return
 
             # common check
@@ -260,7 +261,7 @@ class RsmcResponsesMessage(RsmcBase):
                                              self.asset_type, self.nonce, status)
 
                 # need rollback some resources
-                self.rollback_resource(self.channel_name, self.nonce, status=self.status)
+                self.rollback_resource(self.channel_name, self.nonce, self.payment, status=self.status)
 
         return
 
