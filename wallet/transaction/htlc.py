@@ -341,10 +341,6 @@ class HtlcMessage(HtlcBase):
                                         self.receiver, self.payment, self.sender_balance, self.receiver_balance,
                                         self.hashcode, self.delay_block, self.commitment,
                                         self.delay_commitment, self.router, next_router, self.comments)
-
-            # update the channel balance
-            self.update_balance_for_channel(self.channel_name, self.asset_type, self.sender_address,
-                                            self.receiver_address, self.payment, is_htlc_type=True)
         except GoTo as error:
             LOG.error(error)
             status = error.reason
@@ -639,6 +635,11 @@ class HtlcResponsesMessage(HtlcBase):
         if comments:
             message.update({'Comments': comments})
 
+        # Before the response ok, we could update the channel balance
+        HtlcResponsesMessage.update_balance_for_channel(channel_name, asset_type, payer_address, payee_address,
+                                                        payment, is_htlc_type=True)
+
+        # send response ok message to peer
         HtlcResponsesMessage.send(message)
 
         return

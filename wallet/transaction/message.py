@@ -396,7 +396,7 @@ class TransactionBase(Message):
                 payer_balance = cls.big_number_calculate(payer_balance, payment, False)
                 payee_balance = cls.big_number_calculate(payee_balance, payment)
 
-            if payer_balance >= 0 and payee_balance >= 0:
+            if int(payer_balance) >= 0 and int(payee_balance) >= 0:
                 Channel.update_channel(channel_name,
                                        balance={payer_address: {asset_type: str(payer_balance)},
                                                 payee_address: {asset_type: str(payee_balance)}},
