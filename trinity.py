@@ -72,7 +72,7 @@ Configure = {
     "Channel":{
         "TNC":{"CommitMinDeposit": 1,   # the min commit deposit
                "CommitMaxDeposit": 5000,# the max commit deposit
-               "Fee": 0.01 # gateway fee
+               "Fee": float(os.getenv("TR_FEE",0.01)) # gateway fee
                }
     },#
     "MaxChannel":100, # the max number to create channel, if 0 , no limited
