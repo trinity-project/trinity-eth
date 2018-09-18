@@ -28,6 +28,7 @@ from eth_hash.backends.pysha3 import keccak256
 
 from common.log import LOG
 from common.console import console_log
+from common.exceptions import GoTo
 from common.singleton import SingletonClass
 from wallet.utils import get_magic
 from trinity import IS_SUPPORTED_ASSET_TYPE, SUPPORTED_ASSET_TYPE
@@ -109,7 +110,11 @@ class Payment(metaclass=SingletonClass):
 
     @classmethod
     def verify_hr(cls, hashcode, rcode):
-        return hashcode.__contains__(cls.hash_r(rcode).__str__())
+        try:
+            rcode = rcode.strip(' 0x')
+            return hashcode.__contains__(cls.hash_r(rcode).__str__())
+        except Exception as error:
+            raise GoTo('Invalid RCode<{}> for HashR<{}>'.format(rcode, hashcode))
 
     @classmethod
     def is_valid_hash_r(cls, hashcode):

@@ -355,7 +355,7 @@ class HtlcMessage(HtlcBase):
                 except Exception as error:
                     LOG.error('Failed triggerring to send RResponse for HashR<{}>. Exception: {}'\
                               .format(self.hashcode, error))
-        except GoTo as error:
+        except TrinityException as error:
             LOG.error(error)
             status = error.reason
         except Exception as error:
