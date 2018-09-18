@@ -185,6 +185,9 @@ class RsmcMessage(RsmcBase):
 
         return None
 
+    @classmethod
+    def get_payer_and_payee(cls, role_index, sender, receiver):
+        return super(RsmcMessage, cls).get_payer_and_payee(role_index, receiver, sender)
 
 class RsmcResponsesMessage(RsmcBase):
     """
@@ -288,7 +291,7 @@ class RsmcResponsesMessage(RsmcBase):
 
         # different ROLE by role index
         role_index = int(role_index)
-        payer, payee = RsmcResponsesMessage.get_payer_and_payee(role_index, sender, receiver)
+        payer, payee = RsmcMessage.get_payer_and_payee(role_index, sender, receiver)
         payer_address, _, _ = uri_parser(payer)
         payee_address, _, _ = uri_parser(payee)
 
