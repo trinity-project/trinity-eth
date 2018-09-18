@@ -584,7 +584,7 @@ class HtlcResponsesMessage(HtlcBase):
         :return:
         """
         # get nonce from latest trade
-        _, nonce = HtlcResponsesMessage.check_nonce(channel_name, tx_nonce)
+        _, nonce = HtlcResponsesMessage.check_nonce(tx_nonce, channel_name)
 
         # start to verify balance
         payer_address, _, _ = uri_parser(sender)
