@@ -442,7 +442,9 @@ class TransactionBase(Message):
         :return:
         """
         if status is not None and status != EnumResponseStatus.RESPONSE_OK.name:
-            Channel.delete_trade(channel_name, int(nonce))
+            trade = Channel.query_trade(channel_name, nonce)
+            if not trade:
+                Channel.delete_trade(channel_name, int(nonce))
 
     @classmethod
     def is_hlock_to_rsmc(cls, hashcode):
