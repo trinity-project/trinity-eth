@@ -155,7 +155,7 @@ class Message(object):
         # check whether the sender and receiver are correct url or not
         # TODO: it's better to use regex expression to check the url's validity
         try:
-            return (sender.__contains__('@') and receiver.__contains__('@'))
+            return sender.__contains__('@') and receiver.__contains__('@')
         except Exception as error:
             LOG.error('Illegal URL is found. Exception: {}'.format(error))
             raise GoTo(EnumResponseStatus.RESPONSE_INVALID_URL_FORMAT,

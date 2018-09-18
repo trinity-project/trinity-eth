@@ -302,6 +302,7 @@ class HtlcMessage(HtlcBase):
         nonce = -1
         try:
             self.check_channel_state(self.channel_name)
+            self.check_router(self.router, self.hashcode)
             self.verify()
             _, nonce = self.check_nonce(self.nonce, self.channel_name)
             self.check_payment(self.channel_name, self.sender_address, self.asset_type, self.payment)
@@ -345,10 +346,12 @@ class HtlcMessage(HtlcBase):
                                             self.receiver_address, self.payment, is_htlc_type=True)
         except GoTo as error:
             LOG.error(error)
+            status = error.reason
         except Exception as error:
             LOG.error('Failed to handle Htlc message for channel<{}>, HashR<{}>. Exception:{}'.format(self.channel_name,
                                                                                                       self.hashcode,
                                                                                                       error))
+            status = EnumResponseStatus.RESPONSE_EXCEPTION_HAPPENED
         finally:
             # failed operation
             if EnumResponseStatus.RESPONSE_OK != status:
@@ -526,6 +529,7 @@ class HtlcResponsesMessage(TransactionBase):
 
         try:
             self.check_channel_state(self.channel_name)
+            self.check_router(self.router, self.hashcode)
             self.verify()
 
             # check the nonce
