@@ -337,7 +337,7 @@ class HtlcMessage(HtlcBase):
                                  self.hashcode, payment_trade.rcode, self.comments)
 
             # send response to receiver
-            HtlcResponsesMessage.create(self.wallet, self.channel_name, self.asset_type, nonce, self.sender,
+            HtlcResponsesMessage.create(self.wallet, self.channel_name, self.asset_type, self.nonce, self.sender,
                                         self.receiver, self.payment, self.sender_balance, self.receiver_balance,
                                         self.hashcode, self.delay_block, self.commitment,
                                         self.delay_commitment, self.router, next_router, self.comments)
@@ -525,13 +525,18 @@ class HtlcResponsesMessage(HtlcBase):
         try:
             # check the response status
             if not self.check_response_status(self.status):
-                self.rollback_resource(self.channel_name, nonce, self.payment, status=self.status)
+                self.rollback_resource(self.channel_name, self.nonce, self.payment, status=self.status)
                 return
 
             self.check_channel_state(self.channel_name)
             self.check_router(self.router, self.hashcode)
             self.verify()
-            _, nonce = self.check_nonce(self.nonce, self.channel_name)
+
+            if nonce != self.nonce:
+                raise GoTo(
+                    EnumResponseStatus.RESPONSE_TRADE_WITH_INCOMPATIBLE_NONCE,
+                    'Nonce is incompatible. self nonce<{}>, peer nonce<{}>'.format(nonce, self.nonce)
+                )
             _, payer_balance, payee_balance = self.check_balance(
                 self.channel_name, self.asset_type, self.sender_address, self.sender_balance,
                 self.receiver_address, self.receiver_balance, is_htcl_type=True, payment=self.payment)
@@ -543,7 +548,7 @@ class HtlcResponsesMessage(HtlcBase):
             # update the channel balance
             self.update_balance_for_channel(self.channel_name, self.asset_type, self.receiver_address,
                                             self.sender_address, self.payment, is_htlc_type=True)
-        except GoTo as error:
+        except TrinityException as error:
             LOG.error(error)
             status = error.reason
         except Exception as error:

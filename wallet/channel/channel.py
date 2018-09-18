@@ -44,6 +44,10 @@ class EnumChannelError(IntEnum):
     CHANNEL_NOT_FOUND = 0x1
     CHANNEL_ALREADY_EXISTED = 0x2
 
+    # nonce related
+    CHANNEL_ALLOC_NONCE_FAILED_SINCE_NO_TRADE_FOUND = 0x20
+    CHANNEL_ALLOC_NONCE_FAILED_SINCE_TOO_SMALL = 0x21
+
 
 class Channel(object):
     """
@@ -51,6 +55,10 @@ class Channel(object):
     """
     _contract_event_api = None
     _trade_hash_rcode_default = '0x0000000000000000000000000000000000000000000000000000000000000000'
+
+    _quick_settle_nonce = 0
+    _founder_nonce = 1
+    _trade_nonce = 2
 
     def __init__(self, channel_name):
         self.channel_name = channel_name
@@ -315,8 +323,39 @@ class Channel(object):
         :param channel_name:
         :return:
         """
-        nonce = cls.latest_nonce(channel_name)
-        return int(nonce) + 1 if nonce is not None else 0
+        latest_trade = cls.latest_trade(channel_name)
+        if not latest_trade:
+            raise ChannelException(
+                EnumChannelError.CHANNEL_ALLOC_NONCE_FAILED_SINCE_NO_TRADE_FOUND,
+                'Failed to alloc nonce for channel<{}> since no trade records were found'.format(channel_name)
+        )
+
+        # to check whether this nonce is able to reuse or not
+        if cls.is_nonce_able_to_resuse(latest_trade.state):
+            nonce = latest_trade.nonce
+        else:
+            nonce = int(latest_trade.nonce) + 1
+
+        # the nonce must start from 2
+        if cls._trade_nonce > nonce:
+            raise ChannelException(
+                EnumChannelError.CHANNEL_ALLOC_NONCE_FAILED_SINCE_TOO_SMALL,
+                'Failed to alloc nonce for channel<{}> since trade nonce MUST be started from 2'.format(channel_name)
+            )
+
+        return nonce
+
+    @classmethod
+    def is_channel_trade_confirmed(cls, state):
+        return state in [EnumTradeState.confirmed.name, EnumTradeState.confirmed_onchain.name]
+
+    @classmethod
+    def is_channel_state_confirming(cls, state):
+        return state in [EnumTradeState.confirming.name]
+
+    @classmethod
+    def is_nonce_able_to_resuse(cls, state):
+        return state in [EnumTradeState.initializing.name]
 
     @classmethod
     def latest_nonce(cls, channel_name):

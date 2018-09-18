@@ -323,7 +323,7 @@ class RsmcResponsesMessage(RsmcBase):
             hashcode=hashcode, rcode=sign_rcode, commitment=commitment)
         if 0 == role_index:
             rsmc_trade.update({'balance': peer_balance, 'peer_balance': self_balance})
-        Channel.add_trade(channel_name, nonce=nonce, rsmc=rsmc_trade)
+        Channel.add_trade(channel_name, nonce=nonce, **rsmc_trade)
 
         # update message body
         message_body = {

@@ -48,13 +48,10 @@ class EnumTradeState(IntEnum):
     """
     Define transaction state
     """
+    initializing = 0x0  # in this state, we could reuse this nonce
     confirming = 0x10
     confirmed = 0x20
     confirmed_onchain = 0x21
-
-    # error transaction state
-    stuck_by_error_deposit = 0x80
-    failed = 0xFF
 
 
 class EnumTradeStatus(IntEnum):
