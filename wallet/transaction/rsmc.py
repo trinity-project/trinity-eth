@@ -237,7 +237,7 @@ class RsmcResponsesMessage(RsmcBase):
 
             is_htlc_to_rsmc = self.is_hlock_to_rsmc(self.hashcode)
             self.check_balance(self.channel_name, self.asset_type, self.payer, self.sender_balance,
-                               self.payee, self.receiver_balance, hlock_to_rsmc=is_htlc_to_rsmc)
+                               self.payee, self.receiver_balance, hlock_to_rsmc=is_htlc_to_rsmc, payment=self.payment)
 
             if 0 == self.role_index:
                 self.rsmc_sign(self.wallet, self.channel_name, self.asset_type, self.nonce, self.sender, self.receiver,
