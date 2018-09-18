@@ -235,13 +235,16 @@ class RsmcResponsesMessage(RsmcBase):
             self.check_role(self.role_index)
             self.check_nonce(self.nonce, self.channel_name)
 
+            is_htlc_to_rsmc = self.is_hlock_to_rsmc(self.hashcode)
+            self.check_balance(self.channel_name, self.asset_type, self.payer, self.sender_balance,
+                               self.payee, self.receiver_balance, hlock_to_rsmc=is_htlc_to_rsmc)
+
             if 0 == self.role_index:
                 self.rsmc_sign(self.wallet, self.channel_name, self.asset_type, self.nonce, self.sender, self.receiver,
                                self.payment, self.sender_balance, self.receiver_balance, self.rsmc_sign_role,
                                self.hashcode, self.comments)
             
             # update transaction
-            is_htlc_to_rsmc = self.is_hlock_to_rsmc(self.hashcode)
             Payment.confirm_payment(self.channel_name, self.hashcode, is_htlc_to_rsmc)
             Channel.update_trade(self.channel_name, self.nonce, peer_commitment=self.commitment,
                                  state=EnumTradeState.confirmed.name)
@@ -296,8 +299,10 @@ class RsmcResponsesMessage(RsmcBase):
         payee_address, _, _ = uri_parser(payee)
 
         # check balance
+        is_hlock_to_rsmc = RsmcResponsesMessage.is_hlock_to_rsmc(hashcode)
         _, payer_balance, payee_balance = RsmcResponsesMessage.check_balance(
-            channel_name, asset_type, payer_address, sender_balance, payee_address, receiver_balance, payment=payment
+            channel_name, asset_type, payer_address, sender_balance, payee_address, receiver_balance,
+            hlock_to_rsmc=is_hlock_to_rsmc, payment=payment
         )
 
         # sign the trade
