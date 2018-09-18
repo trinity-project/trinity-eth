@@ -526,6 +526,10 @@ class HtlcResponsesMessage(HtlcBase):
         nonce = Channel.latest_nonce(self.channel_name)
 
         try:
+            # check the response status
+            if not self.check_response_status(self.status):
+                return
+
             self.check_channel_state(self.channel_name)
             self.check_router(self.router, self.hashcode)
             self.verify()

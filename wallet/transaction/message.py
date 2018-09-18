@@ -191,9 +191,9 @@ class Message(object):
         new_nonce = Channel.new_nonce(channel_name)
 
         if not (TransactionBase._FOUNDER_NONCE < int(nonce) == new_nonce):
-            GoTo(EnumResponseStatus.RESPONSE_TRADE_WITH_INCOMPATIBLE_NONCE,
-                 '{}::Channel<{}> has incompatible nonce<self: {}, peer: {}>'.format(cls.__name__,
-                                                                                     channel_name, new_nonce, nonce))
+            raise GoTo(EnumResponseStatus.RESPONSE_TRADE_WITH_INCOMPATIBLE_NONCE,
+                       '{}::Channel<{}> has incompatible nonce<self: {}, peer: {}>'.format(cls.__name__, channel_name,
+                                                                                           new_nonce, nonce))
         else:
             return True, new_nonce
 
