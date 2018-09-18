@@ -160,7 +160,8 @@ class RsmcMessage(RsmcBase):
         # judge whether it is htlc lock part to rsmc trade or not
         hlock_to_rsmc = RsmcMessage.is_hlock_to_rsmc(hashcode)
         _, payer_balance, payee_balance = RsmcBase.calculate_balance_after_payment(
-            balance.get(payer_address).get(asset_type), balance.get(payee_address).get(asset_type), payment, hlock_to_rsmc)
+            balance.get(payer_address).get(asset_type), balance.get(payee_address).get(asset_type), payment,
+            hlock_to_rsmc=hlock_to_rsmc)
 
         # create message
         message_body = {
@@ -255,6 +256,7 @@ class RsmcResponsesMessage(RsmcBase):
                                             is_htlc_to_rsmc)
         except GoTo as error:
             LOG.error(error)
+            status = error.reason
         except Exception as error:
             status = EnumResponseStatus.RESPONSE_EXCEPTION_HAPPENED
             LOG.error('Failed to handle RsmcSign for channel<{}> '.format(self.channel_name),
@@ -265,7 +267,7 @@ class RsmcResponsesMessage(RsmcBase):
             if EnumResponseStatus.RESPONSE_OK != status:
                 if 0 == self.role_index:
                     self.send_error_response(self.sender, self.receiver, self.channel_name,
-                                             self.asset_type, self.nonce, status)
+                                             self.asset_type, self.nonce, status, kwargs={'RoleIndex': '1'})
 
                 # need rollback some resources
                 self.rollback_resource(self.channel_name, self.nonce, self.payment, status=self.status)
@@ -344,7 +346,7 @@ class RsmcResponsesMessage(RsmcBase):
             'RoleIndex': str(role_index),
         }
 
-        if not hashcode:
+        if hashcode:
             message_body.update({'HashR': hashcode})
 
         # generate the message header
