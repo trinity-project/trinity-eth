@@ -443,7 +443,7 @@ class TransactionBase(Message):
         """
         if status is not None and status != EnumResponseStatus.RESPONSE_OK.name:
             trade = Channel.query_trade(channel_name, nonce)
-            if not trade:
+            if trade:
                 Channel.delete_trade(channel_name, int(nonce))
 
     @classmethod
