@@ -298,6 +298,7 @@ class HtlcMessage(HtlcBase):
     def handle(self):
         super(HtlcMessage, self).handle()
 
+        trigger_rresponse = False
         status = EnumResponseStatus.RESPONSE_OK
         try:
             self.check_channel_state(self.channel_name)
@@ -339,14 +340,21 @@ class HtlcMessage(HtlcBase):
 
                 payment_trade = payment_trade[0]
                 # trigger RResponse
-                RResponse.create(self.channel_name, self.asset_type, self.nonce, self.wallet.url, self.sender,
-                                 self.hashcode, payment_trade.rcode, self.comments)
+                trigger_rresponse = True
 
             # send response to receiver
             HtlcResponsesMessage.create(self.wallet, self.channel_name, self.asset_type, self.nonce, self.sender,
                                         self.receiver, self.payment, self.sender_balance, self.receiver_balance,
                                         self.hashcode, self.delay_block, self.commitment,
                                         self.delay_commitment, self.router, next_router, self.comments)
+
+            if trigger_rresponse:
+                try:
+                    RResponse.create(self.channel_name, self.asset_type, self.nonce, self.wallet.url, self.sender,
+                                     self.hashcode, payment_trade.rcode, self.comments)
+                except Exception as error:
+                    LOG.error('Failed triggerring to send RResponse for HashR<{}>. Exception: {}'\
+                              .format(self.hashcode, error))
         except GoTo as error:
             LOG.error(error)
             status = error.reason
