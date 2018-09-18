@@ -45,7 +45,7 @@ class RsmcBase(TransactionBase):
         self.sender_balance = self.message_body.get('SenderBalance')
         self.receiver_balance = self.message_body.get('ReceiverBalance')
         self.commitment = self.message_body.get('Commitment')
-        self.role_index = int(self.message_body.get('RoleIndex', 0xFF))
+        self.role_index = int(self.message_body.get('RoleIndex', -1))
         self.hashcode = self.message_body.get('HashR')
         self.wallet = wallet
 
@@ -233,7 +233,8 @@ class RsmcResponsesMessage(RsmcBase):
             self.check_channel_state(self.channel_name)
             self.verify()
             self.check_role(self.role_index)
-            self.check_nonce(self.nonce, self.channel_name)
+            nonce = self.nonce if 0 == self.role_index else self.nonce + 1
+            self.check_nonce(nonce, self.channel_name)
 
             is_htlc_to_rsmc = self.is_hlock_to_rsmc(self.hashcode)
             self.check_balance(self.channel_name, self.asset_type, self.payer, self.sender_balance,
