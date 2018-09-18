@@ -385,12 +385,12 @@ class TransactionBase(Message):
                 if 0 > payer_hlock:
                     raise GoTo(EnumResponseStatus.RESPONSE_TRADE_LOCKED_ASSET_LESS_THAN_PAYMENT,
                                'Why here? Payment<{}> should less than locked asset'.format(payment))
-                channel_hlock.update({payer_address: {asset_type: payer_hlock}})
+                channel_hlock.update({payer_address: {asset_type: str(payer_hlock)}})
                 payee_balance = cls.big_number_calculate(payee_balance, payment)
             elif is_htlc_type:
                 payer_hlock = channel_hlock.get(payer_address).get(asset_type)
                 payer_hlock = cls.big_number_calculate(payer_hlock, payment)
-                channel_hlock.update({payer_address: {asset_type: payer_hlock}})
+                channel_hlock.update({payer_address: {asset_type: str(payer_hlock)}})
                 payer_balance = cls.big_number_calculate(payer_balance, payment, False)
             else:
                 payer_balance = cls.big_number_calculate(payer_balance, payment, False)
