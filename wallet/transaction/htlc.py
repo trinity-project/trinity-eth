@@ -61,7 +61,7 @@ class RResponse(TransactionBase):
 
         self.hashcode = self.message_body.get("HashR")
         self.rcode = self.message_body.get("R")
-        self.payment = self.message_body.get('PaymentCount')
+        self.payment = int(self.message_body.get('PaymentCount', -1))
 
         self.wallet = wallet
 
@@ -82,7 +82,7 @@ class RResponse(TransactionBase):
         htlc_trade = RResponse.get_htlc_trade_by_hashr(channel_name, hashcode)
         asset_type = asset_type.upper()
         payer_address, _, _ = uri_parser(receiver)
-        payment = htlc_trade.hlock.get(payer_address).get(asset_type)
+        payment = htlc_trade.payment
 
         message = RResponse.create_message_header(sender, receiver, RResponse._message_name,
                                                   channel_name, asset_type, nonce)
@@ -115,7 +115,7 @@ class RResponse(TransactionBase):
             htlc_trade = self.get_htlc_trade_by_hashr(self.channel_name, self.hashcode)
             Channel.update_trade(self.channel_name, htlc_trade.nonce, rcode=self.rcode)
             # check payment:
-            stored_payment = htlc_trade.get(self.receiver_address).get(self.asset_type)
+            stored_payment = int(htlc_trade.payment)
             if stored_payment != self.payment:
                 raise GoTo(EnumResponseStatus.RESPONSE_TRADE_UNMATCHED_PAYMENT,
                            'Unmatched payment. self stored payment<{}>, peer payment<{}>'.format(stored_payment,
