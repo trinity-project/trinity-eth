@@ -124,12 +124,6 @@ class RResponse(TransactionBase):
             # send response OK message
             RResponseAck.create(self.channel_name, self.asset_type, self.nonce, self.sender, self.receiver,
                                 self.hashcode, self.rcode, self.payment, self.comments, status)
-
-            # trigger rsmc
-            self.trigger_pay_by_rsmc()
-
-            # notify rcode to next peer
-            self.notify_rcode_to_next_peer(htlc_trade.channel)
         except TrinityException as error:
             LOG.error(error)
             status = error.reason
@@ -137,6 +131,12 @@ class RResponse(TransactionBase):
             status = EnumResponseStatus.RESPONSE_EXCEPTION_HAPPENED
             LOG.error('Failed to handle RResponse with HashR<{}>. Exception: {}'.format(self.hashcode, error))
             pass
+        else:
+            # trigger rsmc
+            self.trigger_pay_by_rsmc()
+
+            # notify rcode to next peer
+            self.notify_rcode_to_next_peer(htlc_trade.channel)
         finally:
             if EnumResponseStatus.RESPONSE_OK != status:
                 RResponseAck.send_error_response(self.sender, self.receiver, self.channel_name, self.asset_type,
@@ -166,6 +166,11 @@ class RResponse(TransactionBase):
             if not next_channel:
                 LOG.info('HTLC Founder with HashR<{}> received the R-code<{}>'.format(self.hashcode, self.rcode))
                 return
+
+            htlc_trade = self.get_htlc_trade_by_hashr(next_channel, self.hashcode)
+            if next_channel != htlc_trade.channel:
+                LOG.error('Why the channel is different. next_channel<{}>, stored channel<{}>' \
+                          .format(next_channel, htlc_trade.channel))
 
             # notify the previous node the R-code
             LOG.debug('Payment get channel {}/{}'.format(next_channel, self.hashcode))
@@ -328,7 +333,8 @@ class HtlcMessage(HtlcBase):
                 payment = self.big_number_calculate(self.payment, fee, False)
                 receiver = next_router
                 self.create(self.wallet, channel_set.channel, self.asset_type, self.wallet.url, receiver,
-                            payment, self.hashcode, self.router, next_router, self.comments)
+                            payment, self.hashcode, self.router, next_router, current_channel=self.channel_name,
+                            comments=self.comments)
             else:
                 Channel.update_payment(self.channel_name, self.hashcode)
                 payment_trade = Channel.query_payment(self.channel_name, self.hashcode)
@@ -408,7 +414,7 @@ class HtlcMessage(HtlcBase):
 
     @classmethod
     def create(cls, wallet, channel_name, asset_type, sender, receiver, payment, hashcode,
-               router, next_router, comments=None):
+               router, next_router, current_channel=None, comments=None):
         """
 
         :param channel_name:
@@ -474,6 +480,8 @@ class HtlcMessage(HtlcBase):
             balance=payer_balance, peer_balance=payee_balance, payment=payment, hashcode=hashcode, delay_block=end_block_height,
             commitment=rsmc_commitment, delay_commitment=hlock_commitment
         )
+        if current_channel:
+            htlc_trade.update({'channel': current_channel})
         Channel.add_trade(channel_name, nonce=nonce, **htlc_trade)
 
         # generate the messages
