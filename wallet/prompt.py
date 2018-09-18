@@ -734,12 +734,11 @@ def main():
         settings.setup_testnet()
 
     # initialize the loggers
-    init_logger(file_name='wallet.log')
+    port = Configure.get("NetPort")
+    init_logger(wallet_port=port, file_name='wallet.log')
 
     UserPrompt = UserPromptInterface()
-    port = Configure.get("NetPort")
     address = Configure.get("RpcListenAddress")
-    port = port if port else "21556"
     address = address if address else "0.0.0.0"
     api_server_rpc = RpcInteraceApi(port)
     endpoint_rpc = "tcp:port={0}:interface={1}".format(port, address)

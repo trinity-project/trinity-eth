@@ -38,9 +38,9 @@ DATABASE_CONFIG = {
         'password': os.getenv('DB_PASSWORD'),
     },
     'type': os.getenv('DB_TYPE', 'mongodb'),
-    'channel': os.getenv('DB_CHANNEL', 'Channel') if __running_mode__ else 'beta-channel',
-    'trans': os.getenv('DB_TRANS','Transaction') if __running_mode__ else 'beta-trans',
-    'history': os.getenv('DB_HISTORY','History') if __running_mode__ else 'beta-history',
+    'channel': os.getenv('DB_CHANNEL', 'Channel') if __running_mode__ else os.getenv('DB_CHANNEL', 'beta-channel'),
+    'trans': os.getenv('DB_TRANS','Transaction') if __running_mode__ else os.getenv('DB_TRANS','beta-trans'),
+    'history': os.getenv('DB_HISTORY','History') if __running_mode__ else os.getenv('DB_HISTORY','beta-history'),
     'host': os.getenv('DB_HOST', '127.0.0.1'),
     'port': int(os.getenv('DB_PORT', 27017))
 }
@@ -53,8 +53,7 @@ GWEI_COEFFICIENT = 20
 SUPPORTED_ASSET_TYPE = {'TNC': '0x65096f2B7A8dc1592479F1911cd2B98dae4d2218'}
 IS_SUPPORTED_ASSET_TYPE = lambda asset_type: \
     isinstance(asset_type, str) and \
-    (asset_type.upper() in ['TNC'] or \
-     (SUPPORTED_ASSET_TYPE['TNC'].__contains__(asset_type.replace('0x', ''))))
+    (asset_type.upper() in ['TNC'] or (SUPPORTED_ASSET_TYPE['TNC'].__contains__(asset_type.replace('0x', ''))))
 
 
 # Some configuration related to the logs
