@@ -361,7 +361,7 @@ class HtlcMessage(HtlcBase):
                                                          self.asset_type, self.nonce, status)
 
                 # delete some related resources
-                self.rollback_resource(self.channel_name, self.nonce, self.payment, self.status)
+                self.rollback_resource(self.channel_name, self.nonce, self.payment, status.name)
 
         return
 
