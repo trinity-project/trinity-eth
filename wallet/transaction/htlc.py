@@ -331,7 +331,13 @@ class HtlcMessage(HtlcBase):
             else:
                 Channel.update_payment(self.channel_name, self.hashcode)
                 payment_trade = Channel.query_payment(self.channel_name, self.hashcode)
+                if not (payment_trade and payment_trade[0]):
+                    raise GoTo(
+                        EnumResponseStatus.RESPONSE_TRADE_HASHR_NOT_FOUND,
+                        'Rcode not found for hashcode<{}>'.format(self.hashcode)
+                    )
 
+                payment_trade = payment_trade[0]
                 # trigger RResponse
                 RResponse.create(self.channel_name, self.asset_type, self.nonce, self.wallet.url, self.sender,
                                  self.hashcode, payment_trade.rcode, self.comments)
@@ -519,7 +525,6 @@ class HtlcResponsesMessage(HtlcBase):
 
     def handle(self):
         super(HtlcResponsesMessage, self).handle()
-        nonce = Channel.latest_nonce(self.channel_name)
 
         status = EnumResponseStatus.RESPONSE_OK
         try:
@@ -533,8 +538,8 @@ class HtlcResponsesMessage(HtlcBase):
             self.verify()
             _, nonce = self.check_nonce(self.nonce + 1, self.channel_name)
             _, payer_balance, payee_balance = self.check_balance(
-                self.channel_name, self.asset_type, self.sender_address, self.sender_balance,
-                self.receiver_address, self.receiver_balance, is_htcl_type=True, payment=self.payment)
+                self.channel_name, self.asset_type, self.receiver_address, self.sender_balance,
+                self.sender_address, self.receiver_balance, is_htcl_type=True, payment=self.payment)
 
             # update transaction
             Channel.update_trade(self.channel_name, int(self.nonce), peer_commitment=self.commitment,
@@ -555,7 +560,7 @@ class HtlcResponsesMessage(HtlcBase):
             return
         finally:
             # rollback the resources
-            self.rollback_resource(self.channel_name, nonce, self.payment, status=status.name)
+            self.rollback_resource(self.channel_name, self.nonce, self.payment, status=status.name)
 
 
     @classmethod
