@@ -299,13 +299,14 @@ class HtlcMessage(HtlcBase):
         super(HtlcMessage, self).handle()
 
         status = EnumResponseStatus.RESPONSE_OK
-        nonce = -1
         try:
             self.check_channel_state(self.channel_name)
             self.check_router(self.router, self.hashcode)
             self.verify()
             _, nonce = self.check_nonce(self.nonce, self.channel_name)
-            self.check_payment(self.channel_name, self.sender_address, self.asset_type, self.payment)
+            _, payer_balance, payee_balance = self.check_balance(
+                self.channel_name, self.asset_type, self.sender_address, self.sender_balance,
+                self.receiver_address, self.receiver_balance, is_htcl_type=True)
 
             # transform the message to the next router if not last router node
             next_router = self.next_router
@@ -325,8 +326,8 @@ class HtlcMessage(HtlcBase):
                 fee = TrinityNumber(str(self.get_fee(self.wallet.url))).number
                 payment = self.big_number_calculate(self.payment, fee, False)
                 receiver = next_router
-                HtlcMessage.create(self.wallet, channel_set.channel, self.asset_type, self.wallet.url, receiver,
-                                   payment, self.hashcode, self.router, next_router, self.comments)
+                self.create(self.wallet, channel_set.channel, self.asset_type, self.wallet.url, receiver,
+                            payment, self.hashcode, self.router, next_router, self.comments)
             else:
                 Channel.update_payment(self.channel_name, self.hashcode)
                 payment_trade = Channel.query_payment(self.channel_name, self.hashcode)
@@ -357,7 +358,10 @@ class HtlcMessage(HtlcBase):
             if EnumResponseStatus.RESPONSE_OK != status:
                 # send error response
                 HtlcResponsesMessage.send_error_response(self.sender, self.receiver, self.channel_name,
-                                                         self.asset_type, nonce, status)
+                                                         self.asset_type, self.nonce, status)
+
+                # delete some related resources
+                self.rollback_resource(self.channel_name, self.nonce, self.payment, self.status)
 
         return
 
@@ -377,8 +381,23 @@ class HtlcMessage(HtlcBase):
         except IndexError:
             return None
 
-    @staticmethod
-    def create(wallet, channel_name, asset_type, sender, receiver, payment, hashcode,
+    @classmethod
+    def get_locked_block_height(cls, total_routers, jumps):
+        """
+
+        :param total_routers:
+        :param jumps:
+        :return:
+        """
+        if not (isinstance(jumps, int) and isinstance(total_routers, int)):
+            return 0
+
+        locked_block_height = get_block_count() + HtlcMessage._block_per_day*(total_routers-jumps)
+
+        return locked_block_height
+
+    @classmethod
+    def create(cls, wallet, channel_name, asset_type, sender, receiver, payment, hashcode,
                router, next_router, comments=None):
         """
 
@@ -395,7 +414,11 @@ class HtlcMessage(HtlcBase):
         :param comments:
         :return:
         """
-        HtlcMessage.check_router(router, hashcode)
+        cls.check_channel_state(channel_name)
+        cls.check_router(router, hashcode)
+        cls.check_asset_type(asset_type)
+        cls.check_both_urls(sender, receiver)
+        cls.check_router(router, hashcode)
 
         # get nonce
         nonce = Channel.new_nonce(channel_name)
@@ -417,20 +440,18 @@ class HtlcMessage(HtlcBase):
         )
 
         # calculate the end block height
-        jumps_index = HtlcMessage.this_point(sender, router)
-        if jumps_index is not None:
-            end_block_height = get_block_count() + HtlcMessage._block_per_day*(len(router)-jumps_index)
-        else:
-            end_block_height = 0
+        jumps_index = HtlcMessage.this_jump(sender, router)
+        end_block_height = cls.get_locked_block_height(len(router), jumps_index)
 
-        # 2 parts in htlc message: conclusive and inconclusive part
-        # ToDo:
+        # Htlc is made up of 2 parts: rsmc and hlock part
+        sign_hashcode, sign_rcode = cls.get_default_rcode()
         rsmc_commitment = HtlcMessage.sign_content(
-            typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
-            valueList=[channel_name, nonce, payer_address, payer_balance, payee_address, payee_balance],
+            typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256''bytes32', 'bytes32'],
+            valueList=[channel_name, nonce, payer_address, payer_balance, payee_address, payee_balance,
+                       sign_hashcode, sign_rcode],
             privtKey = wallet._key.private_key_string)
 
-        # inconclusive part
+        # hlock parts
         hlock_commitment = HtlcMessage.sign_content(
             start=5,
             typeList=['bytes32', 'uint256', 'address', 'address', 'uint256', 'uint256', 'bytes32'],
@@ -439,13 +460,11 @@ class HtlcMessage(HtlcBase):
             privtKey = wallet._key.private_key_string)
 
         # # add trade to database
-        # # ToDo: need re-sign all unconfirmed htlc message later
         htlc_trade = Channel.htlc_trade(
             type=EnumTradeType.TRADE_TYPE_HTLC, role=EnumTradeRole.TRADE_ROLE_FOUNDER, asset_type=asset_type,
             balance=payer_balance, peer_balance=payee_balance, payment=payment, hashcode=hashcode, delay_block=end_block_height,
             commitment=rsmc_commitment, delay_commitment=hlock_commitment
         )
-
         Channel.add_trade(channel_name, nonce=nonce, **htlc_trade)
 
         # generate the messages
@@ -473,19 +492,15 @@ class HtlcMessage(HtlcBase):
         return None
 
     @classmethod
-    def this_point(cls, sender, router=[]):
+    def this_jump(cls, sender, router=[]):
         for jumps in router:
             if sender in jumps:
                 return router.index(jumps)
 
         return None
 
-    @classmethod
-    def is_first_sender(cls, router, sender):
-        return router and sender in router[0]
 
-
-class HtlcResponsesMessage(TransactionBase):
+class HtlcResponsesMessage(HtlcBase):
     """
     { "MessageType":"HtlcGSign",
       "Sender": self.receiver,
@@ -501,22 +516,6 @@ class HtlcResponsesMessage(TransactionBase):
     """
     _message_name = 'HtlcSign'
 
-    def __init__(self, message, wallet):
-        super().__init__(message)
-
-        self.sender_balance = self.message_body.get('SenderBalance')
-        self.receiver_balance = self.message_body.get('ReceiverBalance')
-        self.commitment = self.message_body.get('Commitment')
-        self.payment = self.message_body.get('Payment')
-        self.delay_block = self.message_body.get('DelayBlock')
-        self.delay_commitment = self.message_body.get('DelayCommitment')
-        self.hashcode = self.message_body.get('HashR')
-
-        self.router = message.get('Router', [])
-        self.next_router = message.get('Next', None)
-
-        self.wallet = wallet
-
     def check_if_the_last_router(self):
         return self.wallet.url == self.router[-1][0]
 
@@ -531,16 +530,10 @@ class HtlcResponsesMessage(TransactionBase):
             self.check_channel_state(self.channel_name)
             self.check_router(self.router, self.hashcode)
             self.verify()
-
-            # check the nonce
-            if nonce != int(self.nonce):
-                LOG.error('Incompatible nonce<self>')
-                raise GoTo(EnumResponseStatus.RESPONSE_TRADE_WITH_INCOMPATIBLE_NONCE,
-                           'Incompatible nonce<self: {}, peer: {}>'.format(nonce, self.nonce))
-
+            _, nonce = self.check_nonce(self.nonce, self.channel_name)
             _, payer_balance, payee_balance = self.check_balance(
-                self.channel_name, self.asset_type, self.receiver_address, self.sender_balance,
-                self.sender_address, self.receiver_balance, is_htcl_type=True, payment=self.payment)
+                self.channel_name, self.asset_type, self.sender_address, self.sender_balance,
+                self.receiver_address, self.receiver_balance, is_htcl_type=True)
 
             # update transaction
             Channel.update_trade(self.channel_name, int(self.nonce), peer_commitment=self.commitment,
@@ -562,8 +555,8 @@ class HtlcResponsesMessage(TransactionBase):
             self.rollback_resource(self.channel_name, nonce, status=self.status)
 
 
-    @staticmethod
-    def create(wallet, channel_name, asset_type, tx_nonce, sender, receiver, payment, sender_balance, receiver_balance,
+    @classmethod
+    def create(cls, wallet, channel_name, asset_type, tx_nonce, sender, receiver, payment, sender_balance, receiver_balance,
                hashcode, delay_block, peer_commitment, peer_hlock_commitment, router, next_router, comments=None):
         """
 
@@ -597,10 +590,11 @@ class HtlcResponsesMessage(TransactionBase):
             is_htcl_type=True, payment=payment )
 
         # 2 parts in htlc message: conclusive and inconclusive part
-        # ToDo:
+        sign_hashcode, sign_rcode = cls.get_default_rcode()
         rsmc_commitment = HtlcResponsesMessage.sign_content(
-            typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
-            valueList=[channel_name, nonce, payer_address, payer_balance, payee_address, payee_balance],
+            typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256', 'bytes32', 'bytes32'],
+            valueList=[channel_name, nonce, payer_address, payer_balance, payee_address, payee_balance,
+                       sign_hashcode, sign_rcode],
             privtKey = wallet._key.private_key_string)
 
         hlock_commitment = HtlcResponsesMessage.sign_content(
@@ -615,7 +609,6 @@ class HtlcResponsesMessage(TransactionBase):
             balance=payee_balance, peer_balance=payer_balance, payment=payment, hashcode=hashcode,
             delay_block=delay_block, commitment=rsmc_commitment, peer_commitment=peer_commitment,
             delay_commitment=hlock_commitment, peer_delay_commitment=peer_hlock_commitment, channel=channel_name)
-
         Channel.add_trade(channel_name, nonce=nonce, **htlc_trade)
 
         # create message

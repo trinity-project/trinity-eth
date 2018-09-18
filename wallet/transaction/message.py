@@ -441,12 +441,8 @@ class TransactionBase(Message):
         :param payment:
         :return:
         """
-        # failure action
-        # if status == EnumResponseStatus.RESPONSE_TRADE_WITH_INCOMPATIBLE_NONCE.name:
-        #     Channel.delete_trade(channel_name, int(nonce))
-
         if status is not None and status != EnumResponseStatus.RESPONSE_OK.name:
-            event_machine.unregister_event(channel_name)
+            Channel.delete_trade(channel_name, int(nonce))
 
     @classmethod
     def is_hlock_to_rsmc(cls, hashcode):
@@ -469,7 +465,11 @@ class TransactionBase(Message):
             htlc_trade = htlc_trade[0]
             return hashcode, htlc_trade.rcode
         else:
-            return Channel._trade_hash_rcode_default, Channel._trade_hash_rcode_default
+            return cls.get_default_rcode()
+
+    @classmethod
+    def get_default_rcode(cls):
+        return Channel._trade_hash_rcode_default, Channel._trade_hash_rcode_default
 
     @classmethod
     def get_htlc_trade_by_hashr(cls, channel_name, hashcode):
