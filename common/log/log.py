@@ -66,7 +66,7 @@ log_settings = {
 def init_logger(log_path = None, wallet_port=None, file_name=None):
     init_log_path = log_path if log_path else TRINITY_LOG_PATH
     if not wallet_port:
-        init_log_path = os.path.join('{}'.format(wallet_port))
+        init_log_path = os.path.join(init_log_path, '{}'.format(wallet_port))
     init_filename = file_name if file_name else 'trinity.log'
 
     # create the common.log path
