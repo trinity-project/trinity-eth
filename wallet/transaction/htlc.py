@@ -531,12 +531,7 @@ class HtlcResponsesMessage(HtlcBase):
             self.check_channel_state(self.channel_name)
             self.check_router(self.router, self.hashcode)
             self.verify()
-
-            if nonce != self.nonce:
-                raise GoTo(
-                    EnumResponseStatus.RESPONSE_TRADE_WITH_INCOMPATIBLE_NONCE,
-                    'Nonce is incompatible. self nonce<{}>, peer nonce<{}>'.format(nonce, self.nonce)
-                )
+            _, nonce = self.check_nonce(self.nonce + 1, self.channel_name)
             _, payer_balance, payee_balance = self.check_balance(
                 self.channel_name, self.asset_type, self.sender_address, self.sender_balance,
                 self.receiver_address, self.receiver_balance, is_htcl_type=True, payment=self.payment)
