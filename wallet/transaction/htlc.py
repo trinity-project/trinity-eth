@@ -446,7 +446,7 @@ class HtlcMessage(HtlcBase):
         # Htlc is made up of 2 parts: rsmc and hlock part
         sign_hashcode, sign_rcode = cls.get_default_rcode()
         rsmc_commitment = HtlcMessage.sign_content(
-            typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256''bytes32', 'bytes32'],
+            typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256', 'bytes32', 'bytes32'],
             valueList=[channel_name, nonce, payer_address, payer_balance, payee_address, payee_balance,
                        sign_hashcode, sign_rcode],
             privtKey = wallet._key.private_key_string)
@@ -455,8 +455,7 @@ class HtlcMessage(HtlcBase):
         hlock_commitment = HtlcMessage.sign_content(
             start=5,
             typeList=['bytes32', 'uint256', 'address', 'address', 'uint256', 'uint256', 'bytes32'],
-            valueList=[channel_name, nonce, payer_address, payee_address,
-                       end_block_height, int(payment), hashcode],
+            valueList=[channel_name, nonce, payer_address, payee_address, end_block_height, int(payment), hashcode],
             privtKey = wallet._key.private_key_string)
 
         # # add trade to database
