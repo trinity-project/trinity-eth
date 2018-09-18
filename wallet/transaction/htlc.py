@@ -306,7 +306,7 @@ class HtlcMessage(HtlcBase):
             _, nonce = self.check_nonce(self.nonce, self.channel_name)
             _, payer_balance, payee_balance = self.check_balance(
                 self.channel_name, self.asset_type, self.sender_address, self.sender_balance,
-                self.receiver_address, self.receiver_balance, is_htcl_type=True)
+                self.receiver_address, self.receiver_balance, is_htcl_type=True, payment=self.payment)
 
             # transform the message to the next router if not last router node
             next_router = self.next_router
@@ -538,7 +538,7 @@ class HtlcResponsesMessage(HtlcBase):
             _, nonce = self.check_nonce(self.nonce, self.channel_name)
             _, payer_balance, payee_balance = self.check_balance(
                 self.channel_name, self.asset_type, self.sender_address, self.sender_balance,
-                self.receiver_address, self.receiver_balance, is_htcl_type=True)
+                self.receiver_address, self.receiver_balance, is_htcl_type=True, payment=self.payment)
 
             # update transaction
             Channel.update_trade(self.channel_name, int(self.nonce), peer_commitment=self.commitment,
