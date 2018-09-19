@@ -246,6 +246,8 @@ class HtlcBase(TransactionBase):
     """
 
     """
+    _sign_type_list = ['bytes32', 'uint256', 'address', 'address', 'uint256', 'uint256', 'bytes32']
+
     def __init__(self, message, wallet):
         super().__init__(message)
 
@@ -313,6 +315,23 @@ class HtlcMessage(HtlcBase):
             _, payer_balance, payee_balance = self.check_balance(
                 self.channel_name, self.asset_type, self.sender_address, self.sender_balance,
                 self.receiver_address, self.receiver_balance, is_htcl_type=True, payment=self.payment)
+
+            sign_hashcode, sign_rcode = self.get_default_rcode()
+            self.check_signature(
+                self.wallet,
+                type_list=RsmcMessage._sign_type_list,
+                value_list=[self.channel_name, self.nonce, self.sender_address, int(self.sender_balance),
+                            self.receiver_address, int(self.receiver_balance), sign_hashcode, sign_rcode],
+                signature=self.commitment
+            )
+
+            self.check_signature(
+                self.wallet,
+                type_list=self._sign_type_list,
+                value_list=[self.channel_name, self.nonce, self.sender_address, self.receiver_address,
+                            int(self.delay_block), int(self.payment), self.hashcode],
+                signature=self.delay_commitment
+            )
 
             # transform the message to the next router if not last router node
             next_router = self.next_router
@@ -462,7 +481,7 @@ class HtlcMessage(HtlcBase):
         # Htlc is made up of 2 parts: rsmc and hlock part
         sign_hashcode, sign_rcode = cls.get_default_rcode()
         rsmc_commitment = HtlcMessage.sign_content(
-            typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256', 'bytes32', 'bytes32'],
+            typeList=RsmcMessage._sign_type_list,
             valueList=[channel_name, nonce, payer_address, payer_balance, payee_address, payee_balance,
                        sign_hashcode, sign_rcode],
             privtKey = wallet._key.private_key_string)
@@ -557,6 +576,23 @@ class HtlcResponsesMessage(HtlcBase):
                 self.channel_name, self.asset_type, self.receiver_address, self.sender_balance,
                 self.sender_address, self.receiver_balance, is_htcl_type=True, payment=self.payment)
 
+            sign_hashcode, sign_rcode = self.get_default_rcode()
+            self.check_signature(
+                self.wallet,
+                type_list=RsmcMessage._sign_type_list,
+                value_list=[self.channel_name, self.nonce, self.receiver_address, int(self.sender_balance),
+                            self.sender_address, int(self.receiver_balance), sign_hashcode, sign_rcode],
+                signature=self.commitment
+            )
+
+            self.check_signature(
+                self.wallet,
+                type_list=self._sign_type_list,
+                value_list=[self.channel_name, self.nonce, self.receiver_address, self.sender_address,
+                            int(self.delay_block), int(self.payment), self.hashcode],
+                signature=self.delay_commitment
+            )
+
             # update transaction
             Channel.update_trade(self.channel_name, int(self.nonce), peer_commitment=self.commitment,
                                  peer_delay_commitment=self.delay_commitment)
@@ -616,7 +652,7 @@ class HtlcResponsesMessage(HtlcBase):
         # 2 parts in htlc message: conclusive and inconclusive part
         sign_hashcode, sign_rcode = cls.get_default_rcode()
         rsmc_commitment = HtlcResponsesMessage.sign_content(
-            typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256', 'bytes32', 'bytes32'],
+            typeList=RsmcMessage._sign_type_list,
             valueList=[channel_name, nonce, payer_address, payer_balance, payee_address, payee_balance,
                        sign_hashcode, sign_rcode],
             privtKey = wallet._key.private_key_string)

@@ -22,12 +22,20 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
+from enum import IntEnum
 from common.singleton import SingletonClass
 from common.log import LOG
 from common.number import TrinityNumber
+from common.exceptions import ContractEventException
 from blockchain.ethInterface import Interface as EthInterface
 from blockchain.web3client import Client as EthWebClient
 from lightwallet.Settings import settings
+
+
+class EnumContractEventStatus(IntEnum):
+    """"""
+    # signature related status
+    CONTRACT_SOLIDITY_HASH_EXCEPTION = 0x0
 
 
 class ContractEventInterface(metaclass=SingletonClass):
@@ -62,6 +70,17 @@ class ContractEventInterface(metaclass=SingletonClass):
 
         content = cls._eth_client.sign_args(typeList, valueList, privtKey).decode()
         return '0x' + content
+
+    @classmethod
+    def solidity_hash(cls, type_list, value_list):
+        try:
+            return cls._eth_client.solidity_hash(type_list, value_list)
+        except Exception as error:
+            raise ContractEventException(
+                EnumContractEventStatus.CONTRACT_SOLIDITY_HASH_EXCEPTION,
+                'Solidity Hash error with type_list<{}>, value_list<{}>. Exception: {}' \
+                    .format(type_list, value_list, error)
+            )
 
     @classmethod
     def approve(cls, address, deposit, private_key, gwei_coef=1):

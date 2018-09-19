@@ -27,8 +27,7 @@ from .response import EnumResponseStatus
 
 from common.log import LOG
 from common.common import uri_parser
-from common.number import TrinityNumber
-from common.exceptions import GoTo
+from common.exceptions import GoTo, TrinityException
 from model.channel_model import EnumChannelState
 from wallet.channel import Channel
 from wallet.channel import EnumTradeType, EnumTradeRole, EnumTradeState
@@ -41,6 +40,8 @@ class FounderBase(Message):
     """
     Descriptions: for creating channels
     """
+    _sign_type_list = ['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256']
+
     def __init__(self, message, wallet):
         super(FounderBase, self).__init__(message)
 
@@ -156,13 +157,19 @@ class FounderMessage(FounderBase):
             # some checks and verification for founder message
             self.verify()
             self.check_nonce(self.nonce)
-            self.check_signature()
+            self.check_signature(
+                self.wallet,
+                type_list=self._sign_type_list,
+                value_list=[self.channel_name, self.nonce, self.sender_address, int(self.founder_deposit),
+                            self.receiver_address, int(self.partner_deposit)],
+                signature=self.commitment
+            )
 
             # send response
             FounderResponsesMessage.create(self.wallet, self.channel_name, self.asset_type,
                                            self.sender, self.founder_deposit,
                                            self.receiver, self.partner_deposit, self.commitment,)
-        except GoTo as error:
+        except TrinityException as error:
             LOG.error(error)
             status = error.reason
         except Exception as error:
@@ -209,7 +216,7 @@ class FounderMessage(FounderBase):
 
         # Sign this data to hash value
         commitment = FounderMessage.sign_content(
-            typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
+            typeList=FounderMessage._sign_type_list,
             valueList=[channel_name, nonce, founder_address, founder_deposit, partner_address, partner_deposit],
             privtKey = wallet._key.private_key_string )
 
@@ -279,7 +286,14 @@ class FounderResponsesMessage(FounderBase):
             # some checks and verification for founder message
             self.verify()
             self.check_nonce(self.nonce)
-            self.check_signature()
+            founder_trade = Channel.query_trade(self.channel_name, self.nonce)[0]
+            self.check_signature(
+                self.wallet,
+                type_list=self._sign_type_list,
+                value_list=[self.channel_name, self.nonce, self.receiver_address, int(founder_trade.balance),
+                            self.sender_address, int(founder_trade.peer_balance)],
+                signature=self.commitment
+            )
 
             # update the trade
             Channel.update_trade(self.channel_name, self.nonce, peer_commitment=self.commitment)
@@ -317,7 +331,7 @@ class FounderResponsesMessage(FounderBase):
         partner_address, _, _ = uri_parser(partner)
         # Sign this data to the
         commitment = FounderResponsesMessage.sign_content(
-            typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
+            typeList=FounderResponsesMessage._sign_type_list,
             valueList=[channel_name, nonce, founder_address, founder_deposit, partner_address, partner_deposit],
             privtKey = wallet._key.private_key_string )
 

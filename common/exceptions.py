@@ -46,3 +46,8 @@ class ChannelException(TrinityException):
 class UnsupportedTrinityNumber(Exception):
     """Unsupported trinity number type"""
     pass
+
+
+class ContractEventException(TrinityException):
+    """contract event exception error"""
+    pass

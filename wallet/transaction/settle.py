@@ -38,6 +38,8 @@ class SettleBase(Message):
     """
     Descriptions: for quick-closing channels
     """
+    _sign_type_list = ['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256']
+
     def __init__(self, message, wallet):
         super(SettleBase, self).__init__(message)
 
@@ -124,7 +126,13 @@ class SettleMessage(SettleBase):
             self.check_nonce(self.nonce)
             self.check_balance(self.channel_name, self.asset_type, self.sender_address, self.sender_balance,
                                self.receiver_address, self.receiver_balance)
-            self.check_signature()
+            self.check_signature(
+                self.wallet,
+                type_list=self._sign_type_list,
+                value_list=[self.channel_name, self.nonce, self.sender_address, int(self.sender_balance),
+                            self.receiver_address, int(self.receiver_balance)],
+                signature=self.commitment
+            )
 
             # To create settle response message
             SettleResponseMessage.create(self.wallet, self.channel_name, self.asset_type, self.nonce,
@@ -170,7 +178,7 @@ class SettleMessage(SettleBase):
         receiver_balance = balance.get(receiver_address, {}).get(asset_type)
 
         commitment = SettleMessage.sign_content(
-            typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
+            typeList=SettleMessage._sign_type_list,
             valueList=[channel_name, nonce, sender_address, int(sender_balance), receiver_address, int(receiver_balance)],
             privtKey = wallet._key.private_key_string)
 
@@ -227,7 +235,14 @@ class SettleResponseMessage(SettleBase):
             # common check arguments
             self.verify()
             self.check_nonce(self.nonce)
-            self.check_signature()
+            settle_trade = Channel.query_trade(self.channel_name, self.nonce)[0]
+            self.check_signature(
+                self.wallet,
+                type_list=self._sign_type_list,
+                value_list=[self.channel_name, self.nonce, self.receiver_address, int(settle_trade.balance),
+                            self.sender_address, int(settle_trade.peer_balance)],
+                signature=self.commitment
+            )
 
             # update the trade
             Channel.update_trade(self.channel_name, SettleResponseMessage._SETTLE_NONCE, peer_commitment=self.commitment)
@@ -263,7 +278,7 @@ class SettleResponseMessage(SettleBase):
 
         # sign the contents
         commitment = SettleResponseMessage.sign_content(
-            typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256'],
+            typeList=SettleResponseMessage._sign_type_list,
             valueList=[channel_name, nonce, sender_address, int(sender_balance), receiver_address, int(receiver_balance)],
             privtKey = wallet._key.private_key_string)
 

@@ -38,6 +38,8 @@ class RsmcBase(TransactionBase):
     """
     Description:
     """
+    _sign_type_list = ['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256', 'bytes32', 'bytes32']
+
     def __init__(self, message, wallet=None):
         super(RsmcBase, self).__init__(message)
 
@@ -241,6 +243,15 @@ class RsmcResponsesMessage(RsmcBase):
             self.check_balance(self.channel_name, self.asset_type, self.payer, self.sender_balance,
                                self.payee, self.receiver_balance, hlock_to_rsmc=is_htlc_to_rsmc, payment=self.payment)
 
+            sign_hashcode, sign_rcode = self.get_rcode(self.channel_name, self.hashcode)
+            self.check_signature(
+                self.wallet,
+                type_list=self._sign_type_list,
+                value_list=[self.channel_name, nonce, self.payer, int(self.sender_balance),
+                            self.payee, int(self.receiver_balance), sign_hashcode, sign_rcode],
+                signature=self.commitment
+            )
+
             if 0 == self.role_index:
                 self.rsmc_sign(self.wallet, self.channel_name, self.asset_type, self.nonce, self.sender, self.receiver,
                                self.payment, self.sender_balance, self.receiver_balance, self.rsmc_sign_role,
@@ -313,7 +324,7 @@ class RsmcResponsesMessage(RsmcBase):
         # sign the trade
         sign_hashcode, sign_rcode = cls.get_rcode(channel_name, hashcode)
         commitment = RsmcResponsesMessage.sign_content(
-            typeList=['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256', 'bytes32', 'bytes32'],
+            typeList=RsmcResponsesMessage._sign_type_list,
             valueList=[channel_name, nonce, payer_address, payer_balance, payee_address, payee_balance,
                        sign_hashcode, sign_rcode],
             privtKey = wallet._key.private_key_string)

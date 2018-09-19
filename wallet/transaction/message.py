@@ -177,8 +177,17 @@ class Message(object):
         return True, net_magic
 
     @classmethod
-    def check_signature(cls):
-        return True
+    def check_signature(cls, wallet, type_list, value_list, signature):
+        """"""
+        if not (wallet and type_list and value_list and signature):
+            raise GoTo(
+                EnumResponseStatus.RESPONSE_ILLEGAL_INPUT_PARAMETER,
+                'Illegal input parameters: type_list<{}>, value_list<{}>, signature<{}>' \
+                    .format(type_list, value_list, signature)
+            )
+
+        sign_hash =  cls.contract_event_api().solidity_hash(type_list, value_list)
+        return wallet.address == wallet.recoverHash(sign_hash, signature=signature)
 
     @classmethod
     def check_nonce(cls, nonce, channel_name=''):
