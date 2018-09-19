@@ -522,12 +522,14 @@ class Channel(object):
                 result = trigger(self_address, channel_name, nonce,
                                  self_address, trade.balance,
                                  peer_address, trade.peer_balance,
+                                 trade.hashcode, trade.rcode,
                                  trade.commitment, trade.peer_commitment,
                                  sign_key, gwei_coef)
             else:
                 result = trigger(self_address, channel_name, nonce,
                                  peer_address, trade.peer_balance,
-                                 self_address, trade.peer_balance,
+                                 self_address, trade.balance,
+                                 trade.hashcode, trade.rcode,
                                  trade.peer_commitment, trade.commitment,
                                  sign_key, gwei_coef)
 
