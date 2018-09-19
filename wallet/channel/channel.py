@@ -593,7 +593,7 @@ class Channel(object):
         rsmc_body = cls.trade_body(type, role, asset_type, balance, peer_balance, commitment, peer_commitment, state)
         hashcode = hashcode if hashcode else Channel._trade_hash_rcode_default
         rcode = rcode if rcode else Channel._trade_hash_rcode_default
-        rsmc_body.update({'hashcode': hashcode, 'rcode': rcode, 'payment': payment})
+        rsmc_body.update({'hashcode': hashcode, 'rcode': rcode, 'payment': str(payment)})
         return rsmc_body
 
     @classmethod
