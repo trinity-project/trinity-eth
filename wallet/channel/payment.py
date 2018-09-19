@@ -63,7 +63,6 @@ class Payment(metaclass=SingletonClass):
             asset_type = asset_type.upper()
 
         hashcode = hashcode.strip()
-        hashcode = hashcode.replace('0x', '')
 
         code = "{uri}&{net_magic}&{hashcode}&{asset_type}&{payment}&{comments}".format(uri=receiver,
                                                                                        net_magic=get_magic(),
@@ -97,7 +96,6 @@ class Payment(metaclass=SingletonClass):
         keys=['uri', 'net_magic', 'hashcode', 'asset_type', 'payment', 'comments']
 
         result = dict(zip(keys, info))
-        result['hashcode'] = '0x'+result['hashcode']
 
         return True, result
 

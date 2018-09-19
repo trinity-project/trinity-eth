@@ -506,12 +506,6 @@ class Channel(object):
                     LOG.debug('No need update transaction. nonce<{}>, latest_nonce<{}>'.format(nonce, latest_nonce))
                     return
                 nonce = latest_nonce
-
-            if 1 == nonce:
-                trade_rsmc = trade.founder
-            else:
-                trade_rsmc = trade.rsmc
-
         except Exception as error:
             LOG.error('No trade record could be forced to release. channel<{}>, nonce<{}>. Exception: {}' \
                       .format(channel_name, nonce, error))
@@ -522,19 +516,19 @@ class Channel(object):
             peer_address, _, _ = uri_parser(peer_uri)
 
             LOG.debug('Force to close channel<{}> with nonce<{}>'.format(channel_name, nonce))
-            LOG.debug('Trade RSMC part: {}'.format(trade_rsmc))
-            trade_role = trade_rsmc.get('role')
+            LOG.debug('Trade nonce: {}'.format(trade.nonce))
+            trade_role = trade.role
             if EnumTradeRole.TRADE_ROLE_FOUNDER.name == trade_role:
                 result = trigger(self_address, channel_name, nonce,
-                                 self_address, trade_rsmc.get('balance'),
-                                 peer_address, trade_rsmc.get('peer_balance'),
-                                 trade_rsmc.get('commitment'), trade_rsmc.get('peer_commitment'),
+                                 self_address, trade.balance,
+                                 peer_address, trade.peer_balance,
+                                 trade.commitment, trade.peer_commitment,
                                  sign_key, gwei_coef)
             else:
                 result = trigger(self_address, channel_name, nonce,
-                                 peer_address, trade_rsmc.get('peer_balance'),
-                                 self_address, trade_rsmc.get('balance'),
-                                 trade_rsmc.get('peer_commitment'), trade_rsmc.get('commitment'),
+                                 peer_address, trade.peer_balance,
+                                 self_address, trade.peer_balance,
+                                 trade.peer_commitment, trade.commitment,
                                  sign_key, gwei_coef)
 
             return result
