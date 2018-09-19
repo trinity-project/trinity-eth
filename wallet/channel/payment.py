@@ -130,7 +130,7 @@ class Payment(metaclass=SingletonClass):
         try:
             htlc_lock = Channel.batch_query_trade(channel_name, filters={'type': EnumTradeType.TRADE_TYPE_HTLC.name,
                                                                          'hashcode': hashcode})[0]
-            Channel.update_trade(channel_name, htlc_lock.nonce, state=EnumTradeState.confirming.name)
+            Channel.update_trade(channel_name, htlc_lock.nonce, state=EnumTradeState.confirmed.name)
 
             return
         except Exception as error:
