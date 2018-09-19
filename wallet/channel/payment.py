@@ -111,7 +111,7 @@ class Payment(metaclass=SingletonClass):
     @classmethod
     def verify_hr(cls, hashcode, rcode):
         try:
-            rcode = rcode.strip(' 0x')
+            rcode = rcode.replace('0x', '').strip()
             return hashcode.__contains__(cls.hash_r(rcode).__str__())
         except Exception as error:
             raise GoTo('Invalid RCode<{}> for HashR<{}>'.format(rcode, hashcode))
