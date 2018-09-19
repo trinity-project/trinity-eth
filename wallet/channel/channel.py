@@ -307,8 +307,8 @@ class Channel(object):
     @classmethod
     def latest_confirmed_trade(cls, channel_name):
         try:
-            filters = {'$or': [{'founder.state': EnumTradeState.confirmed.name},
-                               {'rsmc.state': EnumTradeState.confirmed.name}]}
+            filters = {'$or': [{'state': EnumTradeState.confirmed_onchain.name},
+                               {'state': EnumTradeState.confirmed.name}]}
             trade = APITransaction(channel_name).sort(key='nonce', filters=filters)[0]
         except Exception as error:
             LOG.error('No transaction records were found for channel<{}>. Exception: {}'.format(channel_name, error))
