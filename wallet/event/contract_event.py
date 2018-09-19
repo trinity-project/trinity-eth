@@ -170,11 +170,12 @@ class ContractEventInterface(metaclass=SingletonClass):
 
     @classmethod
     def close_channel(cls, invoker, channel_id, nonce, founder, founder_balance, partner, partner_balance,
-                      founder_signature, partner_signature, invoker_key, gwei_coef=1):
+                      lock_hash, lock_secret, founder_signature, partner_signature, invoker_key, gwei_coef=1):
         try:
             result = cls._eth_interface.close_channel(invoker, channel_id, nonce,
                                                       founder, int(founder_balance),
                                                       partner, int(partner_balance),
+                                                      lock_hash, lock_secret,
                                                       founder_signature, partner_signature, invoker_key,
                                                       gwei_coef=gwei_coef)
             LOG.debug('close_channel result: {}'.format(result))
@@ -185,11 +186,12 @@ class ContractEventInterface(metaclass=SingletonClass):
 
     @classmethod
     def update_close_channel(cls, invoker, channel_id, nonce, founder, founder_balance, partner, partner_balance,
-                      founder_signature, partner_signature, invoker_key, gwei_coef=1):
+                             lock_hash, lock_secret, founder_signature, partner_signature, invoker_key, gwei_coef=1):
         try:
             result = cls._eth_interface.update_transaction(invoker, channel_id, nonce,
                                                            founder, int(founder_balance),
                                                            partner, int(partner_balance),
+                                                           lock_hash, lock_secret,
                                                            founder_signature, partner_signature, invoker_key,
                                                            gwei_coef= gwei_coef)
             LOG.debug('update_close_channel result: {}'.format(result))
