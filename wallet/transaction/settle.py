@@ -235,7 +235,7 @@ class SettleResponseMessage(SettleBase):
             # common check arguments
             self.verify()
             self.check_nonce(self.nonce)
-            settle_trade = Channel.query_trade(self.channel_name, self.nonce)[0]
+            settle_trade = Channel.query_trade(self.channel_name, self.nonce)
             self.check_signature(
                 self.wallet,
                 type_list=self._sign_type_list,

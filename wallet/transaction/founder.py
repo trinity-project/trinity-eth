@@ -286,7 +286,7 @@ class FounderResponsesMessage(FounderBase):
             # some checks and verification for founder message
             self.verify()
             self.check_nonce(self.nonce)
-            founder_trade = Channel.query_trade(self.channel_name, self.nonce)[0]
+            founder_trade = Channel.query_trade(self.channel_name, self.nonce)
             self.check_signature(
                 self.wallet,
                 type_list=self._sign_type_list,
