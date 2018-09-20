@@ -116,7 +116,7 @@ class UserPromptInterface(PromptInterface):
             "channel create {partner} {asset_type} {deposit}",
             "channel tx {payment_link}/{receiver} {asset_type} {count}",
             "channel close {channel}",
-            "channel force-close {channel} {gwei}",
+            "channel force-close {channel}",
             "channel peer [state=]|[peer=]|[channel=]",
             "channel payment {asset}, {count}, [{comments}]",
             "channel qrcode {on/off}",
@@ -482,14 +482,18 @@ class UserPromptInterface(PromptInterface):
         :return:
         """
         channel_name = get_arg(arguments, 1)
+        nonce = get_arg(arguments, 2, True)
+        is_debug = False
+        if 'debug' in arguments:
+            is_debug = True
 
         console_log.console("Force to close channel {}".format(channel_name))
         if channel_name:
             channel_event = ChannelForceSettleEvent(channel_name, True)
             channel_event.register_args(EnumEventAction.EVENT_EXECUTE,
                                         invoker_uri=self.Wallet.url, channel_name=channel_name,
-                                        nonce=None, invoker_key=self.Wallet._key.private_key_string,
-                                        is_debug=False)
+                                        nonce=nonce, invoker_key=self.Wallet._key.private_key_string,
+                                        is_debug=is_debug)
             ws_instance.register_event(channel_event)
         else:
             console_log.warn("No Channel Create")

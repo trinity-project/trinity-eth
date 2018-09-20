@@ -275,6 +275,16 @@ class HtlcBase(TransactionBase):
 
         return True
 
+    @classmethod
+    def check_hashcode_used(cls, channel_name, hashcode):
+        try:
+            trade_record = Channel.batch_query_trade(channel_name, filters={'hashcode': hashcode})[0]
+        except Exception as error:
+            return True
+        else:
+            raise GoTo(EnumResponseStatus.RESPONSE_TRADE_HASHR_ALREADY_EXISTED,
+                       'HashR<{}> already used by trade with nonce<{}>'.format(hashcode, trade_record.nonce))
+
 
 class HtlcMessage(HtlcBase):
     """
@@ -308,6 +318,7 @@ class HtlcMessage(HtlcBase):
         trigger_rresponse = False
         status = EnumResponseStatus.RESPONSE_OK
         try:
+            self.check_hashcode_used(self.channel_name, self.hashcode)
             self.check_channel_state(self.channel_name)
             self.check_router(self.router, self.hashcode)
             self.verify()
