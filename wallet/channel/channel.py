@@ -445,7 +445,7 @@ class Channel(object):
                         comments=comments)
             else:
                 # RSMC transaction
-                trigger(channel_name, asset_type, wallet.url, receiver, count, hashcode, comments=comments)
+                trigger(channel_name, asset_type, wallet.url, receiver, count, hashcode=None, comments=comments)
         except Exception as error:
             LOG.error('Failed to transfer {} {} to receiver<{}>. Exception: {}' \
                       .format(count, asset_type, receiver, error))
