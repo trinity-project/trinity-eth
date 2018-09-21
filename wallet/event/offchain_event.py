@@ -185,11 +185,11 @@ class ChannelHtlcUnlockEvent(ChannelOfflineEventBase):
                   .format(self.event_arguments.args, self.event_arguments.kwargs))
 
         # close channel event
-        result = Channel.force_release_htlc(invoker_uri, channel_name, invoker_key, gwei_coef=self.gwei_coef,
+        result = Channel.force_release_htlc(invoker_uri, channel_name, hashcode, invoker_key, gwei_coef=self.gwei_coef,
                                             trigger=self.contract_event_api.htlc_unlock_payment, is_debug=is_debug)
 
         # set channel settling
-        if result is not None and 'success' in result.values():
+        if result and 'success' in result.values():
             Channel.update_channel(self.channel_name, state=EnumChannelState.SETTLED.name)
             self.next_stage()
 
@@ -206,7 +206,7 @@ class ChannelPunishHtlcUnlockEvent(ChannelUpdateSettleEvent):
 
 class ChannelSettleHtlcUnlockEvent(ChannelOfflineEventBase):
     def __init__(self, channel_name, is_event_founder=True):
-        super(ChannelSettleHtlcUnlockEvent, self).__init__(channel_name, EnumEventType.EVENT_TYPE_END_SETTLE,
+        super(ChannelSettleHtlcUnlockEvent, self).__init__(channel_name, EnumEventType.EVENT_TYPE_SETTLE_HTLC_UNLOCK,
                                                      is_event_founder)
 
     def prepare(self, block_height, *args, **kwargs):

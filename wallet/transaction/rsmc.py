@@ -47,7 +47,7 @@ class RsmcBase(TransactionBase):
         self.sender_balance = self.message_body.get('SenderBalance')
         self.receiver_balance = self.message_body.get('ReceiverBalance')
         self.commitment = self.message_body.get('Commitment')
-        self.role_index = int(self.message_body.get('RoleIndex'))
+        self.role_index = int(self.message_body.get('RoleIndex', -1))
         self.hashcode = self.message_body.get('HashR')
         self.wallet = wallet
 
