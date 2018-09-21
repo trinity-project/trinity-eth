@@ -52,6 +52,11 @@ class EnumEventType(IntEnum):
     EVENT_TYPE_UPDATE_SETTLE = 0x11
     EVENT_TYPE_END_SETTLE = 0x12
 
+    # Event for htlc lock
+    EVENT_TYPE_HTLC_UNLOCK = 0x20
+    EVENT_TYPE_PUNISH_HTLC_UNLOCK = 0x21
+    EVENT_TYPE_SETTLE_HTLC_UNLOCK = 0x22
+
     # test event
     EVENT_TYPE_TEST_STATE = 0xE0
 

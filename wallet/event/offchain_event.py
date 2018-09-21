@@ -103,6 +103,11 @@ class ChannelUpdateSettleEvent(ChannelOfflineEventBase):
         super(ChannelUpdateSettleEvent, self).execute(block_height)
 
         # close channel event
+        # ToDo uncomment below codes in future
+        # latest_trade = Channel.latest_confirmed_trade()
+        # if isinstance(nonce, int) and int(nonce) == latest_trade.nonce: # or check balance:
+        #     self.next_stage()
+        #     return
 
         result = Channel.force_release_rsmc(invoker_uri, channel_name, nonce, invoker_key, gwei_coef=self.gwei_coef,
                                             trigger=self.contract_event_api.update_close_channel)
@@ -150,4 +155,80 @@ class ChannelEndSettleEvent(ChannelOfflineEventBase):
 
     def terminate(self, block_height, *args, **kwargs):
         super(ChannelEndSettleEvent, self).terminate(block_height, *args, **kwargs)
+        self.next_stage()
+
+
+class ChannelHtlcUnlockEvent(ChannelOfflineEventBase):
+    def __init__(self, channel_name, is_event_founder=True):
+        super(ChannelHtlcUnlockEvent, self).__init__(channel_name, EnumEventType.EVENT_TYPE_HTLC_UNLOCK,
+                                                    is_event_founder)
+
+    def prepare(self, block_height, *args, **kwargs):
+        super(ChannelHtlcUnlockEvent, self).prepare(block_height, *args, **kwargs)
+        self.next_stage()
+
+    def execute(self, block_height, invoker='', channel_name='', invoker_key=''):
+        """
+
+        :param block_height:
+        :param invoker_uri:
+        :param channel_name:
+        :param trade:
+        :param invoker_key:
+        :param gwei:
+        :return:
+        """
+        super(ChannelHtlcUnlockEvent, self).execute(block_height)
+
+        # close channel event
+        result = self.contract_event_api.end_close_channel(invoker, channel_name, invoker_key, gwei_coef=self.gwei_coef)
+
+        # set channel settling
+        if result is not None and 'success' in result.values():
+            Channel.update_channel(self.channel_name, state=EnumChannelState.CLOSED.name)
+        self.next_stage()
+
+    def terminate(self, block_height, *args, **kwargs):
+        super(ChannelHtlcUnlockEvent, self).terminate(block_height, *args, **kwargs)
+        self.next_stage()
+
+
+class ChannelPunishHtlcUnlockEvent(ChannelUpdateSettleEvent):
+    def __init__(self, channel_name, is_event_founder=True):
+        super(ChannelPunishHtlcUnlockEvent, self).__init__(channel_name, is_event_founder)
+        self.event_type = EnumEventType.EVENT_TYPE_PUNISH_HTLC_UNLOCK
+
+
+class ChannelSettleHtlcUnlockEvent(ChannelOfflineEventBase):
+    def __init__(self, channel_name, is_event_founder=True):
+        super(ChannelSettleHtlcUnlockEvent, self).__init__(channel_name, EnumEventType.EVENT_TYPE_END_SETTLE,
+                                                     is_event_founder)
+
+    def prepare(self, block_height, *args, **kwargs):
+        super(ChannelSettleHtlcUnlockEvent, self).prepare(block_height, *args, **kwargs)
+        self.next_stage()
+
+    def execute(self, block_height, invoker='', channel_name='', invoker_key=''):
+        """
+
+        :param block_height:
+        :param invoker_uri:
+        :param channel_name:
+        :param trade:
+        :param invoker_key:
+        :param gwei:
+        :return:
+        """
+        super(ChannelSettleHtlcUnlockEvent, self).execute(block_height)
+
+        # close channel event
+        result = self.contract_event_api.end_close_channel(invoker, channel_name, invoker_key, gwei_coef=self.gwei_coef)
+
+        # set channel settling
+        if result is not None and 'success' in result.values():
+            Channel.update_channel(self.channel_name, state=EnumChannelState.CLOSED.name)
+        self.next_stage()
+
+    def terminate(self, block_height, *args, **kwargs):
+        super(ChannelSettleHtlcUnlockEvent, self).terminate(block_height, *args, **kwargs)
         self.next_stage()

@@ -47,7 +47,7 @@ class RsmcBase(TransactionBase):
         self.sender_balance = self.message_body.get('SenderBalance')
         self.receiver_balance = self.message_body.get('ReceiverBalance')
         self.commitment = self.message_body.get('Commitment')
-        self.role_index = int(self.message_body.get('RoleIndex', -1))
+        self.role_index = int(self.message_body.get('RoleIndex'))
         self.hashcode = self.message_body.get('HashR')
         self.wallet = wallet
 
@@ -272,9 +272,8 @@ class RsmcResponsesMessage(RsmcBase):
             status = error.reason
         except Exception as error:
             status = EnumResponseStatus.RESPONSE_EXCEPTION_HAPPENED
-            LOG.error('Failed to handle RsmcSign for channel<{}> '.format(self.channel_name),
-                      'nonce<{}>, role_index<{}>.'.format(self.nonce, self.role_index),
-                      'Exception: {}'.format(error))
+            LOG.error('Failed to handle RsmcSign for channel<{}> nonce<{}>, role_index<{}>.Exception: {}' \
+                      .format(self.channel_name, self.nonce, self.role_index, error))
         finally:
             # send error response
             if EnumResponseStatus.RESPONSE_OK != status:
@@ -344,7 +343,7 @@ class RsmcResponsesMessage(RsmcBase):
         rsmc_trade = Channel.rsmc_trade(
             type=EnumTradeType.TRADE_TYPE_RSMC, role=trade_role, asset_type=asset_type,
             balance=self_balance, peer_balance=peer_balance, payment=payment,
-            hashcode=hashcode, rcode=sign_rcode, commitment=commitment)
+            hashcode=sign_hashcode, rcode=sign_rcode, commitment=commitment)
         Channel.add_trade(channel_name, nonce=nonce, **rsmc_trade)
 
         # update message body

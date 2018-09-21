@@ -395,9 +395,8 @@ class HtlcMessage(HtlcBase):
             LOG.error(error)
             status = error.reason
         except Exception as error:
-            LOG.error('Failed to handle Htlc message for channel<{}>, HashR<{}>. Exception:{}'.format(self.channel_name,
-                                                                                                      self.hashcode,
-                                                                                                      error))
+            LOG.error('Failed to handle Htlc message for channel<{}>, HashR<{}>. Exception:{}'
+                      .format(self.channel_name, self.hashcode, error))
             status = EnumResponseStatus.RESPONSE_EXCEPTION_HAPPENED
         finally:
             # failed operation

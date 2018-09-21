@@ -382,11 +382,8 @@ class Channel(object):
         :return:
         """
         if not (wallet and partner and asset_type and deposit):
-            LOG.error('Invalid parameters:',
-                      'wallet<{}>, founder<{}>, partner<{}>, asset_type<{}>, deposit<{}>'.format(wallet,
-                                                                                                 founder, partner,
-                                                                                                 asset_type,
-                                                                                                 deposit))
+            LOG.error('Invalid parameters:wallet<{}>, founder<{}>, partner<{}>, asset_type<{}>, deposit<{}>' \
+                      .format(wallet, founder, partner, asset_type, deposit))
             # here we could use some hooks to register event to handle output console ????
             console_log.error('Illegal mandatory parameters. Please check in your command.')
             return False
@@ -412,8 +409,8 @@ class Channel(object):
             deposit = int(deposit)
             partner_deposit = int(partner_deposit)
             if 0 >= deposit or 0 >= partner_deposit:
-                LOG.error('Could not register channel because of illegal deposit<{}:{}>.'.format(deposit,
-                                                                                                 partner_deposit))
+                LOG.error('Could not register channel because of illegal deposit<{}:{}>.'\
+                          .format(deposit, partner_deposit))
                 return False
 
             try:
@@ -517,19 +514,27 @@ class Channel(object):
 
             LOG.debug('Force to close channel<{}> with nonce<{}>'.format(channel_name, nonce))
             LOG.debug('Trade nonce: {}'.format(trade.nonce))
+
+            # get hashcode and rcode
+            hashcode = None
+            rcode = None
+            if trade.nonce not in [0, 1]:
+                hashcode = trade.hashcode
+                rcode = trade.rcode
+
             trade_role = trade.role
             if EnumTradeRole.TRADE_ROLE_FOUNDER.name == trade_role:
                 result = trigger(self_address, channel_name, nonce,
                                  self_address, trade.balance,
                                  peer_address, trade.peer_balance,
-                                 trade.hashcode, trade.rcode,
+                                 hashcode, rcode,
                                  trade.commitment, trade.peer_commitment,
                                  sign_key, gwei_coef)
             else:
                 result = trigger(self_address, channel_name, nonce,
                                  peer_address, trade.peer_balance,
                                  self_address, trade.balance,
-                                 trade.hashcode, trade.rcode,
+                                 hashcode, rcode,
                                  trade.peer_commitment, trade.commitment,
                                  sign_key, gwei_coef)
 

@@ -210,3 +210,16 @@ class ContractEventInterface(metaclass=SingletonClass):
             LOG.error('end force_settle error: {}'.format(error))
             return None
 
+    @classmethod
+    def htlc_unlock_payment(cls):
+        pass
+
+    @classmethod
+    def punish_when_htlc_unlock_payment(cls):
+        pass
+
+    @classmethod
+    def settle_after_htlc_unlock_payment(cls):
+        pass
+
+
