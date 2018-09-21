@@ -205,7 +205,7 @@ class Interface(object):
                                                      gwei_coef=gwei_coef)
 
     def close_channel(self, invoker, channel_id, nonce, founder, founder_balance,
-                      partner, partner_balance, lock_hask, lock_secret, founder_signature, partner_signature, invoker_key, gwei_coef=1):
+                      partner, partner_balance, lock_hash, lock_secret, founder_signature, partner_signature, invoker_key, gwei_coef=1):
         """
         Description: one side of the channel dismantle the channel unilaterally
         Description: channel partners have agreed to withdraw channel balance, but don't close the channel
@@ -216,7 +216,7 @@ class Interface(object):
         :param founder_balance: founder remaining assets amount
         :param partner: another partner address
         :param partner_balance: the partner remaining assets amount
-        :param lock_hask: hash of lock_secret
+        :param lock_hash: hash of lock_secret
         :param lock_secret: R value in HTLC transaction, default is all zero
         :param founder_signature: founder signature for above information
         :param partner_signature: partner signature for above information
@@ -230,7 +230,7 @@ class Interface(object):
                                                          [channel_id, nonce,
                                                          founder, founder_balance,
                                                          partner, partner_balance,
-                                                         lock_hask, lock_secret,
+                                                         lock_hash, lock_secret,
                                                          founder_signature, partner_signature],
                                                          invoker_key, gwei_coef=gwei_coef)
             tx_msg = 'success'
@@ -244,7 +244,7 @@ class Interface(object):
         }
 
     def update_transaction(self, invoker, channel_id, nonce, founder, founder_balance,
-                           partner, partner_balance, lock_hask, lock_secret, founder_signature, partner_signature,
+                           partner, partner_balance, lock_hash, lock_secret, founder_signature, partner_signature,
                            invoker_key, gwei_coef=1):
         """
         Description: the partner will confirm shutter transaction whether it is valid
@@ -257,7 +257,7 @@ class Interface(object):
                                                         [channel_id, nonce,
                                                          founder, founder_balance,
                                                          partner, partner_balance,
-                                                         lock_hask, lock_secret,
+                                                         lock_hash, lock_secret,
                                                          founder_signature, partner_signature],invoker_key,
                                                          gwei_coef=gwei_coef)
             tx_msg = 'success'
