@@ -211,8 +211,16 @@ class ContractEventInterface(metaclass=SingletonClass):
             return None
 
     @classmethod
-    def htlc_unlock_payment(cls):
-        pass
+    def htlc_unlock_payment(cls, invoker, channel_id, founder, partner, lock_period, lock_amount, lock_hash,
+                            founder_signature, partner_signature, secret, invoker_key):
+        try:
+            result =  cls._eth_interface.withdraw(invoker, channel_id, founder, partner, lock_period, lock_amount,
+                                                  lock_hash, founder_signature, partner_signature, secret, invoker_key)
+            LOG.debug('htlc_unlock_payment result: {}'.format(result))
+            return result
+        except Exception as error:
+            LOG.error('htlc_unlock_payment error: {}'.format(error))
+            return None
 
     @classmethod
     def punish_when_htlc_unlock_payment(cls):

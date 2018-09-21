@@ -73,7 +73,7 @@ class ChannelForceSettleEvent(ChannelOfflineEventBase):
         # set channel settling
         if result is not None and 'success' in result.values():
             Channel.update_channel(self.channel_name, state=EnumChannelState.SETTLED.name)
-        self.next_stage()
+            self.next_stage()
 
     def terminate(self, block_height, *args, **kwargs):
         super(ChannelForceSettleEvent, self).terminate(block_height, *args, **kwargs)
@@ -167,7 +167,7 @@ class ChannelHtlcUnlockEvent(ChannelOfflineEventBase):
         super(ChannelHtlcUnlockEvent, self).prepare(block_height, *args, **kwargs)
         self.next_stage()
 
-    def execute(self, block_height, invoker='', channel_name='', invoker_key=''):
+    def execute(self, block_height, invoker_uri='', channel_name='', hashcode='', invoker_key='', is_debug=False):
         """
 
         :param block_height:
@@ -180,13 +180,18 @@ class ChannelHtlcUnlockEvent(ChannelOfflineEventBase):
         """
         super(ChannelHtlcUnlockEvent, self).execute(block_height)
 
+        LOG.debug('unlock htlc payment parameter: {}, {}, {}'.format(invoker_uri, channel_name, hashcode))
+        LOG.debug('unlock htlc payment event args: {}, kwargs {}' \
+                  .format(self.event_arguments.args, self.event_arguments.kwargs))
+
         # close channel event
-        result = self.contract_event_api.end_close_channel(invoker, channel_name, invoker_key, gwei_coef=self.gwei_coef)
+        result = Channel.force_release_htlc(invoker_uri, channel_name, invoker_key, gwei_coef=self.gwei_coef,
+                                            trigger=self.contract_event_api.htlc_unlock_payment, is_debug=is_debug)
 
         # set channel settling
         if result is not None and 'success' in result.values():
-            Channel.update_channel(self.channel_name, state=EnumChannelState.CLOSED.name)
-        self.next_stage()
+            Channel.update_channel(self.channel_name, state=EnumChannelState.SETTLED.name)
+            self.next_stage()
 
     def terminate(self, block_height, *args, **kwargs):
         super(ChannelHtlcUnlockEvent, self).terminate(block_height, *args, **kwargs)

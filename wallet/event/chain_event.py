@@ -31,6 +31,7 @@ def eth_websocket(callback):
     def wrapper(*args, **kwargs):
         try:
             payload = callback(*args, **kwargs)
+            payload.update({'chainType': 'ETH'})
             if not payload.get('walletAddress'):
                 payload.update({'walletAddress': ws_instance.wallet_address})
         except Exception as error:

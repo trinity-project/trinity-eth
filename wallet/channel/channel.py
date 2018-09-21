@@ -543,7 +543,7 @@ class Channel(object):
         return None
 
     @classmethod
-    def force_release_htlc(cls, channel_name):
+    def force_release_htlc(cls, uri, channel_name, hashcode, sign_key, gwei_coef=1, trigger=None, is_debug=False):
         pass
 
     @classmethod
