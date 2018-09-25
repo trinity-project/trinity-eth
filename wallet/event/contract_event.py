@@ -68,7 +68,7 @@ class ContractEventInterface(metaclass=SingletonClass):
         valueList = args[1] if 1 < len(args) else kwargs.get('valueList')
         privtKey = args[2] if 2 < len(args) else kwargs.get('privtKey')
 
-        content = cls._eth_client.sign_args(typeList, valueList, privtKey).decode()
+        content = cls._eth_client.sign_args(typeList, valueList, privtKey)
         return '0x' + content
 
     @classmethod
@@ -229,5 +229,3 @@ class ContractEventInterface(metaclass=SingletonClass):
     @classmethod
     def settle_after_htlc_unlock_payment(cls):
         pass
-
-

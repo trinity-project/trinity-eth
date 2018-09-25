@@ -88,6 +88,8 @@ class Client(object):
     def broadcast(self, raw_data):
         return self.web3.eth.sendRawTransaction(raw_data)
 
+    def int_to_big_endian(self, value):
+        return value.to_bytes(32, 'big')
 
     def sign_args(self,typeList, valueList, privtKey):
         '''
@@ -98,8 +100,8 @@ class Client(object):
         '''
         data_hash = self.solidity_hash(typeList, valueList)
         v, r, s = ecsign(data_hash, normalize_key(privtKey))
-        signature = binascii.hexlify(int_to_big_endian(r) + int_to_big_endian(s) + bytes(chr(v - 27).encode()))
-        return signature
+        signature = self.int_to_big_endian(r) + self.int_to_big_endian(s) + bytes(chr(v - 27).encode())
+        return '{:x}'.format(int.from_bytes(signature, 'big'))
 
     def solidity_hash(self, typeList, valueList):
         """
