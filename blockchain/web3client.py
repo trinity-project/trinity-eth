@@ -101,7 +101,7 @@ class Client(object):
         data_hash = self.solidity_hash(typeList, valueList)
         v, r, s = ecsign(data_hash, normalize_key(privtKey))
         signature = self.int_to_big_endian(r) + self.int_to_big_endian(s) + bytes(chr(v - 27).encode())
-        return signature.hex().encode()
+        return signature.hex()
 
     def solidity_hash(self, typeList, valueList):
         """
