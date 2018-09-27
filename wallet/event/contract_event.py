@@ -166,6 +166,12 @@ class ContractEventInterface(metaclass=SingletonClass):
                                                           gwei_coef=gwei_coef)
         except Exception as error:
             LOG.error('quick_settle error: {}'.format(error))
+            LOG.error('quick_settle parameters: '
+                      'channel<{}>, nonce<{}>, '
+                      'founder<{}>, founder_balance<{}>, founder_signature<{}>, '
+                      'partner<{}>, partner_balance<{}>, partner_signature<{}>' \
+                      .format(channel_id, nonce, founder, founder_balance, founder_signature,
+                              partner, partner_balance, partner_signature))
             return None
 
     @classmethod
