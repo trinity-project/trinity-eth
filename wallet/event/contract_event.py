@@ -95,6 +95,7 @@ class ContractEventInterface(metaclass=SingletonClass):
             # return tx_id
             tx_id = cls._eth_interface.approve(address, deposit, private_key, gwei_coef=gwei_coef)
             LOG.debug('ContractEventInterface::approve: txId: {}'.format(tx_id))
+            return tx_id
         except Exception as error:
             LOG.error('authorized deposit error: {}'.format(error))
 
@@ -120,7 +121,7 @@ class ContractEventInterface(metaclass=SingletonClass):
             result = cls._eth_interface.get_transaction_receipt(tx_id)
             if result:
                 print(result)
-            return
+            return result
         except Exception as error:
             LOG.error('get_approved_asset error: {}'.format(error))
             return None
