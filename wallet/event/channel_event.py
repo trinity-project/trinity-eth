@@ -137,9 +137,13 @@ class ChannelDepositEvent(ChannelEventBase):
             sync_channel_info_to_gateway(self.channel_name, 'AddChannel', asset_type)
             console_log.info('Channel {} state is {}'.format(self.channel_name, EnumChannelState.OPENED.name))
 
-            # to trigger event
+            # to trigger monitor event for closing channel
             event_monitor_close_channel(self.channel_name)
             event_monitor_settle(self.channel_name)
+
+            # to trigger monitor event for unlocking htlc locked payment
+
+
             self.next_stage()
 
     def timeout_handler(self, block_height, *args, **kwargs):

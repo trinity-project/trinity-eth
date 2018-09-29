@@ -29,7 +29,6 @@ from model.base_enum import EnumChannelState
 from common.log import LOG
 
 
-
 class ChannelOfflineEventBase(EventBase):
     """
 
@@ -167,15 +166,17 @@ class ChannelHtlcUnlockEvent(ChannelOfflineEventBase):
         super(ChannelHtlcUnlockEvent, self).prepare(block_height, *args, **kwargs)
         self.next_stage()
 
-    def execute(self, block_height, invoker_uri='', channel_name='', hashcode='', invoker_key='', is_debug=False):
+    def execute(self, block_height, invoker_uri='', channel_name='', hashcode='', rcode='', invoker_key='',
+                is_debug=False):
         """
 
         :param block_height:
         :param invoker_uri:
         :param channel_name:
-        :param trade:
+        :param hashcode:
+        :param rcode:
         :param invoker_key:
-        :param gwei:
+        :param is_debug:
         :return:
         """
         super(ChannelHtlcUnlockEvent, self).execute(block_height)
@@ -185,12 +186,12 @@ class ChannelHtlcUnlockEvent(ChannelOfflineEventBase):
                   .format(self.event_arguments.args, self.event_arguments.kwargs))
 
         # close channel event
-        result = Channel.force_release_htlc(invoker_uri, channel_name, hashcode, invoker_key, gwei_coef=self.gwei_coef,
-                                            trigger=self.contract_event_api.htlc_unlock_payment, is_debug=is_debug)
+        result = Channel.force_release_htlc(
+            invoker_uri, channel_name, hashcode, rcode, invoker_key, gwei_coef=self.gwei_coef,
+            trigger=self.contract_event_api.htlc_unlock_payment, is_debug=is_debug)
 
-        # set channel settling
+        # Don't close channel
         if result and 'success' in result.values():
-            Channel.update_channel(self.channel_name, state=EnumChannelState.SETTLED.name)
             self.next_stage()
 
     def terminate(self, block_height, *args, **kwargs):
@@ -198,10 +199,44 @@ class ChannelHtlcUnlockEvent(ChannelOfflineEventBase):
         self.next_stage()
 
 
-class ChannelPunishHtlcUnlockEvent(ChannelUpdateSettleEvent):
+class ChannelPunishHtlcUnlockEvent(ChannelOfflineEventBase):
     def __init__(self, channel_name, is_event_founder=True):
-        super(ChannelPunishHtlcUnlockEvent, self).__init__(channel_name, is_event_founder)
-        self.event_type = EnumEventType.EVENT_TYPE_PUNISH_HTLC_UNLOCK
+        super(ChannelPunishHtlcUnlockEvent, self).__init__(channel_name, EnumEventType.EVENT_TYPE_PUNISH_HTLC_UNLOCK,
+                                                       is_event_founder)
+
+    def prepare(self, block_height, *args, **kwargs):
+        super(ChannelPunishHtlcUnlockEvent, self).prepare(block_height, *args, **kwargs)
+        self.next_stage()
+
+    def execute(self, block_height, invoker_uri='', channel_name='', nonce='', hashcode='', rcode='', invoker_key=''):
+        """
+
+        :param block_height:
+        :param invoker_uri:
+        :param channel_name:
+        :param nonce:
+        :param hashcode:
+        :param rcode:
+        :param invoker_key:
+        :return:
+        """
+        super(ChannelPunishHtlcUnlockEvent, self).execute(block_height)
+
+        # punishment when other want to release the htlc-locked payment
+        result = Channel.force_release_htlc(
+            invoker_uri, channel_name, hashcode, rcode, invoker_key, gwei_coef=self.gwei_coef,
+            trigger=self.contract_event_api.punish_when_htlc_unlock_payment, is_debug=False,
+            is_pubnishment=True, nonce=nonce)
+
+        # set channel settling
+        if result is not None and 'success' in result.values():
+            Channel.update_channel(self.channel_name, state=EnumChannelState.SETTLED.name)
+
+        self.next_stage()
+
+    def terminate(self, block_height, *args, **kwargs):
+        super(ChannelPunishHtlcUnlockEvent, self).terminate(block_height, *args, **kwargs)
+        self.next_stage()
 
 
 class ChannelSettleHtlcUnlockEvent(ChannelOfflineEventBase):
@@ -213,21 +248,20 @@ class ChannelSettleHtlcUnlockEvent(ChannelOfflineEventBase):
         super(ChannelSettleHtlcUnlockEvent, self).prepare(block_height, *args, **kwargs)
         self.next_stage()
 
-    def execute(self, block_height, invoker='', channel_name='', invoker_key=''):
+    def execute(self, block_height, invoker='', channel_name='', hashcode='', invoker_key=''):
         """
 
         :param block_height:
-        :param invoker_uri:
+        :param invoker:
         :param channel_name:
-        :param trade:
+        :param hashcode:
         :param invoker_key:
-        :param gwei:
         :return:
         """
         super(ChannelSettleHtlcUnlockEvent, self).execute(block_height)
 
         # close channel event
-        result = self.contract_event_api.end_close_channel(invoker, channel_name, invoker_key, gwei_coef=self.gwei_coef)
+        result = self.contract_event_api.settle_after_htlc_unlock_payment(invoker_key, channel_name, hashcode, invoker_key)
 
         # set channel settling
         if result is not None and 'success' in result.values():

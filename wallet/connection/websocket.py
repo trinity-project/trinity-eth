@@ -198,12 +198,13 @@ class WebSocketConnection(metaclass=SingletonClass):
         if not received:
             return
 
+        message_type = None
+        message = received
         try:
             message = json.loads(received)
             message_type = message.get('messageType')
         except Exception:
-            message = received
-            message_type = None
+            pass
         finally:
             # start to handle the event
             if EnumChainEventResp.__dict__.__contains__(message_type):

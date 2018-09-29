@@ -26,7 +26,7 @@ import hashlib
 import json
 import time
 from enum import IntEnum
-from .trade import EnumTradeState, EnumTradeRole, EnumTradeStatus
+from .trade import EnumTradeState, EnumTradeRole, EnumTradeStatus, EnumTradeType
 from model.channel_model import APIChannel
 from model.base_enum import EnumChannelState
 from model.transaction_model import APITransaction
@@ -501,7 +501,7 @@ class Channel(object):
                 latest_nonce = int(trade.nonce)
                 if nonce is not None and (latest_nonce == int(nonce) or int(nonce) > latest_nonce+1):
                     LOG.debug('No need update transaction. nonce<{}>, latest_nonce<{}>'.format(nonce, latest_nonce))
-                    return
+                    return None
                 nonce = latest_nonce
         except Exception as error:
             LOG.error('No trade record could be forced to release. channel<{}>, nonce<{}>. Exception: {}' \
@@ -543,8 +543,95 @@ class Channel(object):
         return None
 
     @classmethod
-    def force_release_htlc(cls, uri, channel_name, hashcode, sign_key, gwei_coef=1, trigger=None, is_debug=False):
-        pass
+    def force_release_htlc(cls, uri='', channel_name='', hashcode='', rcode='', sign_key='', gwei_coef=1, trigger=None,
+                           is_debug=False, is_pubnishment=False, nonce=''):
+        """
+
+        :param uri:
+        :param channel_name:
+        :param hashcode:
+        :param rcode:
+        :param sign_key:
+        :param gwei_coef:
+        :param trigger:
+        :param is_debug:
+        :return:
+        """
+        # some internal function here
+        # ToDo: not a good way, could be optimized later
+        def common_kwargs_for_trigger(invoker, channel_id, lock_hash, lock_secret, invoker_key):
+            # makeup the parameters for callback
+            return {
+                'invoker': invoker,
+                'channel_id': channel_id,
+                'lock_hash': lock_hash,
+                'lock_secret': lock_secret,
+                'invoker_key': invoker_key
+            }
+
+        def unlock_htlc_kwargs(trade, address, peer_address, is_debug):
+            """"""
+            trigger_kwargs = {'lock_period': trade.delay_block, 'lock_amount': trade.payment}
+
+            # is debug by test engineer
+            if not is_debug:
+                trigger_kwargs.update({'lock_secret': htlc_trade.rcode})
+
+            # what role is played by this wallet
+            if EnumTradeRole.TRADE_ROLE_FOUNDER.name == trade.role:
+                trigger_kwargs.update({'founder': address, 'founder_signature': trade.delay_commitment,
+                                       'partner': peer_address, 'partner_signature': trade.peer_delay_commitment})
+            else:
+                trigger_kwargs.update({'founder': peer_address, 'founder_signature': trade.peer_delay_commitment,
+                                       'partner': address, 'partner_signature': trade.delay_commitment})
+
+            return trigger_kwargs
+
+        def punishment_htlc_kwargs(trade, address, peer_address):
+            """"""
+            trigger_kwargs = {'nonce': trade.nonce, 'lock_secret': htlc_trade.rcode}
+
+            # what role is played by this wallet
+            if EnumTradeRole.TRADE_ROLE_FOUNDER.name == trade.role:
+                trigger_kwargs.update({'founder': address, 'partner': peer_address,
+                                       'founder_balance': trade.balance, 'partner_balance': trade.peer_balance,
+                                       'founder_signature': trade.commitment, 'partner_signature': trade.peer_commitment})
+            else:
+                trigger_kwargs.update({'founder': peer_address, 'partner': address,
+                                       'founder_balance': trade.peer_balance, 'partner_balance': trade.balance,
+                                       'founder_signature': trade.peer_commitment, 'partner_signature': trade.commitment})
+
+            return trigger_kwargs
+
+        # start to unlock the payment of htlc-locked part
+        try:
+            # get the htlc record by hashcode
+            htlc_trade = cls.batch_query_trade(channel_name, filters={'type': EnumTradeType.TRADE_TYPE_HTLC.name,
+                                                                      'hashcode': hashcode})[0]
+        except Exception as error:
+            LOG.error('No Htlc trade was found. channel<{}>, HashR<{}>. Exception: {}' \
+                      .format(channel_name, hashcode, error))
+        else:
+            channel = cls(channel_name)
+            peer_uri = channel.peer_uri(uri)
+            self_address, _, _ = uri_parser(uri)
+            peer_address, _, _ = uri_parser(peer_uri)
+
+            LOG.debug('Unlock Htlc payment: channel<{}>, HashR<{}>'.format(channel_name, hashcode))
+
+            # makeup the parameters for callback function
+            trigger_kwargs = common_kwargs_for_trigger(self_address, channel_name, hashcode, rcode, sign_key)
+
+            # is withdraw update topic of the contract
+            if is_pubnishment:
+                trigger_kwargs.update(punishment_htlc_kwargs(htlc_trade, self_address, peer_address))
+            else:
+                trigger_kwargs.update(unlock_htlc_kwargs(htlc_trade, self_address, peer_address, is_debug))
+
+            # start trigger the callback and return the result.
+            return trigger(**trigger_kwargs)
+
+        return None
 
     @classmethod
     def trade_body(cls, type, role, asset_type, balance, peer_balance,
