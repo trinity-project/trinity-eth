@@ -499,7 +499,7 @@ class Channel(object):
             else:
                 trade = cls.latest_confirmed_trade(channel_name)
                 latest_nonce = int(trade.nonce)
-                if nonce is not None and (latest_nonce-1 <= int(nonce) <= latest_nonce+1):
+                if nonce is not None and (latest_nonce == int(nonce) or int(nonce) > latest_nonce+1):
                     LOG.debug('No need update transaction. nonce<{}>, latest_nonce<{}>'.format(nonce, latest_nonce))
                     return
                 nonce = latest_nonce
