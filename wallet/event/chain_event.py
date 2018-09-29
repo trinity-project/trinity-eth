@@ -55,13 +55,11 @@ def event_init_wallet(wallet_address):
 
 
 @eth_websocket
-def event_monitor_tx(tx_id, asset_type='TNC', comments={}):
+def event_monitor_tx(tx_id, comments={}):
     assert tx_id, 'Invalid tx_id<{}>.'.format(tx_id)
-    assert asset_type, 'Invalid asset_type <{}>.'.format(asset_type)
 
     payload = {
         'messageType': 'monitorTx',
-        'chainType': asset_type.upper(),
         'playload': tx_id,
         'comments': comments
     }
@@ -83,85 +81,87 @@ def event_monitor_height(height, asset_type='TNC', comments={}):
 
     return payload
 
-@eth_websocket
-def event_monitor_deposit(channel_id, asset_type='TNC', comments={}):
+
+def monitor_channel_event(message_type, channel_id, comments={}):
     """
 
-    :param channel_id: channel's name
-    :param asset_type:
+    :param message_type:
+    :param channel_id: which channel name will be used to monitor
+    :param asset_type: legal asset type should be in ['TNC', 'ETH'] currently
     :param comments:
     :return:
     """
+    assert message_type, 'Invalid message_type<{}>.'.format(message_type)
     assert channel_id, 'Invalid channel_id<{}>.'.format(channel_id)
-    assert asset_type, 'Invalid asset_type <{}>.'.format(asset_type)
 
-    payload = {
-        'messageType': 'monitorDeposit',
-        'chainType': asset_type.upper(),
+    return {
+        'messageType': message_type,
         'playload': channel_id,
         'comments': comments
     }
 
+
+@eth_websocket
+def event_monitor_deposit(channel_id, comments={}):
+    """ refer to details of monitor_channel_event"""
+    payload = monitor_channel_event('monitorDeposit', channel_id, comments)
     return payload
 
 
 @eth_websocket
-def event_monitor_update_deposit(channel_id, asset_type='TNC', comments={}):
-    assert channel_id, 'Invalid channel_id<{}>.'.format(channel_id)
-    assert asset_type, 'Invalid asset_type <{}>.'.format(asset_type)
-
-    payload = {
-        'messageType': 'monitorUpdateDeposit',
-        'chainType': asset_type.upper(),
-        'playload': channel_id,
-        'comments': comments
-    }
-
+def event_monitor_update_deposit(channel_id, comments={}):
+    """ refer to details of monitor_channel_event"""
+    payload = monitor_channel_event('monitorUpdateDeposit', channel_id, comments)
     return payload
 
 
 @eth_websocket
-def event_monitor_quick_close_channel(channel_id, asset_type='TNC', comments={}):
-    assert channel_id, 'Invalid channel_id<{}>.'.format(channel_id)
-    assert asset_type, 'Invalid asset_type <{}>.'.format(asset_type)
-
-    payload = {
-        'messageType': 'monitorQuickCloseChannel',
-        'chainType': asset_type.upper(),
-        'playload': channel_id,
-        'comments': comments
-    }
-
+def event_monitor_quick_close_channel(channel_id, comments={}):
+    """ refer to details of monitor_channel_event"""
+    payload = monitor_channel_event('monitorQuickCloseChannel', channel_id, comments)
     return payload
 
 
 @eth_websocket
-def event_monitor_close_channel(channel_id, asset_type='TNC', comments={}):
-    assert channel_id, 'Invalid tx_id<{}>.'.format(channel_id)
-    assert asset_type, 'Invalid asset_type <{}>.'.format(asset_type)
-
-    payload = {
-        'messageType': 'monitorCloseChannel',
-        'chainType': asset_type.upper(),
-        'playload': channel_id,
-        'comments': comments
-    }
-
+def event_monitor_close_channel(channel_id, comments={}):
+    """ refer to details of monitor_channel_event"""
+    payload = monitor_channel_event('monitorCloseChannel', channel_id, comments)
     return payload
 
 
 @eth_websocket
-def event_monitor_settle(channel_id, asset_type='TNC', comments={}):
-    assert channel_id, 'Invalid tx_id<{}>.'.format(channel_id)
-    assert asset_type, 'Invalid asset_type <{}>.'.format(asset_type)
+def event_monitor_settle(channel_id, comments={}):
+    """ refer to details of monitor_channel_event"""
+    payload = monitor_channel_event('monitorSettle', channel_id, comments)
+    return payload
 
-    payload = {
-        'messageType':'monitorSettle',
-        'chainType': asset_type.upper(),
-        'playload': channel_id,
-        'comments': comments
-    }
 
+@eth_websocket
+def event_monitor_withdraw(channel_id, comments={}):
+    """ refer to details of monitor_channel_event"""
+    payload = monitor_channel_event('monitorWithdraw', channel_id, comments)
+    return payload
+
+
+@eth_websocket
+def event_monitor_withdraw_update(channel_id, comments={}):
+    """ refer to details of monitor_channel_event"""
+    payload = monitor_channel_event('monitorWithdrawUpdate', channel_id, comments)
+    return payload
+
+
+@eth_websocket
+def event_monitor_withdraw_settle(channel_id, comments={}):
+    """ refer to details of monitor_channel_event"""
+    payload = monitor_channel_event('monitorWithdrawSettle', channel_id, comments)
+    return payload
+
+
+@eth_websocket
+def event_cannel_monitor(channel_id, monitor_type, comments={}):
+    """ refer to details of monitor_channel_event"""
+    payload = monitor_channel_event('cancelMonitor', channel_id, comments)
+    payload.update({'monitoryType': monitor_type})
     return payload
 
 
