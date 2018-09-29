@@ -246,7 +246,7 @@ class HtlcBase(TransactionBase):
     """
 
     """
-    _sign_type_list = ['bytes32', 'uint256', 'address', 'address', 'uint256', 'uint256', 'bytes32']
+    _sign_type_list = ['bytes32', 'address', 'address', 'uint256', 'uint256', 'bytes32']
 
     def __init__(self, message, wallet):
         super().__init__(message)
@@ -499,8 +499,8 @@ class HtlcMessage(HtlcBase):
         # hlock parts
         hlock_commitment = HtlcMessage.sign_content(
             start=5,
-            typeList=['bytes32', 'uint256', 'address', 'address', 'uint256', 'uint256', 'bytes32'],
-            valueList=[channel_name, nonce, payer_address, payee_address, end_block_height, int(payment), hashcode],
+            typeList=HtlcMessage._sign_type_list,
+            valueList=[channel_name, payer_address, payee_address, end_block_height, int(payment), hashcode],
             privtKey = wallet._key.private_key_string)
 
         # # add trade to database
@@ -669,8 +669,8 @@ class HtlcResponsesMessage(HtlcBase):
 
         hlock_commitment = HtlcResponsesMessage.sign_content(
             start=5,
-            typeList=['bytes32', 'uint256', 'address', 'address', 'uint256', 'uint256', 'bytes32'],
-            valueList=[channel_name, nonce, payer_address, payee_address, delay_block, int(payment), hashcode],
+            typeList=HtlcResponsesMessage._sign_type_list,
+            valueList=[channel_name, payer_address, payee_address, delay_block, int(payment), hashcode],
             privtKey = wallet._key.private_key_string)
 
         # # ToDo: need re-sign all unconfirmed htlc message later
