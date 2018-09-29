@@ -339,7 +339,7 @@ class HtlcMessage(HtlcBase):
             self.check_signature(
                 self.wallet,
                 type_list=self._sign_type_list,
-                value_list=[self.channel_name, self.nonce, self.sender_address, self.receiver_address,
+                value_list=[self.channel_name, self.sender_address, self.receiver_address,
                             int(self.delay_block), int(self.payment), self.hashcode],
                 signature=self.delay_commitment
             )
@@ -598,7 +598,7 @@ class HtlcResponsesMessage(HtlcBase):
             self.check_signature(
                 self.wallet,
                 type_list=self._sign_type_list,
-                value_list=[self.channel_name, self.nonce, self.receiver_address, self.sender_address,
+                value_list=[self.channel_name, self.receiver_address, self.sender_address,
                             int(self.delay_block), int(self.payment), self.hashcode],
                 signature=self.delay_commitment
             )
