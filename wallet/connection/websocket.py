@@ -37,29 +37,37 @@ from trinity import EVENT_WS_SERVER
 from common.singleton import SingletonClass
 from wallet.event import event_machine, EnumEventAction
 from wallet.event.offchain_event import ChannelEndSettleEvent, \
-    ChannelUpdateSettleEvent
+    ChannelUpdateSettleEvent, \
+    ChannelPunishHtlcUnlockEvent, \
+    ChannelSettleHtlcUnlockEvent
 
 
 class EnumChainEventReq(Enum):
-    init = 'init',
-    monitorTx = 'monitorTx',
-    monitorBlockHeight = 'monitorBlockHeight',
-    monitorDeposit = '',
-    monitorUpdateDeposit = 'monitorUpdateDeposit',
-    monitorQuickCloseChannel = 'monitorQuickCloseChannel',
-    monitorCloseChannel = 'monitorCloseChannel',
+    init = 'init'
+    monitorTx = 'monitorTx'
+    monitorBlockHeight = 'monitorBlockHeight'
+    monitorDeposit = 'monitorDeposit'
+    monitorUpdateDeposit = 'monitorUpdateDeposit'
+    monitorQuickCloseChannel = 'monitorQuickCloseChannel'
+    monitorCloseChannel = 'monitorCloseChannel'
     monitorSettle = 'monitorSettle'
+    monitorWithdraw = 'monitorWithdraw'
+    monitorWithdrawUpdate = 'monitorWithdrawUpdate'
+    monitorWithdrawSettle = 'monitorWithdrawSettle'
 
 
 class EnumChainEventResp(Enum):
-    initResponse = 'initResponse',
-    monitorTxResponse = 'monitorTxResponse',
-    monitorBlockHeightResponse = 'monitorBlockHeightResponse',
-    monitorDepositResponse = 'monitorDepositResponse',
-    monitorUpdateDepositResponse = 'monitorUpdateDepositResponse',
-    monitorQuickCloseChannelResponse = 'monitorQuickCloseChannelResponse',
-    monitorCloseChannelResponse = 'monitorCloseChannelResponse',
+    initResponse = 'initResponse'
+    monitorTxResponse = 'monitorTxResponse'
+    monitorBlockHeightResponse = 'monitorBlockHeightResponse'
+    monitorDepositResponse = 'monitorDepositResponse'
+    monitorUpdateDepositResponse = 'monitorUpdateDepositResponse'
+    monitorQuickCloseChannelResponse = 'monitorQuickCloseChannelResponse'
+    monitorCloseChannelResponse = 'monitorCloseChannelResponse'
     monitorSettleResponse = 'monitorSettleResponse'
+    monitorWithdrawResponse = 'monitorWithdrawResponse'
+    monitorWithdrawUpdateResponse = 'monitorWithdrawUpdateResponse'
+    monitorWithdrawSettleResponse = 'monitorWithdrawSettleResponse'
 
 
 class WebSocketConnection(metaclass=SingletonClass):
@@ -299,6 +307,7 @@ class WebSocketConnection(metaclass=SingletonClass):
         if not message:
             LOG.error('Invalid message: {}'.format(message))
             return
+
         try:
             invoker = message.get('invoker').strip()
             channel_name = message.get('channelId')
@@ -324,9 +333,52 @@ class WebSocketConnection(metaclass=SingletonClass):
                                             invoker, channel_name, self.wallet._key.private_key_string)
                 self.register_event(channel_event, end_time)
 
-        pass
+        return
 
     def monitorSettle(self):
+        pass
+
+    def  monitorWithdraw(self, message):
+        """
+
+        :param message:
+        :return:
+        """
+        if not message:
+            LOG.error('Invalid message: {}'.format(message))
+            return
+
+        try:
+            invoker = message.get('invoker').strip()
+            channel_name = message.get('channelId')
+            hashcode = message.get('HashR')
+        except Exception as error:
+            LOG.error('Invalid message: {}. Exception: {}'.format(message, error))
+        else:
+            if not (self.wallet_address and invoker):
+                LOG.error('monitorWithdraw: Wallet address<{}> or invoker<{}> should not be none' \
+                          .format(self.wallet_address, invoker))
+                return
+
+            if invoker != self.wallet_address.lower():
+                channel_event = ChannelPunishHtlcUnlockEvent(channel_name)
+                channel_event.register_args(EnumEventAction.EVENT_EXECUTE,
+                                            self.wallet.url, channel_name, self.wallet._key.private_key_string, nonce)
+                event_machine.register_event(channel_name, channel_event)
+                event_machine.trigger_start_event(channel_name)
+            else:
+                LOG.debug('monitorWithdraw: register ChannelEndSettleEvent at next block')
+                channel_event = ChannelSettleHtlcUnlockEvent(channel_name)
+                channel_event.register_args(EnumEventAction.EVENT_EXECUTE,
+                                            invoker, channel_name, hashcode, self.wallet._key.private_key_string)
+                self.register_event(channel_event)
+
+        return
+
+    def monitorWithdrawUpdate(self):
+        pass
+
+    def monitorWithdrawSettle(self):
         pass
 
 
