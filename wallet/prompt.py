@@ -302,8 +302,15 @@ class UserPromptInterface(PromptInterface):
             deposit_limit = DepositAuth.deposit_limit()
             deposit_cmp = TrinityNumber(str(DepositAuth.deposit_limit())).number
             deposit = TrinityNumber(get_arg(arguments, 3).strip()).number
-            partner_deposit = TrinityNumber(get_arg(arguments, 4)).number
-            partner_deposit = partner_deposit if partner_deposit is not None else deposit
+            #when partner_deposit not given ,partner_deposit equit with deposit
+            if get_arg(arguments, 4)==None:
+                partner_deposit = deposit
+            elif TrinityNumber(get_arg(arguments, 4)).number==None:
+                console_log.error("partner_deposit is not valid")
+                return
+            else:
+                partner_deposit = TrinityNumber(get_arg(arguments, 4)).number
+
             if deposit_cmp > deposit:
                 console_log.error("Founder's Deposit MUST be larger than {}".format(deposit_limit))
                 return None
