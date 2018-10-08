@@ -7,21 +7,18 @@ sys.path.append(pythonpath)
 
 import argparse
 import json
-import traceback
 import signal
 from functools import wraps, reduce
 from prompt_toolkit import prompt
-from twisted.internet import reactor, endpoints, protocol
+from twisted.internet import reactor, endpoints
 from common.log import LOG, init_logger
 from common.console import console_log
 from common.number import TrinityNumber
 from lightwallet.Settings import settings
 from wallet.utils import get_arg, \
-    get_asset_type_name,\
     check_onchain_balance,\
     check_support_asset_type,\
     check_partner, \
-    is_valid_deposit,\
     is_correct_uri, SupportAssetType,check_float_decimals
 from wallet.channel import Channel, udpate_channel_when_setup
 from wallet.transaction.founder import FounderMessage, FounderResponsesMessage
@@ -32,7 +29,7 @@ from wallet.transaction.settle import SettleMessage, SettleResponseMessage
 from wallet.Interface.rpc_interface import RpcInteraceApi,CurrentLiveWallet
 from wallet.event.event import EnumEventAction
 from wallet.event.chain_event import event_init_wallet
-from wallet.event.offchain_event import ChannelForceSettleEvent
+from wallet.event.offchain_event import ChannelForceSettleEvent, ChannelHtlcUnlockEvent
 from wallet.connection.websocket import ws_instance
 from wallet.utils import get_magic, DepositAuth
 from twisted.web.server import Site
@@ -117,6 +114,7 @@ class UserPromptInterface(PromptInterface):
             "channel tx {payment_link}/{receiver} {asset_type} {count}",
             "channel close {channel}",
             "channel force-close {channel}",
+            "channel htlc-unlock {channel} {hashcode} {rcode} {payment}",  # this is an debug command
             "channel peer [state=]|[peer=]|[channel=]",
             "channel payment {asset}, {count}, [{comments}]",
             "channel qrcode {on/off}",
@@ -505,6 +503,33 @@ class UserPromptInterface(PromptInterface):
         else:
             console_log.warn("No Channel Create")
 
+        return
+
+    @channel_opened
+    def channel_htlc_unlock(self, arguments):
+        """
+
+        :param arguments:
+        :return:
+        """
+        channel_name = get_arg(arguments, 1)
+        hashcode = get_arg(arguments, 2)
+        rcode = get_arg(arguments, 3)
+        payment = get_arg(arguments, 4)
+        payment = TrinityNumber(payment).number
+
+        console_log.console("Force to unlock htlc payment for channel {}".format(channel_name))
+        if channel_name:
+            channel_event = ChannelHtlcUnlockEvent(channel_name, True)
+            channel_event.register_args(EnumEventAction.EVENT_EXECUTE,
+                                        invoker_uri=self.Wallet.url, channel_name=channel_name,hashcode=hashcode,
+                                        rcode=rcode, invoker_key=self.Wallet._key.private_key_string, is_debug=True)
+            ws_instance.register_event(channel_event)
+        else:
+            console_log.warn("No Channel Create")
+
+        return
+
     @channel_opened
     @arguments_length([1,2,3,4])
     def channel_peer(self, arguments):
@@ -640,6 +665,9 @@ class UserPromptInterface(PromptInterface):
 
         elif command == "force-close":
             self.channel_force_close(arguments)
+
+        elif command == "htlc-unlock":
+            self.channel_htlc_unlock(arguments)
 
         elif command == "peer":
             self.channel_peer(arguments)

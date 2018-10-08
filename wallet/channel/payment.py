@@ -32,8 +32,6 @@ from common.exceptions import GoTo
 from common.singleton import SingletonClass
 from wallet.utils import get_magic
 from trinity import IS_SUPPORTED_ASSET_TYPE, SUPPORTED_ASSET_TYPE
-from wallet.channel import Channel
-from wallet.channel.trade import EnumTradeState, EnumTradeType
 
 
 class Payment(metaclass=SingletonClass):
@@ -73,7 +71,8 @@ class Payment(metaclass=SingletonClass):
         base58_code = base58.b58encode(code.encode())
         try:
             return "TN{}".format(base58_code.decode())
-        except:
+        except Exception as error:
+            LOG.debug('generate_payment_code error: {}'.format(error))
             return "TN{}".format(base58_code)
 
     @classmethod
@@ -88,12 +87,12 @@ class Payment(metaclass=SingletonClass):
 
         base58_code = payment_code[2:]
         code = base58.b58decode(base58_code).decode()
-        info = code.split("&",5)
+        info = code.split("&", 5)
 
         if 6 != len(info):
             return False, None
 
-        keys=['uri', 'net_magic', 'hashcode', 'asset_type', 'payment', 'comments']
+        keys = ['uri', 'net_magic', 'hashcode', 'asset_type', 'payment', 'comments']
 
         result = dict(zip(keys, info))
 
@@ -112,27 +111,8 @@ class Payment(metaclass=SingletonClass):
             rcode = rcode.replace('0x', '').strip()
             return hashcode.__contains__(cls.hash_r(rcode).__str__())
         except Exception as error:
-            raise GoTo('Invalid RCode<{}> for HashR<{}>'.format(rcode, hashcode))
+            raise GoTo('Invalid RCode<{}> for HashR<{}>. Exception: {}'.format(rcode, hashcode, error))
 
     @classmethod
     def is_valid_hash_r(cls, hashcode):
         return isinstance(hashcode, str) and hashcode.startswith('TN')
-
-    @classmethod
-    def confirm_payment(cls, channel_name, hashcode, hlock_to_rsmc=False):
-        """"""
-        if not hlock_to_rsmc:
-            return
-
-        # find the htlc trade history
-        try:
-            htlc_lock = Channel.batch_query_trade(channel_name, filters={'type': EnumTradeType.TRADE_TYPE_HTLC.name,
-                                                                         'hashcode': hashcode})[0]
-            Channel.update_trade(channel_name, htlc_lock.nonce, state=EnumTradeState.confirmed.name)
-
-            return
-        except Exception as error:
-            LOG.error('Payment for channel<{}> with HashR<{}> Not found from the DB'.format(channel_name, hashcode))
-            LOG.error('confirm payament Exception: {}'.format(error))
-
-        return

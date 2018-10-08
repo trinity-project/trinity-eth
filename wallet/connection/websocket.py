@@ -352,6 +352,8 @@ class WebSocketConnection(metaclass=SingletonClass):
             invoker = message.get('invoker').strip()
             channel_name = message.get('channelId')
             hashcode = message.get('HashR')
+            rcode = message.get('R')
+            end_time = int(message.get('blockNumber'))
         except Exception as error:
             LOG.error('Invalid message: {}. Exception: {}'.format(message, error))
         else:
@@ -363,7 +365,8 @@ class WebSocketConnection(metaclass=SingletonClass):
             if invoker != self.wallet_address.lower():
                 channel_event = ChannelPunishHtlcUnlockEvent(channel_name)
                 channel_event.register_args(EnumEventAction.EVENT_EXECUTE,
-                                            self.wallet.url, channel_name, self.wallet._key.private_key_string, nonce)
+                                            self.wallet.url, channel_name, hashcode, rcode,
+                                            self.wallet._key.private_key_string)
                 event_machine.register_event(channel_name, channel_event)
                 event_machine.trigger_start_event(channel_name)
             else:
@@ -371,7 +374,7 @@ class WebSocketConnection(metaclass=SingletonClass):
                 channel_event = ChannelSettleHtlcUnlockEvent(channel_name)
                 channel_event.register_args(EnumEventAction.EVENT_EXECUTE,
                                             invoker, channel_name, hashcode, self.wallet._key.private_key_string)
-                self.register_event(channel_event)
+                self.register_event(channel_event, end_time)
 
         return
 

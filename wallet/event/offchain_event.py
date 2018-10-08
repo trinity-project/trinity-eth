@@ -208,13 +208,12 @@ class ChannelPunishHtlcUnlockEvent(ChannelOfflineEventBase):
         super(ChannelPunishHtlcUnlockEvent, self).prepare(block_height, *args, **kwargs)
         self.next_stage()
 
-    def execute(self, block_height, invoker_uri='', channel_name='', nonce='', hashcode='', rcode='', invoker_key=''):
+    def execute(self, block_height, invoker_uri='', channel_name='', hashcode='', rcode='', invoker_key=''):
         """
 
         :param block_height:
         :param invoker_uri:
         :param channel_name:
-        :param nonce:
         :param hashcode:
         :param rcode:
         :param invoker_key:
@@ -226,7 +225,7 @@ class ChannelPunishHtlcUnlockEvent(ChannelOfflineEventBase):
         result = Channel.force_release_htlc(
             invoker_uri, channel_name, hashcode, rcode, invoker_key, gwei_coef=self.gwei_coef,
             trigger=self.contract_event_api.punish_when_htlc_unlock_payment, is_debug=False,
-            is_pubnishment=True, nonce=nonce)
+            is_pubnishment=True)
 
         # set channel settling
         if result is not None and 'success' in result.values():

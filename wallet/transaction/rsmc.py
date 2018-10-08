@@ -258,7 +258,7 @@ class RsmcResponsesMessage(RsmcBase):
                                self.hashcode, self.comments)
             else:
                 # update htlc trade
-                Payment.confirm_payment(self.channel_name, self.hashcode, is_htlc_to_rsmc)
+                Channel.confirm_payment(self.channel_name, self.hashcode, is_htlc_to_rsmc)
             
             # update transaction
             Channel.update_trade(self.channel_name, self.nonce, peer_commitment=self.commitment,

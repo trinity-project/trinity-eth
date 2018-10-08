@@ -27,6 +27,7 @@ import json
 import time
 from enum import IntEnum
 from .trade import EnumTradeState, EnumTradeRole, EnumTradeStatus, EnumTradeType
+from .payment import Payment
 from model.channel_model import APIChannel
 from model.base_enum import EnumChannelState
 from model.transaction_model import APITransaction
@@ -544,7 +545,7 @@ class Channel(object):
 
     @classmethod
     def force_release_htlc(cls, uri='', channel_name='', hashcode='', rcode='', sign_key='', gwei_coef=1, trigger=None,
-                           is_debug=False, is_pubnishment=False, nonce=''):
+                           is_debug=False, is_pubnishment=False):
         """
 
         :param uri:
@@ -608,8 +609,23 @@ class Channel(object):
             # get the htlc record by hashcode
             htlc_trade = cls.batch_query_trade(channel_name, filters={'type': EnumTradeType.TRADE_TYPE_HTLC.name,
                                                                       'hashcode': hashcode})[0]
+
+            # if the state of this trasaction is confirming, no need to update transaction
+            if is_pubnishment and htlc_trade.state not in [EnumTradeState.confirmed.name,
+                                                           EnumTradeState.confirmed_onchain.name]:
+                LOG.info('No need to punish hlock transaction with HashR<{}>'.format(hashcode))
+
+                # to record this rcode if rcode is correct one
+                if Payment.verify_hr(hashcode, rcode):
+                    cls.update_payment(channel_name, hashcode, rcode=rcode)
+
+                    # here, we need to notify the rcode to next wallet
+                    cls.notify_rcode_to_next_peer(htlc_trade, rcode)
+
+                return
+
         except Exception as error:
-            LOG.error('No Htlc trade was found. channel<{}>, HashR<{}>. Exception: {}' \
+            LOG.error('No Htlc trade was found or rcode is error. channel<{}>, HashR<{}>. Exception: {}' \
                       .format(channel_name, hashcode, error))
         else:
             channel = cls(channel_name)
@@ -632,6 +648,54 @@ class Channel(object):
             return trigger(**trigger_kwargs)
 
         return None
+
+    @classmethod
+    def notify_rcode_to_next_peer(cls, htlc_trade, rcode):
+        """
+
+        :param next_channel:
+        :return:
+        """
+        if not htlc_trade:
+            LOG.error('void input parameter -- htlc_trade')
+            return
+
+        if not htlc_trade.channel:
+            LOG.info('Htlc trade with HashR<{}> has been finished'.format(htlc_trade.hashcode))
+            return
+
+        peer = None
+        try:
+            # notify the previous node the R-code
+            LOG.debug('Payment get channel {}/{}'.format(htlc_trade.channel, htlc_trade.hashcode))
+            channel = Channel(htlc_trade.channel)
+            nonce = channel.latest_nonce(htlc_trade.channel)
+            LOG.info("Next peer: {}".format(peer))
+
+            from wallet.transaction.htlc import RResponse
+            RResponse.create(htlc_trade.channel, 'TNC', nonce, channel.partner_uri, channel.founder_uri,
+                             htlc_trade.hashcode, rcode, None)
+        except Exception as error:
+            LOG.error('Failed to notify RCode<{}> to peer<{}>'.format(rcode, peer))
+
+    @classmethod
+    def confirm_payment(cls, channel_name, hashcode, hlock_to_rsmc=False):
+        """"""
+        if not hlock_to_rsmc:
+            return
+
+        # find the htlc trade history
+        try:
+            htlc_lock = cls.batch_query_trade(channel_name, filters={'type': EnumTradeType.TRADE_TYPE_HTLC.name,
+                                                                     'hashcode': hashcode})[0]
+            cls.update_trade(channel_name, htlc_lock.nonce, state=EnumTradeState.confirmed.name)
+
+            return
+        except Exception as error:
+            LOG.error('Payment for channel<{}> with HashR<{}> Not found from the DB'.format(channel_name, hashcode))
+            LOG.error('confirm payament Exception: {}'.format(error))
+
+        return
 
     @classmethod
     def trade_body(cls, type, role, asset_type, balance, peer_balance,
