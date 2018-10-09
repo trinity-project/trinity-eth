@@ -23,7 +23,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 from .event import EventBase, EnumEventType
-from wallet.channel import Channel
+from wallet.channel import Channel, EnumTradeState, EnumTradeType
 from model.base_enum import EnumChannelState
 
 from common.log import LOG
@@ -159,7 +159,7 @@ class ChannelEndSettleEvent(ChannelOfflineEventBase):
 
 class ChannelSettledEvent(ChannelOfflineEventBase):
     def __init__(self, channel_name, is_event_founder=True):
-        super(ChannelSettledEvent, self).__init__(channel_name, EnumEventType.EVENT_TYPE_END_SETTLE,
+        super(ChannelSettledEvent, self).__init__(channel_name, EnumEventType.EVENT_TYPE_END_SETTLE_UPDATE,
                                                     is_event_founder)
 
     def prepare(self, block_height, *args, **kwargs):
@@ -177,7 +177,7 @@ class ChannelSettledEvent(ChannelOfflineEventBase):
         super(ChannelSettledEvent, self).execute(block_height)
 
         # if monitor this event, close channel directly
-        if not channel_name:
+        if channel_name:
             Channel.update_channel(channel_name, state=EnumChannelState.SETTLED.name)
 
 
@@ -294,3 +294,36 @@ class ChannelSettleHtlcUnlockEvent(ChannelOfflineEventBase):
     def terminate(self, block_height, *args, **kwargs):
         super(ChannelSettleHtlcUnlockEvent, self).terminate(block_height, *args, **kwargs)
         self.next_stage()
+
+
+class ChannelHtlcUnlockedEvent(ChannelOfflineEventBase):
+    def __init__(self, channel_name, is_event_founder=True):
+        super(ChannelHtlcUnlockedEvent, self).__init__(channel_name, EnumEventType.EVENT_TYPE_SETTLE_HTLC_UNLOCK_UPDATE,
+                                                  is_event_founder)
+
+    def prepare(self, block_height, *args, **kwargs):
+        super(ChannelHtlcUnlockedEvent, self).prepare(block_height, *args, **kwargs)
+        self.next_stage()
+
+    def execute(self, block_height, channel_name='', hashcode=''):
+        """
+
+        :param block_height:
+        :param channel_name:
+        :param kwargs:
+        :return:
+        """
+        super(ChannelHtlcUnlockedEvent, self).execute(block_height)
+
+        # if monitor this event, update the htlc trade state to confirmed
+        if channel_name and hashcode:
+            try:
+                htlc_trade = Channel.batch_query_trade(channel_name, filters={'type': EnumTradeType.TRADE_TYPE_HTLC.name,
+                                                                              'hashcode': hashcode})[0]
+            except Exception as error:
+                LOG.error('Htlc trade with HashR<{}> not found for channel<{}>. Exception: {}'\
+                          .format(hashcode, channel_name, error))
+            else:
+                Channel.update_trade(channel_name, htlc_trade.nonce, state=EnumTradeState.confirmed_onchain.name)
+        else:
+            LOG.error('Error input parameters: channel <{}>, hashcode<{}>.'.format(channel_name, hashcode))

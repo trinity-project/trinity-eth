@@ -221,8 +221,9 @@ class ContractEventInterface(metaclass=SingletonClass):
     def htlc_unlock_payment(cls, invoker, channel_id, founder, partner, lock_period, lock_amount, lock_hash,
                             founder_signature, partner_signature, lock_secret, invoker_key):
         try:
-            result =  cls._eth_interface.withdraw(invoker, channel_id, founder, partner, lock_period, lock_amount,
-                                                  lock_hash, founder_signature, partner_signature, lock_secret, invoker_key)
+            result =  cls._eth_interface.withdraw(
+                invoker, channel_id, founder, partner, int(lock_period), int(lock_amount),
+                lock_hash, founder_signature, partner_signature, lock_secret, invoker_key)
             LOG.debug('htlc_unlock_payment result: {}'.format(result))
             return result
         except Exception as error:
@@ -234,8 +235,8 @@ class ContractEventInterface(metaclass=SingletonClass):
                                         partner, partner_balance, lock_hash, lock_secret,
                                         founder_signature, partner_signature, invoker_key, gwei_coef=1):
         """"""
-        return cls.update_close_channel(invoker, channel_id, nonce, founder, founder_balance,
-                                        partner, partner_balance, lock_hash, lock_secret,
+        return cls.update_close_channel(invoker, channel_id, int(nonce), founder, int(founder_balance),
+                                        partner, int(partner_balance), lock_hash, lock_secret,
                                         founder_signature, partner_signature, invoker_key, gwei_coef)
 
     @classmethod

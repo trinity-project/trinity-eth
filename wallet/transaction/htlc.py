@@ -384,10 +384,14 @@ class HtlcMessage(HtlcBase):
                                         self.hashcode, self.delay_block, self.commitment,
                                         self.delay_commitment, self.router, next_router, self.comments)
 
+            # means last receiver has received this htlc message, then update this trade record.
             if trigger_rresponse:
                 try:
                     RResponse.create(self.channel_name, self.asset_type, self.nonce, self.wallet.url, self.sender,
                                      self.hashcode, payment_trade.rcode, self.comments)
+
+                    # update the htlc trade history
+                    Channel.update_trade(self.channel_name, self.nonce, rcode=payment_trade.rcode)
                 except Exception as error:
                     LOG.error('Failed triggerring to send RResponse for HashR<{}>. Exception: {}'\
                               .format(self.hashcode, error))
@@ -562,9 +566,6 @@ class HtlcResponsesMessage(HtlcBase):
     """
     _message_name = 'HtlcSign'
 
-    def check_if_the_last_router(self):
-        return self.wallet.url == self.router[-1][0]
-
     def handle_message(self):
         self.handle()
 
@@ -626,17 +627,20 @@ class HtlcResponsesMessage(HtlcBase):
 
 
     @classmethod
-    def create(cls, wallet, channel_name, asset_type, tx_nonce, sender, receiver, payment, sender_balance, receiver_balance,
-               hashcode, delay_block, peer_commitment, peer_hlock_commitment, router, next_router, comments=None):
+    def create(cls, wallet, channel_name, asset_type, tx_nonce, sender, receiver, payment, sender_balance,
+               receiver_balance, hashcode, delay_block, peer_commitment, peer_hlock_commitment, router, next_router,
+               comments=None):
         """
 
-        :param channel_name:
         :param wallet:
+        :param channel_name:
+        :param asset_type:
+        :param tx_nonce:
         :param sender:
         :param receiver:
-        :param asset_type:
         :param payment:
-        :param tx_nonce:
+        :param sender_balance:
+        :param receiver_balance:
         :param hashcode:
         :param delay_block:
         :param peer_commitment:

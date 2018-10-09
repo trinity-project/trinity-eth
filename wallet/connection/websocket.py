@@ -40,7 +40,8 @@ from wallet.event.offchain_event import ChannelEndSettleEvent, \
     ChannelUpdateSettleEvent, \
     ChannelPunishHtlcUnlockEvent, \
     ChannelSettleHtlcUnlockEvent, \
-    ChannelSettledEvent
+    ChannelSettledEvent, \
+    ChannelHtlcUnlockedEvent
 
 
 class EnumChainEventReq(Enum):
@@ -350,8 +351,8 @@ class WebSocketConnection(metaclass=SingletonClass):
             channel_name = message.get('channelId')
 
             # update the channel to settled state
-            if not channel_name:
-                channel_event = ChannelSettledEvent
+            if channel_name:
+                channel_event = ChannelSettledEvent(channel_name)
                 channel_event.execute(get_block_count(), channel_name)
         except Exception as error:
             LOG.error('Invalid message: {}. Exception: {}'.format(message, error))
@@ -371,8 +372,8 @@ class WebSocketConnection(metaclass=SingletonClass):
         try:
             invoker = message.get('invoker').strip()
             channel_name = message.get('channelId')
-            hashcode = message.get('HashR')
-            rcode = message.get('R')
+            hashcode = message.get('lockHash')
+            rcode = message.get('secret')
             end_time = int(message.get('blockNumber'))
         except Exception as error:
             LOG.error('Invalid message: {}. Exception: {}'.format(message, error))
@@ -401,8 +402,24 @@ class WebSocketConnection(metaclass=SingletonClass):
     def monitorWithdrawUpdate(self):
         pass
 
-    def monitorWithdrawSettle(self):
-        pass
+    def monitorWithdrawSettle(self, message):
+        """
+
+        :param message:
+        :return:
+        """
+        try:
+            channel_name = message.get('channelId')
+            hashcode = message.get('lockHash')
+
+            # update the channel to settled state
+            if channel_name:
+                channel_event = ChannelHtlcUnlockedEvent(channel_name)
+                channel_event.execute(get_block_count(), channel_name, hashcode)
+        except Exception as error:
+            LOG.error('Invalid message: {}. Exception: {}'.format(message, error))
+
+        return
 
 
 ws_instance = WebSocketConnection()

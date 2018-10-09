@@ -613,13 +613,26 @@ class Channel(object):
                                                                       'hashcode': hashcode})[0]
 
             # if the state of this trasaction is confirming, no need to update transaction
-            if is_pubnishment and htlc_trade.state not in [EnumTradeState.confirmed.name,
-                                                           EnumTradeState.confirmed_onchain.name]:
+            rsmc_trade = None
+            if is_pubnishment:
+                rsmc_trade = cls.batch_query_trade(channel_name, filters={'type': EnumTradeType.TRADE_TYPE_RSMC.name,
+                                                                          'hashcode': hashcode})
+
+                rsmc_trade = rsmc_trade[0] if rsmc_trade else None
+
+            # no action Rsmc trade with this HashR has already existed and the state of trade is confirmed
+            if rsmc_trade and rsmc_trade.state in [EnumTradeState.confirmed.name]:
+                # to trigger the htlc punishment and close the channel
+                pass
+            else:
+                # Below actions are needed:
+                # step 1 : validate the R-code
+                # step 2 : update the R-code to htlc trade
                 LOG.info('No need to punish hlock transaction with HashR<{}>'.format(hashcode))
 
                 # to record this rcode if rcode is correct one
                 if Payment.verify_hr(hashcode, rcode):
-                    cls.update_payment(channel_name, hashcode, rcode=rcode)
+                    cls.update_trade(channel_name, htlc_trade.nonce, rcode=rcode)
 
                     # here, we need to notify the rcode to next wallet
                     cls.notify_rcode_to_next_peer(htlc_trade, rcode)
@@ -642,7 +655,7 @@ class Channel(object):
 
             # is withdraw update topic of the contract
             if is_pubnishment:
-                trigger_kwargs.update(punishment_htlc_kwargs(htlc_trade, self_address, peer_address))
+                trigger_kwargs.update(punishment_htlc_kwargs(rsmc_trade, self_address, peer_address))
             else:
                 trigger_kwargs.update(unlock_htlc_kwargs(htlc_trade, self_address, peer_address, is_debug))
 

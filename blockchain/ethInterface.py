@@ -47,7 +47,7 @@ class Interface(object):
         :param invoker_key: sender's key
         :return: transaction id
         """
-        return self.eth_client.contruct_Transaction(invoker, self.asset_contract, "approve",
+        return self.eth_client.contruct_Transaction(invoker, self.asset_contract, "increaseApprove",
                                                     [self.data_contract_address, asset_amount],
                                                     invoker_key, gwei_coef=gwei_coef)
 
