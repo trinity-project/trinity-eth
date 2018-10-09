@@ -39,7 +39,8 @@ from wallet.event import event_machine, EnumEventAction
 from wallet.event.offchain_event import ChannelEndSettleEvent, \
     ChannelUpdateSettleEvent, \
     ChannelPunishHtlcUnlockEvent, \
-    ChannelSettleHtlcUnlockEvent
+    ChannelSettleHtlcUnlockEvent, \
+    ChannelSettledEvent
 
 
 class EnumChainEventReq(Enum):
@@ -335,8 +336,27 @@ class WebSocketConnection(metaclass=SingletonClass):
 
         return
 
-    def monitorSettle(self):
-        pass
+    def monitorSettle(self, message):
+        """
+
+        :param message:
+        :return:
+        """
+        if not message:
+            LOG.error('monitorSettle: Invalid message: {}'.format(message))
+            return
+
+        try:
+            channel_name = message.get('channelId')
+
+            # update the channel to settled state
+            if not channel_name:
+                channel_event = ChannelSettledEvent
+                channel_event.execute(get_block_count(), channel_name)
+        except Exception as error:
+            LOG.error('Invalid message: {}. Exception: {}'.format(message, error))
+
+        return
 
     def  monitorWithdraw(self, message):
         """

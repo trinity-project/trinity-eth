@@ -502,6 +502,8 @@ class Channel(object):
                 latest_nonce = int(trade.nonce)
                 if nonce is not None and (latest_nonce == int(nonce) or int(nonce) > latest_nonce+1):
                     LOG.debug('No need update transaction. nonce<{}>, latest_nonce<{}>'.format(nonce, latest_nonce))
+                    # update the channel to settling state
+                    Channel.update_channel(channel_name, state=EnumChannelState.SETTLING.name)
                     return None
                 nonce = latest_nonce
         except Exception as error:

@@ -149,12 +149,36 @@ class ChannelEndSettleEvent(ChannelOfflineEventBase):
 
         # set channel settling
         if result is not None and 'success' in result.values():
-            Channel.update_channel(self.channel_name, state=EnumChannelState.CLOSED.name)
+            Channel.update_channel(self.channel_name, state=EnumChannelState.SETTLED.name)
         self.next_stage()
 
     def terminate(self, block_height, *args, **kwargs):
         super(ChannelEndSettleEvent, self).terminate(block_height, *args, **kwargs)
         self.next_stage()
+
+
+class ChannelSettledEvent(ChannelOfflineEventBase):
+    def __init__(self, channel_name, is_event_founder=True):
+        super(ChannelSettledEvent, self).__init__(channel_name, EnumEventType.EVENT_TYPE_END_SETTLE,
+                                                    is_event_founder)
+
+    def prepare(self, block_height, *args, **kwargs):
+        super(ChannelSettledEvent, self).prepare(block_height, *args, **kwargs)
+        self.next_stage()
+
+    def execute(self, block_height, channel_name='', **kwargs):
+        """
+
+        :param block_height:
+        :param channel_name:
+        :param kwargs:
+        :return:
+        """
+        super(ChannelSettledEvent, self).execute(block_height)
+
+        # if monitor this event, close channel directly
+        if not channel_name:
+            Channel.update_channel(channel_name, state=EnumChannelState.SETTLED.name)
 
 
 class ChannelHtlcUnlockEvent(ChannelOfflineEventBase):
@@ -264,7 +288,7 @@ class ChannelSettleHtlcUnlockEvent(ChannelOfflineEventBase):
 
         # set channel settling
         if result is not None and 'success' in result.values():
-            Channel.update_channel(self.channel_name, state=EnumChannelState.CLOSED.name)
+            Channel.update_channel(self.channel_name, state=EnumChannelState.SETTLED.name)
         self.next_stage()
 
     def terminate(self, block_height, *args, **kwargs):
