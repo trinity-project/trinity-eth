@@ -92,9 +92,9 @@ class ContractEventInterface(metaclass=SingletonClass):
         :param gwei_coef:
         :return:
         """
+        deposit = int(deposit)
         # approved_asset = cls.get_approved_asset(address)
         #
-        # deposit = int(deposit)
         # if approved_asset >= deposit:
         #     LOG.info('Has been approved asset count: {}'.format(approved_asset))
         #     return True
