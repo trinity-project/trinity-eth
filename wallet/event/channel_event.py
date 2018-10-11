@@ -66,6 +66,8 @@ class ChannelDepositEvent(ChannelEventBase):
         self.partner_deposit = 0.0
 
         self.nonce = 1  # thins must be equal to _founder_NONCE
+        self.approved_tx_id = None
+        self.deposit_tx_id = None
 
         pass
 
@@ -79,11 +81,22 @@ class ChannelDepositEvent(ChannelEventBase):
             LOG.info('Channel<{}> in opening state.'.format(self.channel_name))
             console_log.info('Channel<{}> is opening'.format(self.channel_name))
 
-        # provide the authorized right to eth contract
+        if self.approved_tx_id:
+            checked = self.check_transaction_success(self.approved_tx_id)
+            if checked:
+                # go to next stage
+                self.next_stage()
+                return True
+            elif checked is False:
+                return False
+            else:
+                # new transaction is pushed to chain
+                self.approved_tx_id = None
+
+        # make transaction to chain
         result = self.contract_event_api.approve(address, deposit, key, gwei_coef=self.gwei_coef)
         if result:
-            self.next_stage()
-            return True
+            self.approved_tx_id = '0x'+result.strip()
 
         return False
 
@@ -94,6 +107,19 @@ class ChannelDepositEvent(ChannelEventBase):
 
         # execute stage of channel event
         try:
+            # check whether deposit is success or not
+            if self.is_event_founder and self.deposit_tx_id:
+                checked = self.check_transaction_success(self.deposit_tx_id)
+                if checked:
+                    # go to next stage
+                    self.next_stage()
+                    return True
+                elif checked is False:
+                    return False
+                else:
+                    # new transaction is pushed to chain
+                    self.deposit_tx_id = None
+
             # update the founder and partner deposit
             self.deposit = int(deposit)
             self.partner_deposit = int(partner_deposit)
@@ -109,21 +135,17 @@ class ChannelDepositEvent(ChannelEventBase):
                 self.next_stage()
                 return True
 
-            # means this event is executed by the founder
-            # has approved the asset amount which is authorized to be used by the eth contract
+            # check approved asset of both side for event founder.
             if not (approved_deposit >= self.deposit and peer_approved_deposit >= self.partner_deposit):
                 return False
 
+            # below codes means this event is executed by the founder
             # Trigger deposit action if is_event_founder is True
-            if self.is_event_founder:
-                self.contract_event_api.approve_deposit(
+            result = self.deposit_tx_id = self.contract_event_api.approve_deposit(
                     address, channel_id, nonce, founder, deposit, partner, partner_deposit,
                     founder_sign, partner_sign, private_key, gwei_coef=self.gwei_coef)
-
-            # Goto next stage
-            self.next_stage()
-
-            return True
+            if result:
+                self.deposit_tx_id = '0x'+result.strip()
         except Exception as error:
             LOG.warning('Failed to approve deposit of Channel<{}>. Exception: {}'.format(self.channel_name, error))
 

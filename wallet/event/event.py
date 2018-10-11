@@ -96,6 +96,8 @@ class EventBase(object):
         self.contract_event_api = ContractEventInterface()
         self.gwei_coef = self.contract_event_api.gwei_coefficient
 
+        self.contract_executed_success = 1
+
     def retry_event(self):
         self.retry = True
         self.gwei_coef = self.gwei_for_retry
@@ -167,6 +169,29 @@ class EventBase(object):
     @property
     def event_type_name(self):
         return self.event_type.name
+
+    def check_transaction_success(self, tx_hash):
+        """
+
+        :param tx_hash: transaction id by eth blockchain
+        :return:
+        """
+        if tx_hash:
+            result = self.contract_event_api._eth_interface.get_transaction_receipt(tx_hash)
+
+            # check the status is successs or not
+            if result:
+                if self.contract_executed_success == result.get('status'):
+                    # means we will go to next step
+                    return True
+                else:
+                    # need a new transaction
+                    return None
+            else:
+                # continue check this transaction id
+                return False
+        else:
+            return None
 
     @staticmethod
     def check_valid_action(self, action_type):

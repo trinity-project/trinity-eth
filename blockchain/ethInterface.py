@@ -388,7 +388,10 @@ class Interface(object):
                         'transactionIndex': 9
                         }
         """
-        return self.eth_client.get_transaction_receipt(hashString)
+        try:
+            return self.eth_client.get_transaction_receipt(hashString)
+        except:
+            return None
 
     def get_channel_total_balance(self,channel_id):
         """
