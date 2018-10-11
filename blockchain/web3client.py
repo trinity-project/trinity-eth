@@ -5,6 +5,7 @@ from web3 import Web3, HTTPProvider
 from ethereum.utils import sha3, is_string, encode_hex, checksum_encode
 from trinity import GWEI_COEFFICIENT
 from common.log import LOG
+from random import randint
 
 
 def get_privtKey_from_keystore(filename,password):
@@ -184,7 +185,7 @@ class Client(object):
         else:
             LOG.debug('Estimated to spend {} gas'.format(estimate_gas))
             tx_dict = contract.functions[method](*args).buildTransaction({
-                'gas':gasLimit,
+                'gas': estimate_gas + 5000 + randint(1, 10000),
                 'gasPrice': pow(10, 9) * gwei_coef,
                 'nonce': self.web3.eth.getTransactionCount(checksum_encode(invoker)),
             })
