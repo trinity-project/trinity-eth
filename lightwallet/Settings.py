@@ -53,46 +53,38 @@ class SettingsHolder:
 
 settings = SettingsHolder()
 
-erc20_asset_abi =[
+erc20_asset_abi = [
     {
-        "anonymous": False,
-        "inputs": [
+        "constant": True,
+        "inputs": [],
+        "name": "name",
+        "outputs": [
             {
-                "indexed": True,
-                "name": "from",
-                "type": "address"
-            },
-            {
-                "indexed": True,
-                "name": "to",
-                "type": "address"
-            },
-            {
-                "indexed": False,
-                "name": "value",
-                "type": "uint256"
+                "name": "",
+                "type": "string"
             }
         ],
-        "name": "Transfer",
-        "type": "event"
+        "payable": False,
+        "stateMutability": "view",
+        "type": "function"
     },
     {
         "constant": False,
         "inputs": [
             {
                 "name": "_spender",
-                        "type": "address"
+                "type": "address"
             },
             {
                 "name": "_value",
-                        "type": "uint256"
+                "type": "uint256"
             }
         ],
         "name": "approve",
         "outputs": [
             {
                 "name": "",
-                        "type": "bool"
+                "type": "bool"
             }
         ],
         "payable": False,
@@ -103,19 +95,28 @@ erc20_asset_abi =[
         "constant": False,
         "inputs": [
             {
-                "name": "_value",
-                        "type": "uint256"
+                "name": "newOwner",
+                "type": "address"
             }
         ],
-        "name": "burn",
+        "name": "changeAll",
+        "outputs": [],
+        "payable": False,
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "constant": True,
+        "inputs": [],
+        "name": "totalSupply",
         "outputs": [
             {
                 "name": "",
-                        "type": "bool"
+                "type": "uint256"
             }
         ],
         "payable": False,
-        "stateMutability": "nonpayable",
+        "stateMutability": "view",
         "type": "function"
     },
     {
@@ -123,18 +124,213 @@ erc20_asset_abi =[
         "inputs": [
             {
                 "name": "_from",
-                        "type": "address"
+                "type": "address"
+            },
+            {
+                "name": "_to",
+                "type": "address"
             },
             {
                 "name": "_value",
-                        "type": "uint256"
+                "type": "uint256"
+            }
+        ],
+        "name": "transferFrom",
+        "outputs": [
+            {
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "payable": False,
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "constant": True,
+        "inputs": [],
+        "name": "pausedPublic",
+        "outputs": [
+            {
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "payable": False,
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "constant": True,
+        "inputs": [],
+        "name": "decimals",
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint8"
+            }
+        ],
+        "payable": False,
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "constant": False,
+        "inputs": [
+            {
+                "name": "_value",
+                "type": "uint256"
+            }
+        ],
+        "name": "burn",
+        "outputs": [
+            {
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "payable": False,
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "constant": True,
+        "inputs": [],
+        "name": "pausedOwnerAdmin",
+        "outputs": [
+            {
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "payable": False,
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "constant": False,
+        "inputs": [
+            {
+                "name": "_spender",
+                "type": "address"
+            },
+            {
+                "name": "_subtractedValue",
+                "type": "uint256"
+            }
+        ],
+        "name": "decreaseApproval",
+        "outputs": [
+            {
+                "name": "success",
+                "type": "bool"
+            }
+        ],
+        "payable": False,
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "constant": True,
+        "inputs": [
+            {
+                "name": "_owner",
+                "type": "address"
+            }
+        ],
+        "name": "balanceOf",
+        "outputs": [
+            {
+                "name": "balance",
+                "type": "uint256"
+            }
+        ],
+        "payable": False,
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "constant": False,
+        "inputs": [
+            {
+                "name": "_from",
+                "type": "address"
+            },
+            {
+                "name": "_value",
+                "type": "uint256"
             }
         ],
         "name": "burnFrom",
         "outputs": [
             {
                 "name": "",
-                        "type": "bool"
+                "type": "bool"
+            }
+        ],
+        "payable": False,
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "constant": True,
+        "inputs": [],
+        "name": "owner",
+        "outputs": [
+            {
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "payable": False,
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "constant": False,
+        "inputs": [
+            {
+                "name": "newAdmin",
+                "type": "address"
+            }
+        ],
+        "name": "changeAdmin",
+        "outputs": [],
+        "payable": False,
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "constant": True,
+        "inputs": [],
+        "name": "symbol",
+        "outputs": [
+            {
+                "name": "",
+                "type": "string"
+            }
+        ],
+        "payable": False,
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "constant": False,
+        "inputs": [
+            {
+                "name": "_to",
+                "type": "address"
+            },
+            {
+                "name": "_value",
+                "type": "uint256"
+            }
+        ],
+        "name": "transfer",
+        "outputs": [
+            {
+                "name": "",
+                "type": "bool"
             }
         ],
         "payable": False,
@@ -145,47 +341,19 @@ erc20_asset_abi =[
         "constant": False,
         "inputs": [
             {
-                "name": "newAdmin",
-                        "type": "address"
-            }
-        ],
-        "name": "changeAdmin",
-        "outputs": [],
-        "payable": False,
-                "stateMutability": "nonpayable",
-                "type": "function"
-    },
-    {
-        "constant": False,
-        "inputs": [
-            {
-                "name": "newOwner",
-                        "type": "address"
-            }
-        ],
-        "name": "changeAll",
-        "outputs": [],
-        "payable": False,
-                "stateMutability": "nonpayable",
-                "type": "function"
-    },
-    {
-        "constant": False,
-        "inputs": [
-            {
                 "name": "_spender",
-                        "type": "address"
+                "type": "address"
             },
             {
-                "name": "_subtractedValue",
-                        "type": "uint256"
+                "name": "_addedValue",
+                "type": "uint256"
             }
         ],
-        "name": "decreaseApproval",
+        "name": "increaseApproval",
         "outputs": [
             {
                 "name": "success",
-                        "type": "bool"
+                "type": "bool"
             }
         ],
         "payable": False,
@@ -197,38 +365,56 @@ erc20_asset_abi =[
         "inputs": [
             {
                 "name": "token",
-                        "type": "address"
+                "type": "address"
             },
             {
                 "name": "amount",
-                        "type": "uint256"
+                "type": "uint256"
             }
         ],
         "name": "emergencyERC20Drain",
         "outputs": [],
         "payable": False,
-                "stateMutability": "nonpayable",
-                "type": "function"
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "constant": True,
+        "inputs": [
+            {
+                "name": "_owner",
+                "type": "address"
+            },
+            {
+                "name": "_spender",
+                "type": "address"
+            }
+        ],
+        "name": "allowance",
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "payable": False,
+        "stateMutability": "view",
+        "type": "function"
     },
     {
         "constant": False,
         "inputs": [
             {
-                "name": "_spender",
-                        "type": "address"
+                "name": "newPausedPublic",
+                "type": "bool"
             },
             {
-                "name": "_addedValue",
-                        "type": "uint256"
+                "name": "newPausedOwnerAdmin",
+                "type": "bool"
             }
         ],
-        "name": "increaseApproval",
-        "outputs": [
-            {
-                "name": "success",
-                        "type": "bool"
-            }
-        ],
+        "name": "pause",
+        "outputs": [],
         "payable": False,
         "stateMutability": "nonpayable",
         "type": "function"
@@ -237,19 +423,35 @@ erc20_asset_abi =[
         "constant": False,
         "inputs": [
             {
-                "name": "newPausedPublic",
-                        "type": "bool"
-            },
-            {
-                "name": "newPausedOwnerAdmin",
-                        "type": "bool"
+                "name": "newOwner",
+                "type": "address"
             }
         ],
-        "name": "pause",
+        "name": "transferOwnership",
         "outputs": [],
         "payable": False,
-                "stateMutability": "nonpayable",
-                "type": "function"
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "constant": True,
+        "inputs": [],
+        "name": "admin",
+        "outputs": [
+            {
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "payable": False,
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "payable": False,
+        "stateMutability": "nonpayable",
+        "type": "constructor"
     },
     {
         "anonymous": False,
@@ -273,16 +475,28 @@ erc20_asset_abi =[
         "inputs": [
             {
                 "indexed": True,
-                "name": "previousOwner",
+                "name": "previousAdmin",
                 "type": "address"
             },
             {
                 "indexed": True,
-                "name": "newOwner",
+                "name": "newAdmin",
                 "type": "address"
             }
         ],
-        "name": "OwnershipTransferred",
+        "name": "AdminTransferred",
+        "type": "event"
+    },
+    {
+        "anonymous": False,
+        "inputs": [
+            {
+                "indexed": False,
+                "name": "newState",
+                "type": "bool"
+            }
+        ],
+        "name": "PausePublic",
         "type": "event"
     },
     {
@@ -301,52 +515,17 @@ erc20_asset_abi =[
         "anonymous": False,
         "inputs": [
             {
-                "indexed": False,
-                "name": "newState",
-                "type": "bool"
-            }
-        ],
-        "name": "PausePublic",
-        "type": "event"
-    },
-    {
-        "constant": False,
-        "inputs": [
-            {
-                "name": "_to",
-                        "type": "address"
-            },
-            {
-                "name": "_value",
-                        "type": "uint256"
-            }
-        ],
-        "name": "transfer",
-        "outputs": [
-            {
-                "name": "",
-                        "type": "bool"
-            }
-        ],
-        "payable": False,
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "anonymous": False,
-        "inputs": [
-            {
                 "indexed": True,
-                "name": "previousAdmin",
+                "name": "previousOwner",
                 "type": "address"
             },
             {
                 "indexed": True,
-                "name": "newAdmin",
+                "name": "newOwner",
                 "type": "address"
             }
         ],
-        "name": "AdminTransferred",
+        "name": "OwnershipTransferred",
         "type": "event"
     },
     {
@@ -372,205 +551,26 @@ erc20_asset_abi =[
         "type": "event"
     },
     {
-        "constant": False,
+        "anonymous": False,
         "inputs": [
             {
-                "name": "_from",
-                        "type": "address"
-            },
-            {
-                "name": "_to",
-                        "type": "address"
-            },
-            {
-                "name": "_value",
-                        "type": "uint256"
-            }
-        ],
-        "name": "transferFrom",
-        "outputs": [
-            {
-                "name": "",
-                        "type": "bool"
-            }
-        ],
-        "payable": False,
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "constant": False,
-        "inputs": [
-            {
-                "name": "newOwner",
-                        "type": "address"
-            }
-        ],
-        "name": "transferOwnership",
-        "outputs": [],
-        "payable": False,
-                "stateMutability": "nonpayable",
-                "type": "function"
-    },
-    {
-        "inputs": [],
-        "payable": False,
-        "stateMutability": "nonpayable",
-        "type": "constructor"
-    },
-    {
-        "constant": True,
-        "inputs": [],
-        "name": "admin",
-                "outputs": [
-            {
-                "name": "",
+                "indexed": True,
+                "name": "from",
                 "type": "address"
-            }
-        ],
-        "payable": False,
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "constant": True,
-        "inputs": [
-            {
-                "name": "_owner",
-                        "type": "address"
             },
             {
-                "name": "_spender",
-                        "type": "address"
-            }
-        ],
-        "name": "allowance",
-        "outputs": [
-            {
-                "name": "",
-                        "type": "uint256"
-            }
-        ],
-        "payable": False,
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "constant": True,
-        "inputs": [
-            {
-                "name": "_owner",
-                        "type": "address"
-            }
-        ],
-        "name": "balanceOf",
-        "outputs": [
-            {
-                "name": "balance",
-                        "type": "uint256"
-            }
-        ],
-        "payable": False,
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "constant": True,
-        "inputs": [],
-        "name": "decimals",
-                "outputs": [
-            {
-                "name": "",
-                "type": "uint8"
-            }
-        ],
-        "payable": False,
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "constant": True,
-        "inputs": [],
-        "name": "name",
-                "outputs": [
-            {
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "payable": False,
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "constant": True,
-        "inputs": [],
-        "name": "owner",
-                "outputs": [
-            {
-                "name": "",
+                "indexed": True,
+                "name": "to",
                 "type": "address"
-            }
-        ],
-        "payable": False,
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "constant": True,
-        "inputs": [],
-        "name": "pausedOwnerAdmin",
-                "outputs": [
+            },
             {
-                "name": "",
-                "type": "bool"
-            }
-        ],
-        "payable": False,
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "constant": True,
-        "inputs": [],
-        "name": "pausedPublic",
-                "outputs": [
-            {
-                "name": "",
-                "type": "bool"
-            }
-        ],
-        "payable": False,
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "constant": True,
-        "inputs": [],
-        "name": "symbol",
-                "outputs": [
-            {
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "payable": False,
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "constant": True,
-        "inputs": [],
-        "name": "totalSupply",
-                "outputs": [
-            {
-                "name": "",
+                "indexed": False,
+                "name": "value",
                 "type": "uint256"
             }
         ],
-        "payable": False,
-        "stateMutability": "view",
-        "type": "function"
+        "name": "Transfer",
+        "type": "event"
     }
 ]
 
