@@ -4,6 +4,7 @@ from ethereum.utils import ecsign, normalize_key, int_to_big_endian, checksum_en
 from web3 import Web3, HTTPProvider
 from ethereum.utils import sha3, is_string, encode_hex, checksum_encode
 from trinity import GWEI_COEFFICIENT
+from common.log import LOG
 
 
 def get_privtKey_from_keystore(filename,password):
@@ -169,20 +170,28 @@ class Client(object):
         return self.web3.eth.getFilterLogs(filter_id)
 
 
-    def call_contract(self,contract,method,args):
+    def call_contract(self,contract, method, args):
         return contract.functions[method](*args).call()
 
     def contruct_Transaction(self, invoker, contract, method, args, key, gwei_coef=None, gasLimit=4600000):
         """"""
-        tx_dict = contract.functions[method](*args).buildTransaction({
-            'gas':gasLimit,
-            'gasPrice': pow(10, 9) * gwei_coef,
-            'nonce': self.web3.eth.getTransactionCount(checksum_encode(invoker)),
-        })
-        signed = self.web3.eth.account.signTransaction(tx_dict, key)
-        tx_id = self.web3.eth.sendRawTransaction(signed.rawTransaction)
+        try:
+            # pre-check the transaction
+            estimate_gas = contract.functions[method](*args).estimateGas({'from': invoker})
+        except Exception as error:
+            LOG.error('Failed to execute {}. Exception: {}'.format(method, error))
+            return None
+        else:
+            LOG.debug('Estimated to spend {} gas'.format(estimate_gas))
+            tx_dict = contract.functions[method](*args).buildTransaction({
+                'gas':gasLimit,
+                'gasPrice': pow(10, 9) * gwei_coef,
+                'nonce': self.web3.eth.getTransactionCount(checksum_encode(invoker)),
+            })
+            signed = self.web3.eth.account.signTransaction(tx_dict, key)
+            tx_id = self.web3.eth.sendRawTransaction(signed.rawTransaction)
 
-        return binascii.hexlify(tx_id).decode()
+            return binascii.hexlify(tx_id).decode()
 
     def get_transaction_receipt(self, hashString):
         return self.web3.eth.getTransactionReceipt(hashString)
@@ -195,8 +204,6 @@ class Client(object):
     def get_gas_price(cls):
         return cls._gwei_coeficient
 
-    def get_estimate_gas(self, invoker, contract, method, args):
-        return  contract.functions[method](*args).estimateGas({'from':invoker})
-
-
-
+    # @staticmethod
+    # def get_estimate_gas(invoker, contract, method, args):
+    #     return  contract.functions[method](*args).estimateGas({'from': invoker})

@@ -94,18 +94,23 @@ class ChannelDepositEvent(ChannelEventBase):
 
         # execute stage of channel event
         try:
-            deposit = int(deposit)
             partner_deposit = int(partner_deposit)
-
-            approved_deposit = self.contract_event_api.get_approved_asset(founder)
             peer_approved_deposit = self.contract_event_api.get_approved_asset(partner)
-
-            # has approved the asset amount which is authorized to be used by the eth contract
-            if not (approved_deposit >= deposit and peer_approved_deposit >= partner_deposit):
-                return False
+            deposit = int(deposit)
+            approved_deposit = self.contract_event_api.get_approved_asset(founder)
 
             LOG.debug('Approved asset: self<{}:{}>, peer<{}:{}>' \
                       .format(address, approved_deposit, partner, peer_approved_deposit))
+
+            # to check this wallet is event founder or not
+            if not self.is_event_founder and peer_approved_deposit >= partner_deposit:
+                self.next_stage()
+                return True
+
+            # means this event is executed by the founder
+            # has approved the asset amount which is authorized to be used by the eth contract
+            if not (approved_deposit >= deposit and peer_approved_deposit >= partner_deposit):
+                return False
 
             # update the founder and partner deposit
             self.deposit = deposit
