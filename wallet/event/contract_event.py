@@ -84,12 +84,20 @@ class ContractEventInterface(metaclass=SingletonClass):
 
     @classmethod
     def approve(cls, address, deposit, private_key, gwei_coef=1):
-        approved_asset = cls.get_approved_asset(address)
+        """
 
-        deposit = int(deposit)
-        if approved_asset >= deposit:
-            LOG.info('Has been approved asset count: {}'.format(approved_asset))
-            return True
+        :param address:
+        :param deposit:
+        :param private_key:
+        :param gwei_coef:
+        :return:
+        """
+        # approved_asset = cls.get_approved_asset(address)
+        #
+        # deposit = int(deposit)
+        # if approved_asset >= deposit:
+        #     LOG.info('Has been approved asset count: {}'.format(approved_asset))
+        #     return True
 
         try:
             # return tx_id
