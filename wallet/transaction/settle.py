@@ -93,6 +93,27 @@ class SettleBase(Message):
             event_machine.register_event(self.channel_name, channel_event)
             event_machine.trigger_start_event(self.channel_name)
 
+    @classmethod
+    def add_or_update_quick_settle_trade(cls, channel_name, expected_role, **kwargs):
+        """
+
+        :param channel_name:
+        :param expected_role:
+        :param kwargs:
+        :return:
+        """
+        nonce = cls._SETTLE_NONCE
+        try:
+            settle_trade_db = Channel.query_trade(channel_name, nonce)[0]
+        except Exception as error:
+            LOG.debug('No quick settle is created before. Exception: {}'.format(error))
+            Channel.add_trade(channel_name, nonce=nonce, **kwargs)
+        else:
+            # check the role of the database:
+            if settle_trade_db.role != expected_role.name:
+                # update the settle database
+                Channel.update_trade(channel_name, nonce, **kwargs)
+
 
 class SettleMessage(SettleBase):
     """
@@ -186,7 +207,8 @@ class SettleMessage(SettleBase):
         settle_trade = Channel.settle_trade(
             type = EnumTradeType.TRADE_TYPE_QIUCK_SETTLE, role=EnumTradeRole.TRADE_ROLE_FOUNDER,
             asset_type=asset_type, balance=sender_balance, peer_balance=receiver_balance, commitment=commitment)
-        Channel.add_trade(channel_name, nonce=nonce, **settle_trade)
+        SettleMessage.add_or_update_quick_settle_trade(channel_name, EnumTradeRole.TRADE_ROLE_FOUNDER, **settle_trade)
+
 
         # create settle request message
         message = SettleMessage.create_message_header(sender, receiver, SettleMessage._message_name,
@@ -287,7 +309,7 @@ class SettleResponseMessage(SettleBase):
             type = EnumTradeType.TRADE_TYPE_QIUCK_SETTLE, role=EnumTradeRole.TRADE_ROLE_PARTNER,
             asset_type=asset_type, balance=receiver_balance, peer_balance=sender_balance,
             commitment=commitment, peer_commitment=peer_commitment)
-        Channel.add_trade(channel_name, nonce=nonce, **settle_trade)
+        SettleResponseMessage.add_or_update_quick_settle_trade(channel_name, EnumTradeRole.TRADE_ROLE_PARTNER, **settle_trade)
 
         message = SettleResponseMessage.create_message_header(receiver, sender, SettleResponseMessage._message_name,
                                                               channel_name, asset_type, nonce)
