@@ -256,13 +256,11 @@ class RsmcResponsesMessage(RsmcBase):
                 self.rsmc_sign(self.wallet, self.channel_name, self.asset_type, self.nonce, self.sender, self.receiver,
                                self.payment, self.sender_balance, self.receiver_balance, self.rsmc_sign_role,
                                self.hashcode, self.comments)
-            else:
-                # update htlc trade
-                Channel.confirm_payment(self.channel_name, self.hashcode, is_htlc_to_rsmc)
             
             # update transaction
             Channel.update_trade(self.channel_name, self.nonce, peer_commitment=self.commitment,
                                  state=EnumTradeState.confirmed.name)
+            Channel.confirm_payment(self.channel_name, self.hashcode, is_htlc_to_rsmc)
 
             # update the channel balance
             self.update_balance_for_channel(self.channel_name, self.asset_type, self.payer, self.payee, self.payment,
