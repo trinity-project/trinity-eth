@@ -74,19 +74,16 @@ class ChannelDepositEvent(ChannelEventBase):
     def prepare(self, block_height, address='', deposit=0.0, key=''):
         super(ChannelDepositEvent, self).prepare(block_height)
 
-        # update the channel OPENING State after trigger the deposit event, wait for OPENED state
-        if self.retry is False:
-            LOG.debug('Start to create channel<{}>'.format(self.channel_name))
-            Channel.update_channel(self.channel_name, state=EnumChannelState.OPENING.name)
-            LOG.info('Channel<{}> in opening state.'.format(self.channel_name))
-            console_log.info('Channel<{}> is opening'.format(self.channel_name))
-
+        # if this transaction id is approved, it means successful by eth block chain
         if self.approved_tx_id:
             checked = self.check_transaction_success(self.approved_tx_id)
             if checked:
                 # go to next stage
                 self.next_stage()
                 LOG.debug('Approved asset by address<{}:{}>'.format(address, deposit))
+                Channel.update_channel(self.channel_name, state=EnumChannelState.OPENING.name)
+                LOG.info('Start to create channel<{}>. State: OPENING.'.format(self.channel_name))
+                console_log.info('Channel<{}> is opening'.format(self.channel_name))
                 return True
             elif checked is False:
                 return False
@@ -201,9 +198,8 @@ class ChannelQuickSettleEvent(ChannelEventBase):
 
         # update the channel OPENING State after trigger the deposit event, wait for OPENED
         if self.retry is False:
-            LOG.debug('Start to quick-close channel<{}>'.format(self.channel_name))
             Channel.update_channel(self.channel_name, state=EnumChannelState.CLOSING.name)
-            LOG.info('Channel<{}> in closing state.'.format(self.channel_name))
+            LOG.info('Start to quick-close channel<{}>. State: CLOSING.'.format(self.channel_name))
             console_log.info('Channel<{}> is closing'.format(self.channel_name))
 
         # go to next stage

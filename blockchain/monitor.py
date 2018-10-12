@@ -82,17 +82,19 @@ class EventMonitor(object):
 
 def monitorblock():
     """"""
+    old_blockheight_onchain = 0
     while EventMonitor.GoOn:
         blockheight_onchain = get_block_count()
         EventMonitor.update_block_height(blockheight_onchain)
         blockheight = EventMonitor.get_wallet_block_height()
-        block_delta = int(blockheight_onchain) - int(blockheight)
+        block_delta = int(blockheight_onchain) - int(blockheight) if 1 != blockheight else 0
+        need_update = block_delta > 0
+        execute_event_machine = old_blockheight_onchain != blockheight_onchain
 
         # reset event machine
         event_machine.reset_polling()
 
         end_time = time.time() + 15 # sleep 15 second according to the chain update block time
-        need_update = False
         trigger_per_block = False
         while True:
             try:
@@ -101,25 +103,37 @@ def monitorblock():
                         pass
                     else:
                         blockheight += 1
-                        if blockheight <= blockheight_onchain:
-                            need_update = True
-                        else:
+                        if blockheight > blockheight_onchain:
                             need_update = False
-                elif 2010 <= block_delta and not trigger_per_block:
+
+                elif 2010 <= block_delta and need_update:
                     # use magic number
                     blockheight = int(blockheight_onchain) - 2000
+
+                    # only update per 15 seconds when the delta is verify large
                     trigger_per_block = True
-                else:
                     need_update = False
 
-                # update
+                # update wallet block height
                 if need_update or trigger_per_block:
                     EventMonitor.update_wallet_block_height(blockheight)
 
-                event_machine.handle(blockheight_onchain)
+                # only execute the event machine when the block chain height is updated
+                if execute_event_machine:
+                    event_machine.handle(blockheight_onchain)
             except Exception as error:
                 pass
+            finally:
+                # check whether the wallet is updated and the event is pooled
+                if need_update is False and (event_machine.is_polling_finished or execute_event_machine is False):
+                    left_loop_time = end_time - time.time()
+                    # suspend this thread until timeout
+                    time.sleep(left_loop_time)
+                else:
+                    # poll per 100 ms
+                    time.sleep(0.1)
 
-            time.sleep(0.1)
-            if end_time - time.time() <= 0.15:  # 150 ms
-                break
+                # exit this loop for this blockheight
+                if end_time - time.time() <= 0.15:  # 150 ms
+                    old_blockheight_onchain = blockheight_onchain
+                    break
