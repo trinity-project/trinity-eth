@@ -228,6 +228,9 @@ class ChannelPunishHtlcUnlockEvent(ChannelOfflineEventBase):
         super(ChannelPunishHtlcUnlockEvent, self).__init__(channel_name, EnumEventType.EVENT_TYPE_PUNISH_HTLC_UNLOCK,
                                                        is_event_founder)
 
+        # record transfer htlc to rsmc
+        self.transfer_htlc_to_rsmc = True
+
     def prepare(self, block_height, *args, **kwargs):
         super(ChannelPunishHtlcUnlockEvent, self).prepare(block_height, *args, **kwargs)
         self.next_stage()
@@ -249,7 +252,8 @@ class ChannelPunishHtlcUnlockEvent(ChannelOfflineEventBase):
         result = Channel.force_release_htlc(
             invoker_uri, channel_name, hashcode, rcode, invoker_key, gwei_coef=self.gwei_coef,
             trigger=self.contract_event_api.punish_when_htlc_unlock_payment, is_debug=False,
-            is_pubnishment=True)
+            is_pubnishment=True, htcl_to_rsmc=self.transfer_htlc_to_rsmc)
+        self.transfer_htlc_to_rsmc = False
 
         # set channel settling
         if result is not None and 'success' in result.values():

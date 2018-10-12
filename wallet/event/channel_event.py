@@ -27,7 +27,10 @@ from wallet.channel import Channel, sync_channel_info_to_gateway, EnumTradeState
 from model.base_enum import EnumChannelState
 from wallet.event.chain_event import event_monitor_settle, \
     event_monitor_close_channel, \
-    event_test_state
+    event_test_state, \
+    event_monitor_withdraw, \
+    event_monitor_withdraw_update, \
+    event_monitor_withdraw_settle
 from common.log import LOG
 from common.console import console_log
 from common.number import TrinityNumber
@@ -164,6 +167,9 @@ class ChannelDepositEvent(ChannelEventBase):
             event_monitor_settle(self.channel_name)
 
             # to trigger monitor event for unlocking htlc locked payment
+            event_monitor_withdraw(self.channel_name)
+            event_monitor_withdraw_update(self.channel_name)
+            event_monitor_withdraw_settle(self.channel_name)
 
             self.next_stage()
 

@@ -547,7 +547,7 @@ class Channel(object):
 
     @classmethod
     def force_release_htlc(cls, uri='', channel_name='', hashcode='', rcode='', sign_key='', gwei_coef=1, trigger=None,
-                           is_debug=False, is_pubnishment=False):
+                           is_debug=False, is_pubnishment=False, htcl_to_rsmc=False):
         """
 
         :param uri:
@@ -558,6 +558,7 @@ class Channel(object):
         :param gwei_coef:
         :param trigger:
         :param is_debug:
+        :param htcl_to_rsmc:
         :return:
         """
         # some internal function here
@@ -620,24 +621,25 @@ class Channel(object):
 
                 rsmc_trade = rsmc_trade[0] if rsmc_trade else None
 
-            # no action Rsmc trade with this HashR has already existed and the state of trade is confirmed
-            if rsmc_trade and rsmc_trade.state in [EnumTradeState.confirmed.name]:
-                # to trigger the htlc punishment and close the channel
-                pass
-            else:
-                # Below actions are needed:
-                # step 1 : validate the R-code
-                # step 2 : update the R-code to htlc trade
-                LOG.info('No need to punish hlock transaction with HashR<{}>'.format(hashcode))
+                # no action Rsmc trade with this HashR has already existed and the state of trade is confirmed
+                if rsmc_trade and rsmc_trade.state in [EnumTradeState.confirmed.name]:
+                        # to trigger the htlc punishment and close the channel
+                        pass
+                else:
+                    # Below actions are needed:
+                    # step 1 : validate the R-code
+                    # step 2 : update the R-code to htlc trade
+                    LOG.info('No need to punish hlock transaction with HashR<{}>'.format(hashcode))
 
-                # to record this rcode if rcode is correct one
-                if Payment.verify_hr(hashcode, rcode):
-                    cls.update_trade(channel_name, htlc_trade.nonce, rcode=rcode)
+                    # to record this rcode if rcode is correct one
+                    if Payment.verify_hr(hashcode, rcode):
+                        cls.update_trade(channel_name, htlc_trade.nonce, rcode=rcode)
 
-                    # here, we need to notify the rcode to next wallet
-                    cls.notify_rcode_to_next_peer(htlc_trade, rcode)
+                        # here, we need to notify the rcode to next wallet
+                        if htcl_to_rsmc:
+                            cls.notify_rcode_to_next_peer(htlc_trade, rcode)
 
-                return
+                    return
 
         except Exception as error:
             LOG.error('No Htlc trade was found or rcode is error. channel<{}>, HashR<{}>. Exception: {}' \
