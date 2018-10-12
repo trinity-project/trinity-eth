@@ -1,7 +1,7 @@
-# trinity
+# Trinity
 Trinity is a universal off-chain scaling solution, which aims to achieve real-time payments with low transaction fees, scalability and privacy protection for mainchain assets. Using state channel technology, Trinity will significantly increase the transaction throughput of underlying chains as well as the assets on smart contracts. TNC cross-chain converter facilitates the data and value flow between multiple chains. Trinity will be a fully autonomous and decentralized performance-enhancing network for the entire ecosystem and provides all-round support to Dapps on bottom layer chains in the future.
 https://trinity.tech
-# trinity-eth
+# Trinity-eth
 trinity-eth is the implementation of trinity protocol based on ethereum.
 
 # Trinity-ETH Network Configuration Guide
