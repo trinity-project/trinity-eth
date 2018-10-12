@@ -563,14 +563,15 @@ class Channel(object):
         """
         # some internal function here
         # ToDo: not a good way, could be optimized later
-        def common_kwargs_for_trigger(invoker, channel_id, lock_hash, lock_secret, invoker_key):
+        def common_kwargs_for_trigger(invoker, channel_id, lock_hash, lock_secret, invoker_key, gwei_coef=1):
             # makeup the parameters for callback
             return {
                 'invoker': invoker,
                 'channel_id': channel_id,
                 'lock_hash': lock_hash,
                 'lock_secret': lock_secret,
-                'invoker_key': invoker_key
+                'invoker_key': invoker_key,
+                'gwei_coef': gwei_coef
             }
 
         def unlock_htlc_kwargs(trade, address, peer_address, is_debug):
@@ -639,7 +640,7 @@ class Channel(object):
                         if htcl_to_rsmc:
                             cls.notify_rcode_to_next_peer(htlc_trade, rcode)
 
-                    return
+                    return {'result': 'success'}
 
         except Exception as error:
             LOG.error('No Htlc trade was found or rcode is error. channel<{}>, HashR<{}>. Exception: {}' \
@@ -653,7 +654,7 @@ class Channel(object):
             LOG.debug('Unlock Htlc payment: channel<{}>, HashR<{}>'.format(channel_name, hashcode))
 
             # makeup the parameters for callback function
-            trigger_kwargs = common_kwargs_for_trigger(self_address, channel_name, hashcode, rcode, sign_key)
+            trigger_kwargs = common_kwargs_for_trigger(self_address, channel_name, hashcode, rcode, sign_key, gwei_coef)
 
             # is withdraw update topic of the contract
             if is_pubnishment:
@@ -662,6 +663,7 @@ class Channel(object):
                 trigger_kwargs.update(unlock_htlc_kwargs(htlc_trade, self_address, peer_address, is_debug))
 
             # start trigger the callback and return the result.
+            LOG.debug('Force to unlock htlc with aruments: {}'.format(trigger_kwargs))
             return trigger(**trigger_kwargs)
 
         return None

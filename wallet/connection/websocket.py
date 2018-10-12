@@ -399,7 +399,7 @@ class WebSocketConnection(metaclass=SingletonClass):
 
         return
 
-    def monitorWithdrawUpdate(self):
+    def monitorWithdrawUpdate(self, message):
         pass
 
     def monitorWithdrawSettle(self, message):

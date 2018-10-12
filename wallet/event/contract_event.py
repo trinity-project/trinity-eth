@@ -227,11 +227,11 @@ class ContractEventInterface(metaclass=SingletonClass):
 
     @classmethod
     def htlc_unlock_payment(cls, invoker, channel_id, founder, partner, lock_period, lock_amount, lock_hash,
-                            founder_signature, partner_signature, lock_secret, invoker_key):
+                            founder_signature, partner_signature, lock_secret, invoker_key, gwei_coef=1):
         try:
             result =  cls._eth_interface.withdraw(
                 invoker, channel_id, founder, partner, int(lock_period), int(lock_amount),
-                lock_hash, founder_signature, partner_signature, lock_secret, invoker_key)
+                lock_hash, founder_signature, partner_signature, lock_secret, invoker_key, gwei_coef=gwei_coef)
             LOG.debug('htlc_unlock_payment result: {}'.format(result))
             return result
         except Exception as error:
@@ -245,13 +245,13 @@ class ContractEventInterface(metaclass=SingletonClass):
         """"""
         return cls.update_close_channel(invoker, channel_id, int(nonce), founder, int(founder_balance),
                                         partner, int(partner_balance), lock_hash, lock_secret,
-                                        founder_signature, partner_signature, invoker_key, gwei_coef)
+                                        founder_signature, partner_signature, invoker_key, gwei_coef=gwei_coef)
 
     @classmethod
-    def settle_after_htlc_unlock_payment(cls, invoker, channel_id, lock_hash, invoker_key):
+    def settle_after_htlc_unlock_payment(cls, invoker, channel_id, lock_hash, invoker_key, gwei_coef=1):
         """"""
         try:
-            result =  cls._eth_interface.withdraw_settle(invoker, channel_id, lock_hash, invoker_key)
+            result =  cls._eth_interface.withdraw_settle(invoker, channel_id, lock_hash, invoker_key, gwei_coef=gwei_coef)
             LOG.debug('settle_after_htlc_unlock_payment result: {}'.format(result))
             return result
         except Exception as error:

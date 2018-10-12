@@ -292,7 +292,7 @@ class Interface(object):
         }
 
     def withdraw(self, invoker, channel_id, founder, partner, lock_period, lock_amount, lock_hash,
-                 founder_signature, partner_signature, secret, invoker_key):
+                 founder_signature, partner_signature, secret, invoker_key, gwei_coef=1):
         """
         Description: it's for HLTC tranction, partner that have secret apply for withdraw asset
         :param invoker: applicant address
@@ -314,7 +314,8 @@ class Interface(object):
             tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "withdraw",
                                                           [channel_id, founder, partner,
                                                           lock_period, lock_amount, lock_hash,
-                                                          founder_signature, partner_signature, secret],invoker_key)
+                                                          founder_signature, partner_signature, secret],
+                                                         invoker_key, gwei_coef=gwei_coef)
             tx_msg = 'success'
         except Exception as e:
             tx_id = 'none'
@@ -325,7 +326,7 @@ class Interface(object):
             "txMessage":tx_msg
         }
 
-    def withdraw_settle(self, invoker, channel_id, lock_hash, invoker_key):
+    def withdraw_settle(self, invoker, channel_id, lock_hash, invoker_key, gwei_coef=1):
         """
         Description: withdrawer of HTLC transaction can apply for withdraw the lock assets after lock period timeout
         :param invoker: applicant address
@@ -335,7 +336,7 @@ class Interface(object):
         """
         try:
             tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "withdrawSettle",
-                                                          [channel_id, lock_hash], invoker_key)
+                                                          [channel_id, lock_hash], invoker_key, gwei_coef=gwei_coef)
             tx_msg = 'success'
         except Exception as e:
             tx_id = 'none'
