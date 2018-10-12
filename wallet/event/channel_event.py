@@ -193,6 +193,9 @@ class ChannelQuickSettleEvent(ChannelEventBase):
                                  EnumEventAction.EVENT_TERMINATE, EnumEventAction.EVENT_COMPLETE]
         self.event_stage_iterator = iter(self.event_stage_list)
 
+        # record the tx id for quick settle
+        self.settle_tx_id = None
+
     def prepare(self, block_height, *args, **kwargs):
         super(ChannelQuickSettleEvent, self).prepare(block_height, *args, **kwargs)
 
@@ -210,13 +213,34 @@ class ChannelQuickSettleEvent(ChannelEventBase):
                 partner='', partner_balance=0, founder_signature='', partner_signature='', invoker_key=''):
         super(ChannelQuickSettleEvent, self).execute(block_height)
 
-        if self.is_event_founder:
-            self.contract_event_api.quick_settle(
-                invoker, channel_id, nonce, founder, founder_balance, partner, partner_balance,
-                founder_signature, partner_signature, invoker_key, gwei_coef=self.gwei_coef)
+        # goto next stage directly for event partener
+        if not self.is_event_founder:
+            self.next_stage()
+            return True
 
-        # set next stage
-        self.next_stage()
+        # only executed by the event founder
+        # to check settle ID firslty
+        if self.settle_tx_id:
+            checked = self.check_transaction_success(self.settle_tx_id)
+            if checked:
+                # go to next stage
+                self.next_stage()
+                return True
+            elif checked is False:
+                return False
+            else:
+                # new transaction is pushed to chain
+                self.settle_tx_id = None
+
+        result = self.contract_event_api.quick_settle(
+            invoker, channel_id, nonce, founder, founder_balance, partner, partner_balance,
+            founder_signature, partner_signature, invoker_key, gwei_coef=self.gwei_coef)
+
+        # set the tx id
+        if result:
+            self.settle_tx_id = '0x' + result
+
+        return False
 
     def terminate(self, block_height, *args, asset_type='TNC'):
         super(ChannelQuickSettleEvent, self).terminate(block_height)
