@@ -178,7 +178,8 @@ class Client(object):
         """"""
         try:
             # pre-check the transaction
-            estimate_gas = contract.functions[method](*args).estimateGas({'from': invoker})
+            precheck_arguments = [item for item in args if item]
+            estimate_gas = contract.functions[method](*precheck_arguments).estimateGas({'from': invoker})
         except Exception as error:
             LOG.error('Failed to execute {}. Exception: {}'.format(method, error))
             return None
