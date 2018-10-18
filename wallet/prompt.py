@@ -300,7 +300,7 @@ class UserPromptInterface(PromptInterface):
             deposit_limit = DepositAuth.deposit_limit()
             deposit_cmp = TrinityNumber(str(DepositAuth.deposit_limit())).number
             deposit = TrinityNumber(get_arg(arguments, 3).strip()).number
-            #when partner_deposit not given ,partner_deposit is equal to deposit............
+            #when partner_deposit not given ,partner_deposit is equal to deposit.
             if get_arg(arguments, 4)==None:
                 partner_deposit = deposit
             elif TrinityNumber(get_arg(arguments, 4)).number==None:
