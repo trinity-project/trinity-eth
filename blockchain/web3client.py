@@ -174,7 +174,7 @@ class Client(object):
     def call_contract(self,contract, method, args):
         return contract.functions[method](*args).call()
 
-    def contruct_Transaction(self, invoker, contract, method, args, key, gwei_coef=None, gasLimit=4600000):
+    def contruct_Transaction(self, invoker, contract, method, args, key, gwei_coef=None, gasLimit=4500000):
         """"""
         try:
             # pre-check the transaction
@@ -182,7 +182,7 @@ class Client(object):
             estimate_gas = contract.functions[method](*precheck_arguments).estimateGas({'from': invoker})
             estimate_gas += 5000 + randint(1, 10000)
         except Exception as error:
-            LOG.error('Failed to execute {}. Use default gasLimit: 4600000. Exception: {}'.format(method, error))
+            LOG.error('Failed to execute {}. Use default gasLimit: 4500000. Exception: {}'.format(method, error))
             estimate_gas = gasLimit
         finally:
             LOG.debug('Estimated to spend {} gas'.format(estimate_gas))
