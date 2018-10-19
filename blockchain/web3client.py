@@ -179,7 +179,7 @@ class Client(object):
         try:
             # pre-check the transaction
             precheck_arguments = [item for item in args if item]
-            estimate_gas = contract.functions[method](*precheck_arguments).estimateGas({'from': invoker})
+            estimate_gas = contract.functions[method](*precheck_arguments).estimateGas({'from': checksum_encode(invoker)})
             estimate_gas += 5000 + randint(1, 10000)
         except Exception as error:
             LOG.error('Failed to execute {}. Use default gasLimit: 4500000. Exception: {}'.format(method, error))
