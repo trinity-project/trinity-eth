@@ -1,8 +1,0 @@
-csv_file
-batch_contract_address
-account_address
-account_private_key
-eth_rpc
-token_address
-BATCH_ABI
-TOKEN_ABI
