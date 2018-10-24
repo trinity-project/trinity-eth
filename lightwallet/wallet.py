@@ -142,9 +142,13 @@ class Wallet(object):
         """
 
         :param message_hash: 32-bytes string
-        :param signature: 130-length string
+        :param signature: 130-length string without '0x'
         :return:
         """
+        if isinstance(signature, bytes):
+            signature = signature.decode()
+        signature = signature.replace('0x', '')
+
         publick_key = KeyAPI().ecdsa_recover(message_hash, Signature(binascii.a2b_hex(signature)))
 
         return checksum_encode(publick_key.to_address())
