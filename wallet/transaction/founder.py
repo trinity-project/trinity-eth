@@ -158,7 +158,7 @@ class FounderMessage(FounderBase):
             self.verify()
             self.check_nonce(self.nonce)
             self.check_signature(
-                self.wallet,
+                self.wallet, self.sender_address,
                 type_list=self._sign_type_list,
                 value_list=[self.channel_name, self.nonce, self.sender_address, int(self.founder_deposit),
                             self.receiver_address, int(self.partner_deposit)],
@@ -288,7 +288,7 @@ class FounderResponsesMessage(FounderBase):
             self.check_nonce(self.nonce)
             founder_trade = Channel.query_trade(self.channel_name, self.nonce)
             self.check_signature(
-                self.wallet,
+                self.wallet, self.sender_address,
                 type_list=self._sign_type_list,
                 value_list=[self.channel_name, self.nonce, self.receiver_address, int(founder_trade.balance),
                             self.sender_address, int(founder_trade.peer_balance)],

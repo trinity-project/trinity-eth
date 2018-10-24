@@ -148,7 +148,7 @@ class SettleMessage(SettleBase):
             self.check_balance(self.channel_name, self.asset_type, self.sender_address, self.sender_balance,
                                self.receiver_address, self.receiver_balance)
             self.check_signature(
-                self.wallet,
+                self.wallet, self.sender_address,
                 type_list=self._sign_type_list,
                 value_list=[self.channel_name, self.nonce, self.sender_address, int(self.sender_balance),
                             self.receiver_address, int(self.receiver_balance)],
@@ -259,7 +259,7 @@ class SettleResponseMessage(SettleBase):
             self.check_nonce(self.nonce)
             settle_trade = Channel.query_trade(self.channel_name, self.nonce)
             self.check_signature(
-                self.wallet,
+                self.wallet, self.sender_address,
                 type_list=self._sign_type_list,
                 value_list=[self.channel_name, self.nonce, self.receiver_address, int(settle_trade.balance),
                             self.sender_address, int(settle_trade.peer_balance)],

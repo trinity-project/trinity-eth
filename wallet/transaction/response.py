@@ -39,6 +39,8 @@ class EnumResponseStatus(IntEnum):
         RESPONSE_FOUNDER_OK # for creating event message
         RESPONSE_RSMC_OK    # for RSMC transaction message
     """
+    # Signature error
+    RESPONSE_SIGNATURE_VERIFIED_ERROR = 0x7F
 
     # Founder Message
     RESPONSE_FOUNDER_DEPOSIT_LESS_THAN_PARTNER = 0x80

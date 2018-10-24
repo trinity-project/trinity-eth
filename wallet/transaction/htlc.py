@@ -175,6 +175,7 @@ class RResponse(TransactionBase):
             # notify the previous node the R-code
             LOG.debug('Payment get channel {}/{}'.format(next_channel, self.hashcode))
             channel = Channel(next_channel)
+            channel.update_trade(next_channel, htlc_trade.nonce, rcode=self.rcode)
             peer = channel.peer_uri(self.wallet.url)
             nonce = channel.latest_nonce(next_channel)
             LOG.info("Next peer: {}".format(peer))
@@ -329,7 +330,7 @@ class HtlcMessage(HtlcBase):
 
             sign_hashcode, sign_rcode = self.get_default_rcode()
             self.check_signature(
-                self.wallet,
+                self.wallet, self.sender_address,
                 type_list=RsmcMessage._sign_type_list,
                 value_list=[self.channel_name, self.nonce, self.sender_address, int(self.sender_balance),
                             self.receiver_address, int(self.receiver_balance), sign_hashcode, sign_rcode],
@@ -337,7 +338,7 @@ class HtlcMessage(HtlcBase):
             )
 
             self.check_signature(
-                self.wallet,
+                self.wallet, self.sender_address,
                 type_list=self._sign_type_list,
                 value_list=[self.channel_name, self.sender_address, self.receiver_address,
                             int(self.delay_block), int(self.payment), self.hashcode],
@@ -589,7 +590,7 @@ class HtlcResponsesMessage(HtlcBase):
 
             sign_hashcode, sign_rcode = self.get_default_rcode()
             self.check_signature(
-                self.wallet,
+                self.wallet, self.sender_address,
                 type_list=RsmcMessage._sign_type_list,
                 value_list=[self.channel_name, self.nonce, self.receiver_address, int(self.sender_balance),
                             self.sender_address, int(self.receiver_balance), sign_hashcode, sign_rcode],
@@ -597,7 +598,7 @@ class HtlcResponsesMessage(HtlcBase):
             )
 
             self.check_signature(
-                self.wallet,
+                self.wallet, self.sender_address,
                 type_list=self._sign_type_list,
                 value_list=[self.channel_name, self.receiver_address, self.sender_address,
                             int(self.delay_block), int(self.payment), self.hashcode],

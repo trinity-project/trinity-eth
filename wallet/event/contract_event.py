@@ -44,6 +44,7 @@ class ContractEventInterface(metaclass=SingletonClass):
     """
     _eth_interface = None
     _eth_client = None
+    default_hash_and_secret = '0x'+'0'*64
 
     def __init__(self):
         ContractEventInterface._eth_interface = EthInterface(settings.NODEURL,
@@ -187,6 +188,10 @@ class ContractEventInterface(metaclass=SingletonClass):
     def close_channel(cls, invoker, channel_id, nonce, founder, founder_balance, partner, partner_balance,
                       lock_hash, lock_secret, founder_signature, partner_signature, invoker_key, gwei_coef=1):
         try:
+            if 0 == nonce:
+                lock_hash = cls.default_hash_and_secret
+                lock_secret = cls.default_hash_and_secret
+
             result = cls._eth_interface.close_channel(invoker, channel_id, nonce,
                                                       founder, int(founder_balance),
                                                       partner, int(partner_balance),
@@ -203,6 +208,10 @@ class ContractEventInterface(metaclass=SingletonClass):
     def update_close_channel(cls, invoker, channel_id, nonce, founder, founder_balance, partner, partner_balance,
                              lock_hash, lock_secret, founder_signature, partner_signature, invoker_key, gwei_coef=1):
         try:
+            if 0 == nonce:
+                lock_hash = cls.default_hash_and_secret
+                lock_secret = cls.default_hash_and_secret
+
             result = cls._eth_interface.update_transaction(invoker, channel_id, nonce,
                                                            founder, int(founder_balance),
                                                            partner, int(partner_balance),

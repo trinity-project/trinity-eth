@@ -640,7 +640,9 @@ class Channel(object):
                         if htcl_to_rsmc:
                             cls.notify_rcode_to_next_peer(htlc_trade, rcode)
 
-                    return {'result': 'success'}
+                        return {'result': 'success'}
+                    else:
+                        return {'result': 'No Need Update'}
 
         except Exception as error:
             LOG.error('No Htlc trade was found or rcode is error. channel<{}>, HashR<{}>. Exception: {}' \

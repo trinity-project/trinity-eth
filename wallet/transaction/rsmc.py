@@ -245,7 +245,7 @@ class RsmcResponsesMessage(RsmcBase):
 
             sign_hashcode, sign_rcode = self.get_rcode(self.channel_name, self.hashcode)
             self.check_signature(
-                self.wallet,
+                self.wallet, self.sender_address,
                 type_list=self._sign_type_list,
                 value_list=[self.channel_name, nonce, self.payer, int(self.sender_balance),
                             self.payee, int(self.receiver_balance), sign_hashcode, sign_rcode],

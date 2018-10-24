@@ -177,7 +177,7 @@ class Message(object):
         return True, net_magic
 
     @classmethod
-    def check_signature(cls, wallet, type_list, value_list, signature):
+    def check_signature(cls, wallet, expected, type_list, value_list, signature):
         """"""
         if not (wallet and type_list and value_list and signature):
             raise GoTo(
@@ -187,7 +187,15 @@ class Message(object):
             )
 
         sign_hash =  cls.contract_event_api().solidity_hash(type_list, value_list)
-        return wallet.address == wallet.recoverHash(sign_hash, signature=signature)
+        peer_wallet_address = wallet.recoverHash(sign_hash, signature=signature)
+
+        if expected == peer_wallet_address:
+            return True
+        else:
+            raise GoTo(
+                EnumResponseStatus.RESPONSE_SIGNATURE_VERIFIED_ERROR,
+                'Signature verification error: expected<{}>, parsed-address<{}>'.format(expected, peer_wallet_address)
+            )
 
     @classmethod
     def check_nonce(cls, nonce, channel_name=''):

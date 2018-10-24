@@ -288,7 +288,11 @@ class ChannelSettleHtlcUnlockEvent(ChannelOfflineEventBase):
         super(ChannelSettleHtlcUnlockEvent, self).execute(block_height)
 
         # close channel event
-        result = self.contract_event_api.settle_after_htlc_unlock_payment(invoker_key, channel_name, hashcode, invoker_key)
+        deposit = self.contract_event_api.get_channel_total_balance(self.channel_name)
+        if deposit > 0:
+            result = self.contract_event_api.settle_after_htlc_unlock_payment(invoker_key, channel_name, hashcode, invoker_key)
+        else:
+            result = {'punished_by_peer': 'success'}
 
         # set channel settling
         if result is not None and 'success' in result.values():

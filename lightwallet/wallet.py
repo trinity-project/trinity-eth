@@ -32,6 +32,8 @@ import json
 from blockchain.web3client import Client
 from lightwallet.Settings import settings
 from ethereum.utils import checksum_encode
+from eth_keys import KeyAPI
+from eth_keys.datatypes import Signature
 from model.history_model import APIHistory
 import time
 from common.log import LOG
@@ -135,14 +137,17 @@ class Wallet(object):
         """
         return self._key.sign_hash(message_hash)
 
+    @staticmethod
     def recoverHash(self,message_hash, signature):
         """
 
-        :param message_hash:
-        :param signature:
+        :param message_hash: 32-bytes string
+        :param signature: 130-length string
         :return:
         """
-        return self._key.recoverHash(message_hash, signature=signature)
+        publick_key = KeyAPI().ecdsa_recover(message_hash, Signature(binascii.a2b_hex(signature)))
+
+        return checksum_encode(publick_key.to_address())
 
     def SignTX(self,tx_data: dict):
         """
