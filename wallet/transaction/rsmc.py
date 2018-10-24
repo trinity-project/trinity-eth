@@ -236,7 +236,7 @@ class RsmcResponsesMessage(RsmcBase):
             self.check_channel_state(self.channel_name)
             self.verify()
             self.check_role(self.role_index)
-            nonce = self.nonce if 0 == self.role_index else self.nonce + 1
+            nonce = self.nonce if 0 == self.role_index else self.nonce + 1 # this is just used for check nonce
             self.check_nonce(nonce, self.channel_name)
 
             is_htlc_to_rsmc = self.is_hlock_to_rsmc(self.hashcode)
@@ -247,7 +247,7 @@ class RsmcResponsesMessage(RsmcBase):
             self.check_signature(
                 self.wallet, self.sender_address,
                 type_list=self._sign_type_list,
-                value_list=[self.channel_name, nonce, self.payer, int(self.sender_balance),
+                value_list=[self.channel_name, self.nonce, self.payer, int(self.sender_balance),
                             self.payee, int(self.receiver_balance), sign_hashcode, sign_rcode],
                 signature=self.commitment
             )
