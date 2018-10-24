@@ -138,7 +138,7 @@ class Wallet(object):
         return self._key.sign_hash(message_hash)
 
     @staticmethod
-    def recoverHash(self,message_hash, signature):
+    def recoverHash(message_hash, signature):
         """
 
         :param message_hash: 32-bytes string

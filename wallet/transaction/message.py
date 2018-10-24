@@ -187,7 +187,7 @@ class Message(object):
             )
 
         sign_hash =  cls.contract_event_api().solidity_hash(type_list, value_list)
-        peer_wallet_address = wallet.recoverHash(sign_hash, signature=signature)
+        peer_wallet_address = wallet.recoverHash(sign_hash, signature)
 
         if expected == peer_wallet_address:
             return True
