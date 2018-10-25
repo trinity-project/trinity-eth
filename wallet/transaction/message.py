@@ -24,6 +24,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 # system and 3rd party libs
 # self modules import
+import binascii
 from wallet.utils import get_magic
 from common.common import uri_parser
 from common.log import LOG
@@ -105,7 +106,9 @@ class Message(object):
         return MessageHeader(sender, receiver, message_type, channel_name, asset_type, nonce)
 
     def handle(self):
-        LOG.info('Received Message<{}>'.format(self.message_type))
+        LOG.info('Received Message<{}> from<{}> by channel<{}>'.format(self.message_type,
+                                                                       self.sender_address,
+                                                                       self.channel_name))
         pass
 
     @classmethod
@@ -192,6 +195,8 @@ class Message(object):
         if expected == peer_wallet_address:
             return True
         else:
+            LOG.error('Error data hash<{}> with value<{}> by signature<{}>'.format(binascii.b2a_hex(sign_hash),
+                                                                                   value_list, signature))
             raise GoTo(
                 EnumResponseStatus.RESPONSE_SIGNATURE_VERIFIED_ERROR,
                 'Signature verification error: expected<{}>, parsed-address<{}>'.format(expected, peer_wallet_address)

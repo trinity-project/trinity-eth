@@ -188,7 +188,7 @@ class ContractEventInterface(metaclass=SingletonClass):
     def close_channel(cls, invoker, channel_id, nonce, founder, founder_balance, partner, partner_balance,
                       lock_hash, lock_secret, founder_signature, partner_signature, invoker_key, gwei_coef=1):
         try:
-            if 0 == nonce:
+            if 1 == nonce:
                 lock_hash = cls.default_hash_and_secret
                 lock_secret = cls.default_hash_and_secret
 
