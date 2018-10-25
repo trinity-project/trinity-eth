@@ -47,9 +47,9 @@ class Interface(object):
         :param invoker_key: sender's key
         :return: transaction id
         """
-        return self.eth_client.contruct_Transaction(invoker, self.asset_contract, "increaseApproval",
-                                                    [self.data_contract_address, asset_amount],
-                                                    invoker_key, gwei_coef=gwei_coef)
+        args = (self.data_contract_address, asset_amount)
+        return self.eth_client.contruct_transaction(invoker, self.asset_contract, "increaseApproval",
+                                                    args, args, invoker_key, gwei_coef=gwei_coef)
 
     def get_approved_asset(self, contract_address, abi, approver, spender):
         """
@@ -70,8 +70,9 @@ class Interface(object):
         :param invoker_key: sender's key
         :return: transaction id
         """
+        args = (timeout)
         try:
-            tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "setSettleTimeout", [timeout], invoker_key)
+            tx_id = self.eth_client.contruct_transaction(invoker, self.contract, "setSettleTimeout", args, args, invoker_key)
             tx_msg = 'success'
 
         except Exception as e:
@@ -91,8 +92,9 @@ class Interface(object):
         :param invoker_key: sender's key
         :return: transaction id
         """
+        args = (token_address)
         try:
-            tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "setToken", [token_address], invoker_key)
+            tx_id = self.eth_client.contruct_transaction(invoker, self.contract, "setToken", args, args, invoker_key)
             tx_msg = 'success'
 
         except Exception as e:
@@ -123,12 +125,11 @@ class Interface(object):
         founder = checksum_encode(founder)
         partner = checksum_encode(partner)
 
-        return self.eth_client.contruct_Transaction(invoker, self.contract,"deposit",
-                                                    [channel_id, nonce,
-                                                     founder, founder_amount,
-                                                     partner, partner_amount,
-                                                     founder_signature, partner_signature], invoker_key,
-                                                    gwei_coef=gwei_coef)
+        args = (channel_id, nonce, founder, founder_amount, partner, partner_amount,
+                founder_signature, partner_signature)
+
+        return self.eth_client.contruct_transaction(invoker, self.contract,"deposit",
+                                                    args, args, invoker_key, gwei_coef=gwei_coef)
 
     def update_deposit(self, invoker, channel_id, nonce, founder, founder_amount,
                        partner, partner_amount, founder_signature, partner_signature, invoker_key):
@@ -138,12 +139,12 @@ class Interface(object):
         """
         founder = checksum_encode(founder)
         partner = checksum_encode(partner)
+
+        args = (channel_id, nonce, founder, founder_amount, partner, partner_amount,
+                founder_signature, partner_signature)
         try:
-            tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "updateDeposit",
-                                                         [channel_id, nonce,
-                                                         founder, founder_amount,
-                                                         partner, partner_amount,
-                                                         founder_signature, partner_signature], invoker_key)
+            tx_id = self.eth_client.contruct_transaction(invoker, self.contract, "updateDeposit",
+                                                         args, args, invoker_key)
             tx_msg = 'success'
         except Exception as e:
             tx_id = 'none'
@@ -172,12 +173,12 @@ class Interface(object):
         """
         founder = checksum_encode(founder)
         partner = checksum_encode(partner)
-        return self.eth_client.contruct_Transaction(invoker, self.contract, "quickCloseChannel",
-                                                    [channel_id, nonce,
-                                                     founder, founder_balance,
-                                                     partner, partner_balance,
-                                                     founder_signature, partner_signature], invoker_key,
-                                                     gwei_coef=gwei_coef)
+
+        args = (channel_id, nonce, founder, founder_balance, partner, partner_balance,
+                founder_signature, partner_signature)
+
+        return self.eth_client.contruct_transaction(invoker, self.contract, "quickCloseChannel",
+                                                    args, args, invoker_key, gwei_coef=gwei_coef)
 
     def withdraw_balance(self, invoker, channel_id, nonce, founder, founder_balance,
                             partner, partner_balance, founder_signature, partner_signature, invoker_key, gwei_coef=1):
@@ -197,12 +198,12 @@ class Interface(object):
         """
         founder = checksum_encode(founder)
         partner = checksum_encode(partner)
-        return self.eth_client.contruct_Transaction(invoker, self.contract, "withdrawBalance",
-                                                    [channel_id, nonce,
-                                                     founder, founder_balance,
-                                                     partner, partner_balance,
-                                                     founder_signature, partner_signature], invoker_key,
-                                                     gwei_coef=gwei_coef)
+
+        args = (channel_id, nonce, founder, founder_balance, partner, partner_balance,
+                founder_signature, partner_signature)
+
+        return self.eth_client.contruct_transaction(invoker, self.contract, "withdrawBalance",
+                                                    args, args, invoker_key, gwei_coef=gwei_coef)
 
     def close_channel(self, invoker, channel_id, nonce, founder, founder_balance,
                       partner, partner_balance, lock_hash, lock_secret, founder_signature, partner_signature, invoker_key, gwei_coef=1):
@@ -225,14 +226,16 @@ class Interface(object):
         """
         founder = checksum_encode(founder)
         partner = checksum_encode(partner)
+
+        args = (channel_id, nonce, founder, founder_balance, partner, partner_balance,
+                lock_hash, lock_secret, founder_signature, partner_signature)
+
+        precheck_args = args if nonce not in [0, 1] else (channel_id, nonce, founder, founder_balance,
+                                                          partner, partner_balance,
+                                                          founder_signature, partner_signature)
         try:
-            tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "closeChannel",
-                                                         [channel_id, nonce,
-                                                         founder, founder_balance,
-                                                         partner, partner_balance,
-                                                         lock_hash, lock_secret,
-                                                         founder_signature, partner_signature],
-                                                         invoker_key, gwei_coef=gwei_coef)
+            tx_id = self.eth_client.contruct_transaction(invoker, self.contract, "closeChannel",
+                                                         args, precheck_args, invoker_key, gwei_coef=gwei_coef)
             tx_msg = 'success'
         except Exception as e:
             tx_id = 'none'
@@ -252,14 +255,16 @@ class Interface(object):
         """
         founder = checksum_encode(founder)
         partner = checksum_encode(partner)
+
+        args = (channel_id, nonce, founder, founder_balance, partner, partner_balance,
+                lock_hash, lock_secret, founder_signature, partner_signature)
+
+        precheck_args = args if nonce not in [0, 1] else (channel_id, nonce, founder, founder_balance,
+                                                          partner, partner_balance,
+                                                          founder_signature, partner_signature)
         try:
-            tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "updateTransaction",
-                                                        [channel_id, nonce,
-                                                         founder, founder_balance,
-                                                         partner, partner_balance,
-                                                         lock_hash, lock_secret,
-                                                         founder_signature, partner_signature],invoker_key,
-                                                         gwei_coef=gwei_coef)
+            tx_id = self.eth_client.contruct_transaction(invoker, self.contract, "updateTransaction",
+                                                         args, precheck_args,invoker_key, gwei_coef=gwei_coef)
             tx_msg = 'success'
         except Exception as e:
             tx_id = 'none'
@@ -278,9 +283,10 @@ class Interface(object):
         :param invoker_key: shutter's key
         :return: transaction id
         """
+        args = [channel_id]
         try:
-            tx_id = self.eth_client.contruct_Transaction(invoker, self.contract,"settleTransaction",
-                                                         [channel_id], invoker_key, gwei_coef=gwei_coef)
+            tx_id = self.eth_client.contruct_transaction(invoker, self.contract,"settleTransaction",
+                                                         args, args, invoker_key, gwei_coef=gwei_coef)
             tx_msg = 'success'
         except Exception as e:
             tx_id = 'none'
@@ -310,12 +316,14 @@ class Interface(object):
         """
         founder = checksum_encode(founder)
         partner = checksum_encode(partner)
+
+        args = (channel_id, founder, partner, lock_period, lock_amount, lock_hash,
+                founder_signature, partner_signature, secret)
+        precheck_args = (channel_id, founder, partner, lock_period, lock_amount, lock_hash,
+                         founder_signature, partner_signature)
         try:
-            tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "withdraw",
-                                                          [channel_id, founder, partner,
-                                                          lock_period, lock_amount, lock_hash,
-                                                          founder_signature, partner_signature, secret],
-                                                         invoker_key, gwei_coef=gwei_coef)
+            tx_id = self.eth_client.contruct_transaction(invoker, self.contract, "withdraw",
+                                                         args, precheck_args, invoker_key, gwei_coef=gwei_coef)
             tx_msg = 'success'
         except Exception as e:
             tx_id = 'none'
@@ -334,9 +342,10 @@ class Interface(object):
         :param lock_hash: secret's hash
         :param invoker_key: applicant's key
         """
+        args = [channel_id, lock_hash]
         try:
-            tx_id = self.eth_client.contruct_Transaction(invoker, self.contract, "withdrawSettle",
-                                                          [channel_id, lock_hash], invoker_key, gwei_coef=gwei_coef)
+            tx_id = self.eth_client.contruct_transaction(invoker, self.contract, "withdrawSettle",
+                                                         args, args, invoker_key, gwei_coef=gwei_coef)
             tx_msg = 'success'
         except Exception as e:
             tx_id = 'none'

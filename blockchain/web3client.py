@@ -174,20 +174,19 @@ class Client(object):
     def call_contract(self,contract, method, args):
         return contract.functions[method](*args).call()
 
-    def contruct_Transaction(self, invoker, contract, method, args, key, gwei_coef=None, gasLimit=4500000):
+    def contruct_transaction(self, invoker, contract, method, args, precheck_args, key, gwei_coef=None, gasLimit=4500000):
         """"""
         try:
             # pre-check the transaction
-            precheck_arguments = [item for item in args if item is not None]
-            estimate_gas = contract.functions[method](*precheck_arguments).estimateGas({'from': checksum_encode(invoker)})
-            estimate_gas += 5000 + randint(1, 10000)
+            estimate_gas = contract.functions[method](*precheck_args).estimateGas({'from': checksum_encode(invoker)})
+            gasLimit = estimate_gas + 5000 + randint(1, 10000)
         except Exception as error:
-            LOG.error('Failed to execute {}. Use default gasLimit: 4500000. Exception: {}'.format(method, error))
-            estimate_gas = gasLimit
+            LOG.debug('Failed to execute {}. Exception: {}'.format(method, error))
+            LOG.info('the parameters are : {}'.format(precheck_args))
         finally:
             LOG.debug('Estimated to spend {} gas'.format(estimate_gas))
             tx_dict = contract.functions[method](*args).buildTransaction({
-                'gas': estimate_gas,
+                'gas': gasLimit,
                 'gasPrice': pow(10, 9) * gwei_coef,
                 'nonce': self.web3.eth.getTransactionCount(checksum_encode(invoker)),
             })
