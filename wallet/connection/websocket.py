@@ -41,7 +41,8 @@ from wallet.event.offchain_event import ChannelEndSettleEvent, \
     ChannelPunishHtlcUnlockEvent, \
     ChannelSettleHtlcUnlockEvent, \
     ChannelSettledEvent, \
-    ChannelHtlcUnlockedEvent
+    ChannelHtlcUnlockedEvent, \
+    ChannelStateManageEvent
 
 
 class EnumChainEventReq(Enum):
@@ -400,7 +401,18 @@ class WebSocketConnection(metaclass=SingletonClass):
         return
 
     def monitorWithdrawUpdate(self, message):
-        pass
+        if not message:
+            LOG.error('Invalid message: {}'.format(message))
+            return
+
+        try:
+            invoker = message.get('invoker').strip()
+            channel_name = message.get('channelId')
+        except Exception as error:
+            LOG.error('Invalid message: {}. Exception: {}'.format(message, error))
+        else:
+            if invoker.lower() != self.wallet_address.lower() and channel_name:
+                ChannelStateManageEvent(channel_name).execute(get_block_count(), channel_name)
 
     def monitorWithdrawSettle(self, message):
         """

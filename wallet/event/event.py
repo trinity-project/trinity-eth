@@ -59,6 +59,9 @@ class EnumEventType(IntEnum):
     EVENT_TYPE_SETTLE_HTLC_UNLOCK = 0x22
     EVENT_TYPE_SETTLE_HTLC_UNLOCK_UPDATE = 0x23
 
+    # Event for change channel state
+    EVENT_TYPE_CHANNEL_STATE_SETTELED = 0x30
+
     # test event
     EVENT_TYPE_TEST_STATE = 0xE0
 

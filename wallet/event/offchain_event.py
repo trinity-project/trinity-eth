@@ -335,3 +335,30 @@ class ChannelHtlcUnlockedEvent(ChannelOfflineEventBase):
                 Channel.update_trade(channel_name, htlc_trade.nonce, state=EnumTradeState.confirmed_onchain.name)
         else:
             LOG.error('Error input parameters: channel <{}>, hashcode<{}>.'.format(channel_name, hashcode))
+
+
+class ChannelStateManageEvent(ChannelOfflineEventBase):
+    def __init__(self, channel_name, is_event_founder=True):
+        super(ChannelStateManageEvent, self).__init__(channel_name, EnumEventType.EVENT_TYPE_CHANNEL_STATE_SETTELED,
+                                                       is_event_founder)
+
+    def execute(self, block_height, channel_name='', **kwargs):
+        """
+
+        :param block_height:
+        :param channel_name:
+        :param kwargs:
+        :return:
+        """
+        super(ChannelStateManageEvent, self).execute(block_height)
+
+        # check whether the contract asset
+        try:
+            if channel_name:
+                balance_of_channel = self.contract_event_api.get_channel_total_balance(channel_name)
+                if 0 >= balance_of_channel:
+                    Channel.update_channel(channel_name, state=EnumChannelState.SETTLED.name)
+        except Exception as error:
+            LOG.error('Keep the channel current state because of exception: {}'.format(error))
+
+        return
