@@ -319,11 +319,9 @@ class Interface(object):
 
         args = (channel_id, founder, partner, lock_period, lock_amount, lock_hash,
                 founder_signature, partner_signature, secret)
-        precheck_args = (channel_id, founder, partner, lock_period, lock_amount, lock_hash,
-                         founder_signature, partner_signature)
         try:
             tx_id = self.eth_client.contruct_transaction(invoker, self.contract, "withdraw",
-                                                         args, precheck_args, invoker_key, gwei_coef=gwei_coef)
+                                                         args, args, invoker_key, gwei_coef=gwei_coef)
             tx_msg = 'success'
         except Exception as e:
             tx_id = 'none'

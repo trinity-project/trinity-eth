@@ -184,7 +184,7 @@ class Client(object):
             LOG.debug('Failed to execute {}. Exception: {}'.format(method, error))
             LOG.info('the parameters are : {}'.format(precheck_args))
         finally:
-            LOG.debug('Estimated to spend {} gas'.format(estimate_gas))
+            LOG.debug('Estimated to spend {} gas'.format(gasLimit))
             tx_dict = contract.functions[method](*args).buildTransaction({
                 'gas': gasLimit,
                 'gasPrice': pow(10, 9) * gwei_coef,
