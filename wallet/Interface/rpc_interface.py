@@ -30,8 +30,8 @@ from wallet.channel import get_channel_via_name, query_channel_list
 from common.log import LOG
 from trinity import Configure
 from blockchain.interface import get_balance
-from wallet.channel import Payment
-from model.statistics_model import APIStatistics
+#from wallet.channel import Payment
+#from model.statistics_model import APIStatistics
 from wallet.channel.payment import Payment
 
 
