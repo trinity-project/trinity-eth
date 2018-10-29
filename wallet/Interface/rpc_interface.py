@@ -30,6 +30,9 @@ from wallet.channel import get_channel_via_name, query_channel_list
 from common.log import LOG
 from trinity import Configure
 from blockchain.interface import get_balance
+from wallet.channel import Payment
+from model.statistics_model import APIStatistics
+from wallet.channel.payment import Payment
 
 
 MessageList = []
@@ -227,6 +230,21 @@ class RpcInteraceApi(object):
                 return {"MessageType": "GetChannelList",
                         "MessageBody": {"Error":"Wallet No Open"}
                 }
+
+        elif method == "GetPayment":
+            asset_type = params[0]
+            payment = params[1]
+            hashcode, _ = Payment.create_hr()
+
+
+            pycode = Payment.generate_payment_code(CurrentLiveWallet.Wallet.url, 
+            									   asset_type, payment, hashcode)
+
+            return{"MessageType":"GetPaymentAck",
+            	   "MessageBody": {"pycode":pycode}}
+
+         elif mothod == "GetWalletStatistics":
+            return APIStatistics.query_statistics(params[0])
 
         # elif method == 'RefoundTrans':
         #     return transaction.refound_trans(params)
