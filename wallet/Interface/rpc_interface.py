@@ -243,8 +243,9 @@ class RpcInteraceApi(object):
             return{"MessageType":"GetPaymentAck",
             	   "MessageBody": {"pycode":pycode}}
 
-         elif mothod == "GetWalletStatistics":
-            return APIStatistics.query_statistics(params[0])
+
+        #elif mothod == "GetWalletStatistics":
+        #    return APIStatistics.query_statistics(params[0])
 
         # elif method == 'RefoundTrans':
         #     return transaction.refound_trans(params)
