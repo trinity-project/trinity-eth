@@ -136,6 +136,8 @@ class RResponse(TransactionBase):
             self.trigger_pay_by_rsmc()
 
             # notify rcode to next peer
+            LOG.debug('notify the RResponse to next channel<{}>, current channel<{}>'.format(htlc_trade.channel,
+                                                                                             self.channel_name))
             self.notify_rcode_to_next_peer(htlc_trade.channel)
         finally:
             if EnumResponseStatus.RESPONSE_OK != status:
@@ -683,7 +685,7 @@ class HtlcResponsesMessage(HtlcBase):
             type=EnumTradeType.TRADE_TYPE_HTLC, role=EnumTradeRole.TRADE_ROLE_PARTNER, asset_type=asset_type,
             balance=payee_balance, peer_balance=payer_balance, payment=payment, hashcode=hashcode,
             delay_block=delay_block, commitment=rsmc_commitment, peer_commitment=peer_commitment,
-            delay_commitment=hlock_commitment, peer_delay_commitment=peer_hlock_commitment, channel=channel_name)
+            delay_commitment=hlock_commitment, peer_delay_commitment=peer_hlock_commitment)
         Channel.add_trade(channel_name, nonce=nonce, **htlc_trade)
 
         # create message
