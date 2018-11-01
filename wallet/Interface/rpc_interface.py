@@ -30,10 +30,9 @@ from wallet.channel import get_channel_via_name, query_channel_list
 from common.log import LOG
 from trinity import Configure
 from blockchain.interface import get_balance
-#from model.statistics_model import APIStatistics
-from wallet.channel.payment import Payment
 from wallet.channel import Channel
-
+from wallet.channel.payment import Payment
+from model.statistics_model import APIStatistics
 
 MessageList = []
 
@@ -234,18 +233,34 @@ class RpcInteraceApi(object):
         elif method == "GetPayment":
             asset_type = params[0]
             payment = params[1]
-            hash_r, rcode = Payment.create_hr()
 
-            pycode = Payment.generate_payment_code(CurrentLiveWallet.Wallet.url, asset_type, payment, hash_r)
-
-            Channel.add_payment(None, hash_r, rcode, payment)
+            try:
+                hash_r, rcode = Payment.create_hr()
+                pycode = Payment.generate_payment_code(CurrentLiveWallet.Wallet.url, asset_type, payment, hash_r)
+                Channel.add_payment(None, hash_r, rcode, payment)
+            except Exception as e:
+                LOG.error(e)
+                pycode = None
 
             return{"MessageType":"GetPaymentAck",
             	   "MessageBody": {"pycode":pycode}}
 
 
-        #elif mothod == "GetWalletStatistics":
-        #    return APIStatistics.query_statistics(params[0])
+        elif method == "GetWalletStatistics":
+            try:
+                statistics_data = APIStatistics.query_statistics(params[0])[0]
+
+            except Exception as e:
+                LOG.error(e)
+
+                return {"MessageType": "GetWalletStatisticsAck",
+                        "MessageBody": {"Error": "data is null"}
+                }
+            else:
+
+                return {"MessageType": "GetWalletStatisticsAck",
+                        "MessageBody": json.loads(statistics_data.__str__())
+                }
 
         # elif method == 'RefoundTrans':
         #     return transaction.refound_trans(params)

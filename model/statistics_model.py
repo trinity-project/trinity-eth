@@ -85,8 +85,7 @@ class TBLStatistics(DBManager):
             kwargs.pop('htlc_rcode', True)
             kwargs.update({'htlc_successed': 1})
 
-        return  super(TBLStatistics, self).update_ont_statistics(address, **kwargs)
-
+        return  super(TBLStatistics, self).update_one_statistics(address, **kwargs)
 
     def remove_unsupported_asset(self, asset):
         if not asset:
@@ -127,7 +126,8 @@ class TBLStatistics(DBManager):
     def required_item(self):
         return ['address',
                 'total_channel', 'opend_channel', 'settled_channel', 'closed_channel',
-                'total_transaction', 'expenditure', 'revenue']
+                'total_transaction', 'rsmc_successed', 'payment', 'income',
+                'total_htlc_transaction', 'htlc_successed', 'total_free']
 
 
 class APIStatistics(object):
@@ -152,3 +152,4 @@ class APIStatistics(object):
     @classmethod
     def batch_update_statistics(cls, filters, **kwargs):
         return cls.table.update_many(filters, **kwargs)
+

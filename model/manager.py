@@ -317,7 +317,7 @@ class DBManager(object):
 
         return EnumStatusCode.OK
 
-    def update_ont_statistics(self, primary_key, **kwargs):
+    def update_one_statistics(self, primary_key, **kwargs):
         """
         :param primary_key:
         :param kwargs:
@@ -327,7 +327,5 @@ class DBManager(object):
             LOG.warning('Primary key MUST not be changed.')
             kwargs.pop(self.primary_key)
 
-        # add the update time.
-        #kwargs.update(self.update_at)
-        result = self.db_table.update_one({self.primary_key: primary_key}, {'$inc': kwargs})
+        result = self.db_table.update_one({self.primary_key: primary_key}, {'$inc': kwargs, '$set': self.update_at}, True)
         return self.__result_of_update(result)
