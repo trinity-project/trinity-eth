@@ -34,6 +34,7 @@ from wallet.channel import EnumTradeType, EnumTradeRole, EnumTradeState
 from wallet.event.channel_event import ChannelDepositEvent
 from wallet.event.event import EnumEventAction, event_machine
 from wallet.utils import get_magic, DepositAuth
+from model.statistics_model import APIStatistics
 
 
 class FounderBase(Message):
@@ -81,7 +82,7 @@ class FounderBase(Message):
         :return:
         """
         try:
-            channel_event = ChannelDepositEvent(self.channel_name, is_founder)
+            channel_event = ChannelDepositEvent(self.channel_name, self.wallet.address, is_founder)
 
             # get the transaction record of founder message
             founder_trade = Channel.query_trade(self.channel_name, FounderBase._FOUNDER_NONCE)
@@ -229,6 +230,8 @@ class FounderMessage(FounderBase):
         Channel.add_channel(channel=channel_name, src_addr=founder, dest_addr=partner, state=EnumChannelState.INIT.name,
                             deposit=deposit, magic=get_magic(), hlock=hlock)
 
+        APIStatistics.update_statistics(wallet.address, state=EnumChannelState.INIT.name)
+
         # record the transaction
         founder_trade = Channel.founder_trade(
             type=EnumTradeType.TRADE_TYPE_FOUNDER, role=EnumTradeRole.TRADE_ROLE_FOUNDER, asset_type=asset_type,
@@ -344,6 +347,8 @@ class FounderResponsesMessage(FounderBase):
             channel=channel_name, src_addr=founder, dest_addr=partner, state=EnumChannelState.INIT.name,
             deposit=deposit, hlock=hlock, magic=get_magic()
         )
+
+        APIStatistics.update_statistics(wallet.address, state=EnumChannelState.INIT.name)
 
         # add trade to database
         founder_trade = Channel.founder_trade(

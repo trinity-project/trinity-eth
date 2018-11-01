@@ -405,8 +405,3 @@ class Wallet(object):
             return self.history.batch_query_history({})
         else:
             return self.history.batch_query_history(kwargs)
-
-
-
-
-

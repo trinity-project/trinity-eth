@@ -27,6 +27,7 @@ from wallet.channel import Channel, EnumTradeState, EnumTradeType
 from model.base_enum import EnumChannelState
 
 from common.log import LOG
+from model.statistics_model import APIStatistics
 
 
 class ChannelOfflineEventBase(EventBase):
@@ -38,7 +39,6 @@ class ChannelOfflineEventBase(EventBase):
 
         self.channel_name = channel_name
         self.channel = Channel(channel_name)
-
 
 class ChannelForceSettleEvent(ChannelOfflineEventBase):
     def __init__(self, channel_name, is_event_founder=True):
@@ -80,9 +80,11 @@ class ChannelForceSettleEvent(ChannelOfflineEventBase):
 
 
 class ChannelUpdateSettleEvent(ChannelOfflineEventBase):
-    def __init__(self, channel_name, is_event_founder=True):
+    def __init__(self, channel_name, wallet_address, is_event_founder=True):
         super(ChannelUpdateSettleEvent, self).__init__(channel_name, EnumEventType.EVENT_TYPE_UPDATE_SETTLE,
                                                        is_event_founder)
+
+        self.wallet_address = wallet_address
 
     def prepare(self, block_height, *args, **kwargs):
         super(ChannelUpdateSettleEvent, self).prepare(block_height, *args, **kwargs)
@@ -114,7 +116,7 @@ class ChannelUpdateSettleEvent(ChannelOfflineEventBase):
         # set channel settling
         if result is not None and 'success' in result.values():
             Channel.update_channel(self.channel_name, state=EnumChannelState.SETTLED.name)
-
+            APIStatistics.update_statistics(self.wallet_address, state=EnumChannelState.SETTLED.name)
         self.next_stage()
 
     def terminate(self, block_height, *args, **kwargs):
@@ -123,9 +125,10 @@ class ChannelUpdateSettleEvent(ChannelOfflineEventBase):
 
 
 class ChannelEndSettleEvent(ChannelOfflineEventBase):
-    def __init__(self, channel_name, is_event_founder=True):
+    def __init__(self, channel_name, wallet_address, is_event_founder=True):
         super(ChannelEndSettleEvent, self).__init__(channel_name, EnumEventType.EVENT_TYPE_END_SETTLE,
                                                     is_event_founder)
+        self.wallet_address = wallet_address
 
     def prepare(self, block_height, *args, **kwargs):
         super(ChannelEndSettleEvent, self).prepare(block_height, *args, **kwargs)
@@ -150,6 +153,7 @@ class ChannelEndSettleEvent(ChannelOfflineEventBase):
         # set channel settling
         if result is not None and 'success' in result.values():
             Channel.update_channel(self.channel_name, state=EnumChannelState.SETTLED.name)
+            APIStatistics.update_statistics(self.wallet_address, state=EnumChannelState.SETTLED.name)
         self.next_stage()
 
     def terminate(self, block_height, *args, **kwargs):

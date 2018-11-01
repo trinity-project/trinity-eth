@@ -32,6 +32,7 @@ from common.number import TrinityNumber
 from common.exceptions import GoTo, TrinityException
 from wallet.channel import Channel
 from wallet.channel import EnumTradeType, EnumTradeRole, EnumTradeState
+from model.statistics_model import APIStatistics
 
 
 class RsmcBase(TransactionBase):
@@ -116,6 +117,8 @@ class RsmcMessage(RsmcBase):
             RsmcResponsesMessage.create(self.wallet, self.channel_name, self.asset_type, self.nonce, self.net_magic,
                                         self.sender, self.receiver, self.payment, self.sender_balance,
                                         self.receiver_balance, self.rsmc_sign_role, self.hashcode, self.comments)
+
+            APIStatistics.update_statistics(self.wallet.address, rsmc='rsmc')
         except TrinityException as error:
             status = error.reason
             LOG.error(error)
@@ -127,6 +130,7 @@ class RsmcMessage(RsmcBase):
                 # nofify error response
                 RsmcResponsesMessage.send_error_response(self.sender, self.receiver, self.channel_name, self.asset_type,
                                                          self.nonce, status)
+
         return
 
     @staticmethod
@@ -164,6 +168,8 @@ class RsmcMessage(RsmcBase):
         _, payer_balance, payee_balance = RsmcBase.calculate_balance_after_payment(
             balance.get(payer_address).get(asset_type), balance.get(payee_address).get(asset_type), payment,
             hlock_to_rsmc=hlock_to_rsmc)
+
+        APIStatistics.update_statistics(payer_address, rsmc='rsmc')
 
         # create message
         message_body = {
@@ -260,6 +266,12 @@ class RsmcResponsesMessage(RsmcBase):
             # update transaction
             Channel.update_trade(self.channel_name, self.nonce, peer_commitment=self.commitment,
                                  state=EnumTradeState.confirmed.name)
+
+            if 0 == self.role_index:
+                APIStatistics.update_statistics(self.wallet.address, payment=self.payment, payer=True)
+            else:
+                APIStatistics.update_statistics(self.wallet.address, payment=self.payment, payer=False)
+
             Channel.confirm_payment(self.channel_name, self.hashcode, is_htlc_to_rsmc)
 
             # update the channel balance

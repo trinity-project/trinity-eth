@@ -34,22 +34,24 @@ from wallet.event.chain_event import event_monitor_settle, \
 from common.log import LOG
 from common.console import console_log
 from common.number import TrinityNumber
+from model.statistics_model import APIStatistics
 
 
 class ChannelEventBase(EventBase):
     """
 
     """
-    def __init__(self, channel_name, event_type, is_event_founder=True):
+    def __init__(self, channel_name, event_type, wallet_address, is_event_founder=True):
         super(ChannelEventBase, self).__init__(channel_name, event_type, is_event_founder)
 
         self.channel_name = channel_name
         self.channel = Channel(channel_name)
+        self.wallet_address = wallet_address
 
 
 class ChannelTestEvent(ChannelEventBase):
     def __init__(self):
-        super(ChannelTestEvent, self).__init__('test_event', EnumEventType.EVENT_TYPE_TEST_STATE, True)
+        super(ChannelTestEvent, self).__init__('test_event', EnumEventType.EVENT_TYPE_TEST_STATE, wallet_address, True)
         self.event_stage_iterator = iter([EnumEventAction.EVENT_EXECUTE, EnumEventAction.EVENT_COMPLETE])
 
     def execute(self, *args, **kwargs):
@@ -62,8 +64,8 @@ class ChannelDepositEvent(ChannelEventBase):
     """
     Descriptions: Creating Channel event.
     """
-    def __init__(self, channel_name, is_event_founder=True):
-        super(ChannelDepositEvent, self).__init__(channel_name, EnumEventType.EVENT_TYPE_DEPOSIT, is_event_founder)
+    def __init__(self, channel_name, wallet_address, is_event_founder=True):
+        super(ChannelDepositEvent, self).__init__(channel_name, EnumEventType.EVENT_TYPE_DEPOSIT, wallet_address, is_event_founder)
 
         self.deposit = 0.0
         self.partner_deposit = 0.0
@@ -159,6 +161,7 @@ class ChannelDepositEvent(ChannelEventBase):
         if total_deposit >= self.deposit + self.partner_deposit:
             Channel.update_channel(self.channel_name, state=EnumChannelState.OPENED.name)
             Channel.update_trade(self.channel_name, self.nonce, state=EnumTradeState.confirmed.name)
+            APIStatistics.update_statistics(self.wallet_address, state=EnumChannelState.OPENED.name)
             sync_channel_info_to_gateway(self.channel_name, 'AddChannel', asset_type)
             console_log.info('Channel {} state is {}'.format(self.channel_name, EnumChannelState.OPENED.name))
 
@@ -187,8 +190,8 @@ class ChannelQuickSettleEvent(ChannelEventBase):
     """
         Descriptions: Quick close channel event
     """
-    def __init__(self, channel_name, is_event_founder=True):
-        super(ChannelQuickSettleEvent, self).__init__(channel_name, EnumEventType.EVENT_TYPE_QUICK_SETTLE,
+    def __init__(self, channel_name, wallet_address, is_event_founder=True):
+        super(ChannelQuickSettleEvent, self).__init__(channel_name, EnumEventType.EVENT_TYPE_QUICK_SETTLE,wallet_address,
                                                       is_event_founder)
 
         # different event stage
@@ -251,6 +254,7 @@ class ChannelQuickSettleEvent(ChannelEventBase):
         total_deposit = self.contract_event_api.get_channel_total_balance(self.channel_name)
         if 0 >= total_deposit:
             Channel.update_channel(self.channel_name, state=EnumChannelState.CLOSED.name)
+            APIStatistics.update_statistics(self.wallet_address, state=EnumChannelState.CLOSED.name)
             sync_channel_info_to_gateway(self.channel_name, 'DeleteChannel', asset_type)
             console_log.info('Channel {} state is {}'.format(self.channel_name, EnumChannelState.CLOSED.name))
             self.next_stage()

@@ -28,6 +28,7 @@ from model.base_enum import EnumStatusCode
 from blockchain.web3client import Client
 from lightwallet.UserPreferences import preferences
 import binascii
+from model.statistics_model import APIStatistics
 
 FILENAME_PROMPT_HISTORY = os.path.join(settings.DIR_CURRENT, '.prompt.py.history')
 
@@ -130,6 +131,7 @@ class PromptInterface(object):
                 try:
                     self.Wallet = Wallet.Create(path=path, password=passwd1)
                     print("Wallet %s " % json.dumps(self.Wallet.ToJson(), indent=4))
+                    APIStatistics.add_statistics(self.Wallet.address)
                 except Exception as e:
                     print("Exception creating wallet: %s " % e)
                     self.Wallet = None

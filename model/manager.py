@@ -316,3 +316,18 @@ class DBManager(object):
             return EnumStatusCode.DBUpdatedPartOfItemsOK
 
         return EnumStatusCode.OK
+
+    def update_ont_statistics(self, primary_key, **kwargs):
+        """
+        :param primary_key:
+        :param kwargs:
+        :return:
+        """
+        if self.primary_key in kwargs.keys():
+            LOG.warning('Primary key MUST not be changed.')
+            kwargs.pop(self.primary_key)
+
+        # add the update time.
+        #kwargs.update(self.update_at)
+        result = self.db_table.update_one({self.primary_key: primary_key}, {'$inc': kwargs})
+        return self.__result_of_update(result)

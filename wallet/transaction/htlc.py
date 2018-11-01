@@ -38,6 +38,7 @@ from model.channel_model import EnumChannelState
 from wallet.channel import EnumTradeType, EnumTradeRole, EnumTradeState
 from wallet.event.event import EnumEventAction, event_machine
 import json
+from model.statistics_model import APIStatistics
 
 
 class RResponse(TransactionBase):
@@ -183,6 +184,8 @@ class RResponse(TransactionBase):
             LOG.info("Next peer: {}".format(peer))
             self.create(next_channel, self.asset_type, nonce, self.wallet.url, peer,
                         self.hashcode, self.rcode, self.comments)
+
+            APIStatistics.update_statistics(self.wallet.address, htlc_rcode=True)
         except Exception as error:
             LOG.error('Failed to notify RCode<{}> to peer<{}>'.format(self.rcode, peer))
 
@@ -368,6 +371,9 @@ class HtlcMessage(HtlcBase):
                 self.create(self.wallet, channel_set.channel, self.asset_type, self.wallet.url, receiver,
                             payment, self.hashcode, self.router, next_router, current_channel=self.channel_name,
                             comments=self.comments)
+
+                APIStatistics.update_statistics(self.wallet.address, htlc_free=fee)
+
             else:
                 Channel.update_payment(self.channel_name, self.hashcode)
                 payment_trade = Channel.query_payment(self.channel_name, self.hashcode)

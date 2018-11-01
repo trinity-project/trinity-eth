@@ -39,6 +39,7 @@ from common.common import LOG
 from common.common import uri_parser
 from common.number import TrinityNumber
 from common.exceptions import ChannelException
+from model.statistics_model import APIStatistics
 
 
 class EnumChannelError(IntEnum):
@@ -504,6 +505,8 @@ class Channel(object):
                     LOG.debug('No need update transaction. nonce<{}>, latest_nonce<{}>'.format(nonce, latest_nonce))
                     # update the channel to settling state
                     Channel.update_channel(channel_name, state=EnumChannelState.SETTLING.name)
+                    release_invoker,_,_ = uri_parser(uri)
+                    APIStatistics.update_statistics(release_invoker, state=EnumChannelState.SETTLED.name)
                     return None
                 nonce = latest_nonce
         except Exception as error:

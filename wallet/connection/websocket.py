@@ -324,14 +324,14 @@ class WebSocketConnection(metaclass=SingletonClass):
                 return
 
             if invoker != self.wallet_address.lower():
-                channel_event = ChannelUpdateSettleEvent(channel_name)
+                channel_event = ChannelUpdateSettleEvent(channel_name, self.wallet_address)
                 channel_event.register_args(EnumEventAction.EVENT_EXECUTE,
                                             self.wallet.url, channel_name, self.wallet._key.private_key_string, nonce)
                 event_machine.register_event(channel_name, channel_event)
                 event_machine.trigger_start_event(channel_name)
             else:
                 LOG.debug('register ChannelEndSettleEvent at block<{}>'.format(end_time))
-                channel_event = ChannelEndSettleEvent(channel_name)
+                channel_event = ChannelEndSettleEvent(channel_name, self.wallet_address)
                 channel_event.register_args(EnumEventAction.EVENT_EXECUTE,
                                             invoker, channel_name, self.wallet._key.private_key_string)
                 self.register_event(channel_event, end_time)
