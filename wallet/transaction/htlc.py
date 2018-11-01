@@ -171,8 +171,8 @@ class RResponse(TransactionBase):
                 return
 
             htlc_trade = self.get_htlc_trade_by_hashr(next_channel, self.hashcode)
-            if next_channel != htlc_trade.channel:
-                LOG.error('Why the channel is different. next_channel<{}>, stored channel<{}>' \
+            if htlc_trade.role == EnumTradeRole.TRADE_ROLE_PARTNER.name and next_channel != htlc_trade.channel:
+                LOG.warning('Why the channel is different. next_channel<{}>, stored channel<{}>' \
                           .format(next_channel, htlc_trade.channel))
 
             # notify the previous node the R-code
@@ -691,7 +691,7 @@ class HtlcResponsesMessage(HtlcBase):
             type=EnumTradeType.TRADE_TYPE_HTLC, role=EnumTradeRole.TRADE_ROLE_PARTNER, asset_type=asset_type,
             balance=payee_balance, peer_balance=payer_balance, payment=payment, hashcode=hashcode,
             delay_block=delay_block, commitment=rsmc_commitment, peer_commitment=peer_commitment,
-            delay_commitment=hlock_commitment, peer_delay_commitment=peer_hlock_commitment)
+            delay_commitment=hlock_commitment, peer_delay_commitment=peer_hlock_commitment, channel=channel_name)
         Channel.add_trade(channel_name, nonce=nonce, **htlc_trade)
 
         # create message
