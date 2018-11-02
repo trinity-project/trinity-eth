@@ -108,6 +108,10 @@ class ChannelDepositEvent(ChannelEventBase):
                 founder_sign='', partner_sign='', private_key=''):
         super(ChannelDepositEvent, self).execute(block_height)
 
+        # update the founder and partner deposit
+        self.deposit = int(deposit)
+        self.partner_deposit = int(partner_deposit)
+        
         # execute stage of channel event
         try:
             # if this wallet is not the event founder, go to next step directly.
@@ -129,9 +133,6 @@ class ChannelDepositEvent(ChannelEventBase):
                     # new transaction is pushed to chain
                     self.deposit_tx_id = None
 
-            # update the founder and partner deposit
-            self.deposit = int(deposit)
-            self.partner_deposit = int(partner_deposit)
             # get approved asset of both partners
             peer_approved_deposit = self.contract_event_api.get_approved_asset(partner)
             approved_deposit = self.contract_event_api.get_approved_asset(founder)
@@ -158,7 +159,7 @@ class ChannelDepositEvent(ChannelEventBase):
 
         # check the deposit of the contract address
         total_deposit = self.contract_event_api.get_channel_total_balance(self.channel_name)
-        if total_deposit >= self.deposit + self.partner_deposit:
+        if total_deposit >= self.deposit + self.partner_deposit > 0:
             Channel.update_channel(self.channel_name, state=EnumChannelState.OPENED.name)
             Channel.update_trade(self.channel_name, self.nonce, state=EnumTradeState.confirmed.name)
             APIStatistics.update_statistics(self.wallet_address, state=EnumChannelState.OPENED.name)
