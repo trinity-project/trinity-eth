@@ -204,7 +204,7 @@ class Wallet(object):
         addresss_to = checksum_encode(address_to)
         tx = settings.EthClient.construct_common_tx(self._key.address, addresss_to, value, gasLimit)
         rawdata = self.SignTX(tx)
-        return self._sendraw_and_recordhistory(rawdata=rawdata,asset_id="Eth", sendto=address_to, value=value)
+        return self._sendraw_and_recordhistory(rawdata=rawdata, asset_id="Eth", sendto=address_to, value=value)
 
 
     def _sendraw_and_recordhistory(self, rawdata,asset_id, sendto, value):

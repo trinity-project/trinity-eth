@@ -56,7 +56,7 @@ class Client(object):
         return self.web3.eth.contract(address=checksum_encode(contract_address), abi=abi)
 
 
-    def construct_erc20_tx(self, contract,addressFrom, addressTo,value, gasLimit=None, gasprice=None):
+    def construct_erc20_tx(self, contract, addressFrom, addressTo,value, gasLimit=42000, gasprice=None):
         tx_d = {
 
             'gasPrice': self.web3.eth.gasPrice * 2 if not gasprice  else gasprice,
@@ -64,6 +64,8 @@ class Client(object):
         }
         if gasLimit:
             tx_d.update({"gas": gasLimit})
+        else:
+            tx_d.update({"gas": 42000})
 
         tx = contract.functions.transfer(
             checksum_encode(addressTo),
