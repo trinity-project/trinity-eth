@@ -61,7 +61,7 @@ class SupportAssetType(object):
 class DepositAuth(object):
     """
     """
-    DefaultDeposit = 5000
+    DefaultDeposit = 1
     LastGetTime = None
     DateSource = "https://api.coinmarketcap.com/v2/ticker/2443/?convert=USD"
 
@@ -86,7 +86,8 @@ class DepositAuth(object):
 
         :return:
         """
-        return 800*1.03**(abs((datetime.date.today()-datetime.date(2018,1,15)).days)//365)
+        return cls.DefaultDeposit
+        # return 800*1.03**(abs((datetime.date.today()-datetime.date(2018,1,15)).days)//365)
 
     @classmethod
     def calculate_deposit(cls):
