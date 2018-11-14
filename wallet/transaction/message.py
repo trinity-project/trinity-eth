@@ -588,6 +588,7 @@ class TransactionBase(Message):
         # required is True
         if is_resign_response:
             nego_nonce = nonce
+            pre_nonce = nonce
             pre_trade = Channel.query_trade(channel_name, nego_nonce)
         else:
             pre_trade, pre_nonce = Channel.latest_valid_trade(channel_name)
@@ -606,7 +607,7 @@ class TransactionBase(Message):
         trade_state = pre_trade.state
 
         # local variables
-        resign_body = {'Nonce' : str(nego_nonce)}
+        resign_body = {'Nonce' : str(pre_nonce)}
 
         # is partner role of this transaction
         if EnumTradeRole.TRADE_ROLE_PARTNER.name == trade_role and EnumTradeState.confirming.name == trade_state:
@@ -615,11 +616,11 @@ class TransactionBase(Message):
                 # RSMC trade ??
                 if EnumTradeType.TRADE_TYPE_RSMC.name == trade_type:
                     # update the trade to confirmed state directly
-                    Channel.update_trade(channel_name, pre_trade.nonce, state=EnumTradeState.confirmed.name)
+                    Channel.update_trade(channel_name, pre_nonce, state=EnumTradeState.confirmed.name)
                     return None, pre_trade
                 elif EnumTradeType.TRADE_TYPE_HTLC.name == trade_type:
                     # already signed HTLC transaction ??
-                    Channel.update_trade(channel_name, pre_trade.nonce, state=EnumTradeState.confirmed.name)
+                    Channel.update_trade(channel_name, pre_nonce, state=EnumTradeState.confirmed.name)
                     if pre_trade.peer_delay_commitment:
                         return None, pre_trade
                     else:
