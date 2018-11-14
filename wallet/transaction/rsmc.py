@@ -52,17 +52,6 @@ class RsmcBase(TransactionBase):
         self.hashcode = self.message_body.get('HashR')
         self.wallet = wallet
 
-        if self.role_index in [-1, 1]:
-            self.payer = self.sender
-            self.payer_address = self.sender_address
-            self.payee = self.receiver
-            self.payee_address = self.receiver_address
-        else:
-            self.payer = self.receiver
-            self.payer_address = self.receiver_address
-            self.payee = self.sender
-            self.payee_address = self.sender_address
-
     @classmethod
     def check_role(cls, role):
         # row index related check
@@ -111,6 +100,19 @@ class RsmcBase(TransactionBase):
         response_message_body.update({'RoleIndex': role_index})
         return response_message_body
 
+    def get_payer_and_payee_address(self):
+        """"""
+        if self.role_index in [-1, 1]:
+            self.payer = self.sender
+            self.payer_address = self.sender_address
+            self.payee = self.receiver
+            self.payee_address = self.receiver_address
+        else:
+            self.payer = self.receiver
+            self.payer_address = self.receiver_address
+            self.payee = self.sender
+            self.payee_address = self.sender_address
+
 
 class RsmcMessage(RsmcBase):
     """
@@ -136,6 +138,8 @@ class RsmcMessage(RsmcBase):
     def __init__(self, message, wallet=None):
         super(RsmcMessage, self).__init__(message, wallet)
         self.rsmc_sign_role = 0
+        self.role_index = -1
+        self.get_payer_and_payee_address()
 
     def handle_message(self):
         self.handle()
@@ -342,6 +346,7 @@ class RsmcResponsesMessage(RsmcBase):
     def __init__(self, message, wallet):
         super(RsmcResponsesMessage, self).__init__(message, wallet)
         self.rsmc_sign_role = 1
+        self.get_payer_and_payee_address()
 
     def handle_message(self):
         self.handle()
