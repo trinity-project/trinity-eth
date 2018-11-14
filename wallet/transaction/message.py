@@ -585,8 +585,6 @@ class TransactionBase(Message):
             )
 
         # record the nonce negotiated by partner of the transaction with nonce
-        nego_nonce = None
-
         # required is True
         if is_resign_response:
             nego_nonce = nonce
@@ -617,11 +615,11 @@ class TransactionBase(Message):
                 # RSMC trade ??
                 if EnumTradeType.TRADE_TYPE_RSMC.name == trade_type:
                     # update the trade to confirmed state directly
-                    Channel.update_trade(channel_name, nego_nonce, state=EnumTradeState.confirmed.name)
+                    Channel.update_trade(channel_name, pre_trade.nonce, state=EnumTradeState.confirmed.name)
                     return None, pre_trade
                 elif EnumTradeType.TRADE_TYPE_HTLC.name == trade_type:
                     # already signed HTLC transaction ??
-                    Channel.update_trade(channel_name, nego_nonce, state=EnumTradeState.confirmed.name)
+                    Channel.update_trade(channel_name, pre_trade.nonce, state=EnumTradeState.confirmed.name)
                     if pre_trade.peer_delay_commitment:
                         return None, pre_trade
                     else:
