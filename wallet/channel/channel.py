@@ -307,6 +307,16 @@ class Channel(object):
             return trade
 
     @classmethod
+    def latest_nonce(cls, channel_name):
+        """
+
+        :param channel_name:
+        :return:
+        """
+        latest_trade = cls.latest_trade(channel_name)
+        return int(latest_trade.nonce) if latest_trade else None
+
+    @classmethod
     def latest_confirmed_trade(cls, channel_name):
         try:
             filters = {'$or': [{'state': EnumTradeState.confirmed_onchain.name},
@@ -317,6 +327,34 @@ class Channel(object):
             return None
         else:
             return trade
+
+    @classmethod
+    def latest_confirmed_nonce(cls, channel_name):
+        """
+
+        :param channel_name:
+        :return:
+        """
+        latest_trade = cls.latest_confirmed_trade(channel_name)
+        return int(latest_trade.nonce) if latest_trade else None
+
+    @classmethod
+    def latest_valid_trade(cls, channel_name):
+        """
+
+        :param channel_name:
+        :return:
+        """
+        try:
+            filters = {'$or': [{'state': EnumTradeState.confirmed_onchain.name},
+                               {'state': EnumTradeState.confirmed.name},
+                               {'state': EnumTradeState.confirming.name}]}
+            valid_trade = APITransaction(channel_name).sort(key='nonce', filters=filters)[0]
+        except Exception as error:
+            LOG.error('No valid transaction records were found for channel<{}>.'.format(channel_name))
+            return None, None
+        else:
+            return valid_trade, valid_trade.nonce
 
     @classmethod
     def new_nonce(cls, channel_name):
@@ -331,12 +369,12 @@ class Channel(object):
                 EnumChannelError.CHANNEL_ALLOC_NONCE_FAILED_SINCE_NO_TRADE_FOUND,
                 'Failed to alloc nonce for channel<{}> since no trade records were found'.format(channel_name)
         )
-
+        nonce = int(latest_trade.nonce) + 1
         # to check whether this nonce is able to reuse or not
-        if cls.is_nonce_able_to_resuse(latest_trade.state):
-            nonce = latest_trade.nonce
-        else:
-            nonce = int(latest_trade.nonce) + 1
+        # if cls.is_nonce_able_to_resuse(latest_trade.state):
+        #     nonce = latest_trade.nonce
+        # else:
+        #     nonce = int(latest_trade.nonce) + 1
 
         # the nonce must start from 2
         if cls._trade_nonce > nonce:
@@ -357,17 +395,7 @@ class Channel(object):
 
     @classmethod
     def is_nonce_able_to_resuse(cls, state):
-        return state in [EnumTradeState.initializing.name]
-
-    @classmethod
-    def latest_nonce(cls, channel_name):
-        """
-
-        :param channel_name:
-        :return:
-        """
-        latest_trade = cls.latest_trade(channel_name)
-        return int(latest_trade.nonce) if latest_trade else None
+        return state in [EnumTradeState.init.name]
 
     @classmethod
     def create(cls, wallet, founder, partner, asset_type, deposit, partner_deposit=None, comments=None,
@@ -444,7 +472,7 @@ class Channel(object):
                         comments=comments)
             else:
                 # RSMC transaction
-                trigger(channel_name, asset_type, wallet.url, receiver, count, hashcode=None, comments=comments)
+                trigger(channel_name, asset_type, wallet.url, receiver, count, hashcode, comments=comments)
         except Exception as error:
             LOG.error('Failed to transfer {} {} to receiver<{}>. Exception: {}' \
                       .format(count, asset_type, receiver, error))
@@ -750,21 +778,21 @@ class Channel(object):
 
     @classmethod
     def founder_trade(cls, type, role, asset_type, balance, peer_balance,
-                      commitment=None, peer_commitment=None, state=EnumTradeState.confirming):
+                      commitment=None, peer_commitment=None, state=EnumTradeState.init):
         """parameters refers to trade_body"""
         founder_body = cls.trade_body(type, role, asset_type, balance, peer_balance, commitment, peer_commitment, state)
         return founder_body
 
     @classmethod
     def settle_trade(cls, type, role, asset_type, balance, peer_balance,
-                     commitment=None, peer_commitment=None, state=EnumTradeState.confirming):
+                     commitment=None, peer_commitment=None, state=EnumTradeState.init):
         """parameters refers to trade_body"""
         settle_body = cls.trade_body(type, role, asset_type, balance, peer_balance, commitment, peer_commitment, state)
         return settle_body
 
     @classmethod
     def rsmc_trade(cls, type, role, asset_type, balance, peer_balance, payment, hashcode, rcode,
-                   commitment=None, peer_commitment=None, state=EnumTradeState.confirming):
+                   commitment=None, peer_commitment=None, state=EnumTradeState.init):
         """parameters refers to trade_body"""
         rsmc_body = cls.trade_body(type, role, asset_type, balance, peer_balance, commitment, peer_commitment, state)
         hashcode = hashcode if hashcode else Channel._trade_hash_rcode_default
@@ -775,7 +803,7 @@ class Channel(object):
     @classmethod
     def htlc_trade(cls, type, role, asset_type, balance, peer_balance, payment, hashcode, delay_block,
                    commitment=None, peer_commitment=None, delay_commitment=None, peer_delay_commitment=None,
-                   state=EnumTradeState.confirming, channel=None, rcode=None):
+                   state=EnumTradeState.init, channel=None, rcode=None):
         """parameters refers to trade_body
 
         :param channel: Only receiver record current channel name when htlc transaction occurred.

@@ -65,20 +65,25 @@ class TrinityNumber(object):
             return
 
         if not isinstance(number, str) or not re.match(r'1[0]{9}$|\d{1,9}$|\d{1,9}\.\d+$', number):
-            LOG.warn('Number must be string type<{}>. Current is {}'.format(number, type(number)))
+            LOG.warn('Number must be string type<{}> and lte 100000000. Current is {}'.format(number, type(number)))
             return
 
         number_list = number.split('.')
 
-        integer = int(number_list[0]) if number_list[0].strip() else 0
+        self.integer = int(number_list[0]) if number_list[0].strip() else 0
+        self.fragment = ''
+        fragment = 0
         if number.__contains__('.'):
             fragment = number_list[1].strip() + '0' * self._trinity_coef
-            fragment = int(fragment[0:8])
-        else:
-            fragment = 0
+            self.fragment = fragment[0:8]
+            fragment = int(self.fragment)
+            self.fragment = self.fragment.rstrip('0')
 
         # calculate
-        self.number = integer * pow(10, self._trinity_coef) + fragment
+        self.number = self.integer * pow(10, self._trinity_coef) + fragment
+
+    def __str__(self):
+        return '{}.{}'.format(self.integer, self.fragment) if self.fragment else '{}'.format(self.integer)
 
     @trinity_operator
     def add(self, number):
@@ -114,5 +119,3 @@ class TrinityNumber(object):
     @classmethod
     def convert_to_number(cls, number, asset_type='TNC'):
         return int(number) / cls._trinity_unit
-
-

@@ -29,7 +29,7 @@ from wallet.utils import get_magic
 from common.common import uri_parser
 from common.log import LOG
 from common.exceptions import GoTo
-from wallet.channel import Channel, EnumTradeType, Payment
+from wallet.channel import Channel, EnumTradeType, EnumTradeState, EnumTradeRole, Payment
 from wallet.Interface.gate_way import send_message
 from .response import EnumResponseStatus
 from trinity import IS_SUPPORTED_ASSET_TYPE
@@ -41,7 +41,8 @@ class MessageHeader(object):
     """
         Message header is used for event transaction.
     """
-    def __init__(self, sender:str, receiver:str, message_type:str, channel_name:str, asset_type:str, nonce:int):
+    def __init__(self, sender:str, receiver:str, message_type:str, channel_name:str, asset_type:str, nonce:int,
+                 nego_nonce=None):
         # here we could use the regex expression to judge the ip format accurately.
         assert sender.__contains__('@'), 'Invalid sender<{}>.'.format(sender)
         assert receiver.__contains__('@'), 'Invalid receiver<{}>.'.format(receiver)
@@ -56,6 +57,9 @@ class MessageHeader(object):
             'AssetType': asset_type.upper(),
             'NetMagic': get_magic()
         }
+
+        if nego_nonce and nego_nonce < nonce:
+            self.message_header.update({'ResetTxNonce': nego_nonce})
 
 
 class Message(object):
@@ -86,12 +90,22 @@ class Message(object):
 
         self.message_type = message.get('MessageType')
         self.message_body = message.get('MessageBody')
+        self.resign_body = self.message_body.get('ResignBody')
         self.channel_name = message.get('ChannelName')
         self.asset_type = message.get('AssetType','INVALID_ASSET').upper()
-        self.nonce = int(message.get('TxNonce'))
         self.net_magic = message.get('NetMagic')
         self.status = message.get('Status')
         self.comments = self.message.get('Comments')
+
+        self.nonce = int(message.get('TxNonce'))
+        try:
+            self.nego_nonce = int(message.get('ResetTxNonce'))
+        except:
+            self.nego_nonce = None
+
+        # transaction is triggered by command cline
+        trigger_by_cli = int(self.message_body.get('TriggeredByCLI', 0))
+        self.trigger_by_cli = True if trigger_by_cli else False
 
     @property
     def network_magic(self):
@@ -102,8 +116,9 @@ class Message(object):
         send_message(message)
 
     @staticmethod
-    def create_message_header(sender:str, receiver:str, message_type:str, channel_name:str, asset_type:str, nonce:int):
-        return MessageHeader(sender, receiver, message_type, channel_name, asset_type, nonce)
+    def create_message_header(sender:str, receiver:str, message_type:str, channel_name:str, asset_type:str, nonce:int,
+                              nego_nonce=None):
+        return MessageHeader(sender, receiver, message_type, channel_name, asset_type, nonce, nego_nonce).message_header
 
     def handle(self):
         LOG.info('Received Message<{}> from<{}> by channel<{}>'.format(self.message_type,
@@ -119,7 +134,31 @@ class Message(object):
         return cls._contract_event_api
 
     @classmethod
-    def sign_content(cls, start=3, *args, **kwargs):
+    def sign_content(cls, wallet, sign_type_list, sign_value_list, *args, start=3, **kwargs):
+        """
+
+        :param wallet:
+        :param sign_type_list:
+        :param sign_value_list:
+        :param args:
+        :param start:
+        :param kwargs:
+        :return:
+        """
+        if not (wallet and sign_type_list and sign_value_list):
+            raise GoTo(
+                EnumResponseStatus.RESPONSE_ILLEGAL_INPUT_PARAMETER,
+                'Lack of mandatory parameters: wallet<{}>, type_list<{}>, value_list<{}>' \
+                    .format(wallet, sign_type_list, sign_value_list)
+            )
+
+        kwargs.update({
+            'typeList': sign_type_list,
+            'valueList': sign_value_list,
+            'privtKey': wallet._key.private_key_string
+
+        })
+
         return cls.contract_event_api().sign_content(start, *args, **kwargs)
 
     @classmethod
@@ -130,7 +169,7 @@ class Message(object):
         :return:
         """
         if not IS_SUPPORTED_ASSET_TYPE(asset_type):
-            raise GoTo(EnumResponseStatus.RESPONSE_ASSET_TYPE_NOT_SUPPORTED,
+            raise GoTo(EnumResponseStatus.RESONSE_ASSET_TYPE_NOT_SUPPORTED,
                        'Unsupported Asset type: \'{}\''.format(asset_type))
 
         return True, None
@@ -203,21 +242,37 @@ class Message(object):
             )
 
     @classmethod
-    def check_nonce(cls, nonce, channel_name=''):
+    def check_wallet(cls, wallet):
+        if not wallet:
+            raise GoTo(
+                EnumResponseStatus.RESPONSE_COMMON_ERROR_VOID_WALLET,
+                'Wallet is NoneType.'
+            )
+        return True
+
+    @classmethod
+    def check_nonce(cls, nonce, channel_name='', is_founder=False):
         """
 
         :param channel_name:
         :param nonce:
         :return:
         """
-        new_nonce = Channel.new_nonce(channel_name)
+        nonce = int(nonce)
+        nego_trade = Channel.query_trade(channel_name, nonce)
+        pre_trade = Channel.query_trade(channel_name, nonce-1)
 
-        if not (TransactionBase._FOUNDER_NONCE < int(nonce) == new_nonce):
-            raise GoTo(EnumResponseStatus.RESPONSE_TRADE_WITH_INCOMPATIBLE_NONCE,
-                       '{}::Channel<{}> has incompatible nonce<self: {}, peer: {}>'.format(cls.__name__, channel_name,
-                                                                                           new_nonce, nonce))
+        # to check whether the nonce is legal one or not
+        if not (TransactionBase._FOUNDER_NONCE < nonce
+                and pre_trade.state in [EnumTradeState.confirmed.name, EnumTradeState.confirmed_onchain.name]
+                and ((nego_trade.state in [EnumTradeState.init.state] and is_founder)
+                or (nego_trade.state in [EnumTradeState.confirming.state] and not is_founder))):
+            raise GoTo(
+                EnumResponseStatus.RESPONSE_TRADE_WITH_INCOMPATIBLE_NONCE,
+                '{}::Channel<{}> has incompatible nonce<{}>, state<previous:{}, negotiated: {}>' \
+                    .format(cls.__name__, channel_name, nonce, pre_trade.state, nego_trade.state))
         else:
-            return True, new_nonce
+            return True, nego_trade
 
     @classmethod
     def calculate_balance_after_payment(cls, balance, peer_balance, payment, hlock_to_rsmc=False, is_htlc_type=False):
@@ -262,7 +317,6 @@ class Message(object):
         try:
             # get channel if trade has already existed
             channel_set = Channel.query_channel(channel_name)[0]
-
             expected_balance = int(channel_set.balance.get(address).get(asset_type))
             expected_peer_balance = int(channel_set.balance.get(peer_address).get(asset_type))
 
@@ -322,7 +376,6 @@ class Message(object):
     def send_error_response(cls, sender:str, receiver:str, channel_name:str, asset_type:str,
                        nonce:int, status=EnumResponseStatus.RESPONSE_FAIL, **kwargs):
         message = cls.create_message_header(receiver, sender, cls._message_name, channel_name, asset_type, nonce)
-        message = message.message_header
         message.update({'MessageBody': kwargs})
 
         if status:
@@ -334,6 +387,9 @@ class TransactionBase(Message):
     """
         Descriptions: for RSMC or HTLC transaction
     """
+    _htlc_sign_type_list = ['bytes32', 'address', 'address', 'uint256', 'uint256', 'bytes32']
+    _rsmc_sign_type_list = ['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256', 'bytes32', 'bytes32']
+
     @classmethod
     def check_rcode(cls, hashcode, rcode):
         """
@@ -463,10 +519,13 @@ class TransactionBase(Message):
         :param payment:
         :return:
         """
-        if status is not None and status != EnumResponseStatus.RESPONSE_OK.name:
-            trade = Channel.query_trade(channel_name, nonce)
-            if trade:
-                Channel.delete_trade(channel_name, int(nonce))
+        # For the healthy of the transaction, maybe we need give up the resources roll-back operation
+
+        # if status is not None and status != EnumResponseStatus.RESPONSE_OK.name:
+        #     trade = Channel.query_trade(channel_name, nonce)
+        #     if trade:
+        #         Channel.delete_trade(channel_name, int(nonce))
+        pass
 
     @classmethod
     def is_hlock_to_rsmc(cls, hashcode):
@@ -509,3 +568,190 @@ class TransactionBase(Message):
         except Exception as error:
             raise GoTo(EnumResponseStatus.RESPONSE_TRADE_HASHR_NOT_FOUND,
                        'Htlc trade not found by the HashR<{}> in channel<{}>'.format(hashcode, channel_name))
+
+    @classmethod
+    def create_resign_message_body(cls, channel_name, nonce, is_resign_response=False):
+        """
+
+        :param channel_name:
+        :param nonce:
+        :param is_resign_response: if True, it means has received the peer resign request
+        :return:
+        """
+        if not (channel_name and isinstance(nonce, int)):
+            raise GoTo(
+                EnumResponseStatus.RESPONSE_ILLEGAL_INPUT_PARAMETER,
+                'Illegal parameters: channel_name<{}> or nonce<{}, type:{}>'.format(channel_name, nonce, type(nonce))
+            )
+
+        # record the nonce negotiated by partner of the transaction with nonce
+        nego_nonce = None
+
+        # required is True
+        if is_resign_response:
+            pre_nonce = nonce
+            pre_trade = Channel.query_trade(channel_name, pre_nonce)
+        else:
+            pre_trade, pre_nonce = Channel.latest_valid_trade(channel_name)
+            nego_nonce = pre_nonce + 1 if isinstance(pre_nonce, int) else None
+
+        # does founder practise fraud ???
+        if not (pre_trade and pre_nonce) or cls._FOUNDER_NONCE >= pre_nonce:
+            raise GoTo(
+                EnumResponseStatus.RESPONSE_FOUNDER_WITH_ILLEGAL_NONCE,
+                'Could not finish this transaction because '
+            )
+
+        # initialize some local variables
+        trade_role = pre_trade.role
+        trade_type = pre_trade.type
+        trade_state = pre_trade.state
+
+        # local variables
+        resign_body = {'Nonce' : str(pre_nonce)}
+
+        # is partner role of this transaction
+        if EnumTradeRole.TRADE_ROLE_PARTNER.name == trade_role and EnumTradeState.confirming.name == trade_state:
+            # already signed trade ???
+            if pre_trade.peer_commitment:
+                # RSMC trade ??
+                if EnumTradeType.TRADE_TYPE_RSMC.name == trade_type:
+                    # update the trade to confirmed state directly
+                    Channel.update_trade(channel_name, pre_nonce, state=EnumTradeState.confirmed.name)
+                    return None, pre_trade
+                elif EnumTradeType.TRADE_TYPE_HTLC.name == trade_type:
+                    # already signed HTLC transaction ??
+                    Channel.update_trade(channel_name, pre_nonce, state=EnumTradeState.confirmed.name)
+                    if pre_trade.peer_delay_commitment:
+                        return None, pre_trade
+                    else:
+                        LOG.warning('Dismiss update HTLC locked part signature of the peer.')
+                        resign_body.update({'DelayCommitment': pre_trade.delay_commitment})
+            else:
+                resign_body.update({'Commitment': pre_trade.commitment})
+
+                if EnumTradeType.TRADE_TYPE_HTLC.name == trade_type:
+                    resign_body.update({'DelayCommitment': pre_trade.delay_commitment})
+
+        elif is_resign_response is True and EnumTradeRole.TRADE_ROLE_FOUNDER.name == trade_role and \
+                EnumTradeState.confirmed.name == trade_state:
+            # check the signature is completed
+            if pre_trade.peer_commitment:
+                resign_body.update({'Commitment': pre_trade.commitment})
+
+                # fill the htlc lock signature part
+                if EnumTradeType.TRADE_TYPE_HTLC.name == trade_type:
+                    if pre_trade.peer_delay_commitment:
+                        resign_body.update({'DelayCommitment': pre_trade.delay_commitment})
+                    else:
+                        # raise error.
+                        raise GoTo(
+                            EnumResponseStatus.RESPONSE_FAIL,
+                            'Not found the HTLC locked signature part.'
+                        )
+        else:
+            return None, pre_trade
+
+        return resign_body, pre_trade
+
+    @classmethod
+    def handle_resign_body(cls, wallet, channel_name, resign_body):
+        """"""
+        if not resign_body:
+            return None
+
+        if not (wallet and channel_name):
+            raise GoTo(
+                EnumResponseStatus.RESPONSE_ILLEGAL_INPUT_PARAMETER,
+                'Void wallet<{}> or Illegal channel name<{}>'.format(wallet, channel_name)
+            )
+
+        resign_nonce = int(resign_body.get('Nonce'))
+        update_channel_db = {}
+        update_trade_db = {}
+
+        # get transaction by the resign_nonce
+        resign_trade = Channel.query_trade(channel_name, resign_nonce)
+        asset_type = resign_trade.asset_type
+
+        channel = Channel(channel_name)
+        self_address, _, _ = uri_parser(wallet.url)
+        peer_address, _, _ = uri_parser(channel.peer_uri(wallet.url))
+
+        # Is this wallet sender side of this trade ?????
+        if EnumTradeRole.TRADE_ROLE_PARTNER.name == resign_trade.role:
+            payer_address = peer_address
+            payee_address = self_address
+            payer_balance = resign_trade.peer_balance
+            payee_balance = resign_trade.balance
+        elif EnumTradeRole.TRADE_ROLE_FOUNDER.name == resign_trade.role:
+            payer_address = self_address
+            payee_address = peer_address
+            payer_balance = resign_trade.balance
+            payee_balance = resign_trade.peer_balance
+        else:
+            raise GoTo(
+                EnumResponseStatus.RESPONSE_DATABASE_ERROR_TRADE_ROLE,
+                'Error trade role<{}> for nonce<{}>'.format(resign_trade.role, resign_nonce)
+            )
+        rsmc_list = [channel_name, resign_nonce, payer_address, int(payer_balance),
+                     payee_address, int(payee_balance), resign_trade.hashcode, resign_trade.rcode]
+
+        # self commitment is None
+        commitment = None
+        if not resign_trade.commitment:
+            commitment = cls.sign_content( wallet, cls._rsmc_sign_type_list, rsmc_list)
+            update_trade_db.update({'commitment':commitment})
+
+        # self lock commitment is none
+        htlc_list = None
+        delay_commitment = None
+        if EnumTradeType.TRADE_TYPE_HTLC.name == resign_trade.type:
+            htlc_list = [channel_name, payer_address, payee_address, resign_trade.delay_block,
+                         int(resign_trade.payment), resign_trade.hashcode]
+            delay_commitment = cls.sign_content(wallet, cls._htlc_sign_type_list, htlc_list)
+            update_trade_db.update({'delay_commitment':delay_commitment})
+
+        # check whether the trade need update or not
+        if resign_trade.state not in [EnumTradeState.confirmed.name, EnumTradeState.confirmed_onchain.name]:
+            peer_commitment = resign_body.get('Commitment')
+            peer_delay_commitment = resign_body.get('DelayCommitment')
+
+            # check peer signature
+            cls.check_signature(wallet, peer_address, cls._rsmc_sign_type_list, rsmc_list, peer_commitment)
+
+            # update transaction and channel balance
+            update_trade_db.update({'peer_commitment': peer_commitment})
+            update_channel_db = {
+                'balance': {
+                    payer_address: {asset_type: payer_balance},
+                    payee_address: {asset_type: payee_balance}
+                }
+            }
+
+            # check the htlc part signature
+            channel_hlock = None
+            if EnumTradeType.TRADE_TYPE_HTLC.name == resign_trade.type:
+                cls.check_signature(wallet, peer_address, cls._htlc_sign_type_list,
+                                    htlc_list, peer_delay_commitment)
+                update_trade_db.update({'peer_delay_commitment': peer_delay_commitment})
+
+                # need update the hlock part
+                if payer_address == self_address:
+                    channel = Channel(channel_name)
+                    channel_hlock = channel.hlock
+                    if channel_hlock and channel_hlock.get(payer_address):
+                        payer_hlock = int(resign_trade.payment) + int(channel_hlock.get(payer_address).get(asset_type))
+                        channel_hlock.update({payer_address: {asset_type: str(payer_hlock)}})
+                        update_channel_db.update({'hlock': channel_hlock})
+
+            update_trade_db.update({'state': EnumTradeState.confirmed.name})
+
+            # update transaction
+            Channel.update_trade(channel_name, resign_nonce, **update_trade_db)
+
+            # update Channel balance to new one
+            Channel.update_channel(channel_name, **update_channel_db)
+
+        # return resign message body
+        return cls.create_resign_message_body(channel_name, resign_nonce, True)

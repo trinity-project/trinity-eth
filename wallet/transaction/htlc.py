@@ -87,7 +87,6 @@ class RResponse(TransactionBase):
 
         message = RResponse.create_message_header(sender, receiver, RResponse._message_name,
                                                   channel_name, asset_type, nonce)
-        message = message.message_header
 
         message_body = {
             "HashR": hashcode,
@@ -150,8 +149,8 @@ class RResponse(TransactionBase):
     def trigger_pay_by_rsmc(self):
         try:
             # change htlc to rsmc
-            RsmcMessage.create(self.channel_name, self.asset_type, self.wallet.url, self.sender, self.payment,
-                               self.hashcode, comments=self.comments)
+            RsmcMessage.create(self.wallet, self.channel_name, self.asset_type, self.wallet.url, self.sender,
+                               self.payment, self.hashcode, comments=self.comments)
         except Exception as error:
             LOG.error('Failed to pay from htlc<{}> to rsmc. Need timer to handle later.'.format(self.hashcode))
 
@@ -229,7 +228,6 @@ class RResponseAck(TransactionBase):
         """
         message = RResponseAck.create_message_header(receiver, sender, RResponseAck._message_name,
                                                      channel_name, asset_type.upper(), nonce)
-        message = message.message_header
 
         message_body = {
             "HashR": hashcode,
@@ -539,7 +537,6 @@ class HtlcMessage(HtlcBase):
 
         message = HtlcMessage.create_message_header(sender, receiver, HtlcMessage._message_name,
                                                     channel_name, asset_type, nonce)
-        message = message.message_header
         message.update({'Router': router, 'Next': next_router,})
         message.update({'MessageBody': message_body})
 
@@ -697,7 +694,6 @@ class HtlcResponsesMessage(HtlcBase):
         # create message
         message = HtlcResponsesMessage.create_message_header(receiver, sender, HtlcResponsesMessage._message_name,
                                                              channel_name, asset_type, tx_nonce)
-        message = message.message_header
         message.update({'Router': router, 'Next': next_router,})
         message_body = {
             'SenderBalance': payer_balance,

@@ -52,23 +52,16 @@ class RsmcBase(TransactionBase):
         self.hashcode = self.message_body.get('HashR')
         self.wallet = wallet
 
-    @classmethod
-    def get_payer_and_payee(cls, role_index, sender, receiver):
-        """
-
-        :param role_index:
-        :param sender:
-        :param receiver:
-        :return:
-        """
-        role = int(role_index)
-        cls.check_role(role)
-
-        # reverse the sender and receiver by role
-        if 0 == role:
-            return receiver, sender
+        if self.role_index in [-1, 1]:
+            self.payer = self.sender
+            self.payer_address = self.sender_address
+            self.payee = self.receiver
+            self.payee_address = self.receiver_address
         else:
-            return sender, receiver
+            self.payer = self.receiver
+            self.payer_address = self.receiver_address
+            self.payee = self.sender
+            self.payee_address = self.sender_address
 
     @classmethod
     def check_role(cls, role):
@@ -78,6 +71,46 @@ class RsmcBase(TransactionBase):
                        'RsmcSign with illegal role index<{}>'.format(role))
 
         return True
+
+    @classmethod
+    def request(cls, asset_type, payment, sender_balance, receiver_balance, hashcode=None):
+        """
+
+        :param asset_type:
+        :param payment:
+        :param sender_balance:
+        :param receiver_balance:
+        :param hashcode:
+        :return:
+        """
+        request_message_body = {
+            'AssetType': asset_type,
+            'PaymentCount': str(payment),
+            'SenderBalance': str(sender_balance),
+            'ReceiverBalance': str(receiver_balance),
+        }
+
+        if hashcode:
+            request_message_body.update({'HashR': hashcode})
+
+        return request_message_body
+
+    @classmethod
+    def response(cls, asset_type, payment, sender_balance, receiver_balance, role_index=0, hashcode=None):
+        """
+
+        :param asset_type:
+        :param payment:
+        :param sender_balance:
+        :param receiver_balance:
+        :param role_index:
+        :param hashcode:
+        :return:
+        """
+        response_message_body = cls.request(asset_type, payment, sender_balance, receiver_balance, hashcode)
+        response_message_body.update({'RoleIndex': role_index})
+        return response_message_body
+
 
 
 class RsmcMessage(RsmcBase):
@@ -112,12 +145,82 @@ class RsmcMessage(RsmcBase):
         super(RsmcMessage, self).handle()
 
         status = EnumResponseStatus.RESPONSE_OK
+        resign_ack = None
+        resign_request = None
         try:
-            # send RsmcSign message to peer
-            RsmcResponsesMessage.create(self.wallet, self.channel_name, self.asset_type, self.nonce, self.net_magic,
-                                        self.sender, self.receiver, self.payment, self.sender_balance,
-                                        self.receiver_balance, self.rsmc_sign_role, self.hashcode, self.comments)
+            # common check
+            self.check_channel_state(self.channel_name)
+            self.verify()
 
+            # resign request by peer ??
+            if self.resign_body:
+                resign_ack, nego_trade = self.handle_resign_body(self.wallet, self.channel_name, self.resign_body)
+            else:
+                # check whether need resign previous transaction
+                resign_request, nego_trade = self.create_resign_message_body(self.channel_name, self.nonce)
+
+            # real nonce
+            nego_nonce = nego_trade and (nego_trade.nonce+1)
+            nonce = nego_nonce or self.nonce
+
+            rsmc_sign_body = self.response(self.asset_type, self.payment, self.sender_balance, self.receiver_balance,
+                                           self.rsmc_sign_role, self.hashcode)
+
+            # if need resign, just send resign message body
+            sign_hashcode, sign_rcode = self.get_rcode(self.channel_name, self.hashcode)
+            if resign_request:
+                # record the transaction without any signature
+                rsmc_trade = Channel.rsmc_trade(
+                    type=EnumTradeType.TRADE_TYPE_RSMC, role=EnumTradeRole.TRADE_ROLE_PARTNER, asset_type=self.asset_type,
+                    balance=self.receiver_balance, peer_balance=self.sender_balance, payment=self.payment,
+                    hashcode=sign_hashcode, rcode=sign_rcode
+                )
+
+                # add resign body to message body
+                rsmc_sign_body.update({'ResignBody': resign_request})
+            else:
+                # check the balance
+                htlc_to_rsmc = self.is_hlock_to_rsmc(self.hashcode)
+                _, payer_balance, payee_balance = self.check_balance(
+                    self.channel_name, self.asset_type, self.payer_address, self.sender_balance,
+                    self.payee_address, self.receiver_balance, htlc_to_rsmc=htlc_to_rsmc, payment=self.payment
+                )
+
+                # sign the trade
+                commitment = RsmcResponsesMessage.sign_content(
+                    self.wallet, RsmcMessage._sign_type_list, [self.channel_name, nonce, self.payer_address,
+                                                               payer_balance, self.payee_address, payee_balance,
+                                                               sign_hashcode, sign_rcode]
+                )
+
+                rsmc_trade = Channel.rsmc_trade(
+                    type=EnumTradeType.TRADE_TYPE_RSMC, role=EnumTradeRole.TRADE_ROLE_PARTNER, asset_type=self.asset_type,
+                    balance=self.receiver_balance, peer_balance=self.sender_balance, payment=self.payment,
+                    hashcode=sign_hashcode, rcode=sign_rcode, commitment=commitment, state=EnumTradeState.confirming
+                )
+
+                # update the message body with signature
+                rsmc_sign_body.update({'Commitment': commitment})
+
+                # add resign ack
+                if resign_ack:
+                    rsmc_sign_body.update({'ResignBody': resign_ack})
+
+            # Response message header
+            response_message = RsmcResponsesMessage.create_message_header(
+                self.receiver, self.sender, RsmcResponsesMessage._message_name, self.channel_name, self.asset_type,
+                self.nonce, nego_nonce
+            )
+            response_message.update({'MessageBody': rsmc_sign_body})
+            response_message.update({'Status': status.name})
+            self.send(response_message)
+
+            # record the transaction
+            if nonce != self.nonce:
+                Channel.delete_trade(self.channel_name, nonce)
+                Channel.add_trade(self.channel_name, nonce=nonce, **rsmc_trade)
+            else:
+                Channel.add_trade(self.channel_name, nonce=nonce, **rsmc_trade)
             APIStatistics.update_statistics(self.wallet.address, rsmc='rsmc')
         except TrinityException as error:
             status = error.reason
@@ -150,6 +253,10 @@ class RsmcMessage(RsmcBase):
         # check channel state
         RsmcMessage.check_asset_type(asset_type)
         channel = RsmcMessage.check_channel_state(channel_name)
+        payer_address, _, _ = uri_parser(sender)
+        payee_address, _, _ = uri_parser(receiver)
+        asset_type = asset_type.upper()
+        resign_body = None
 
         # get nonce in the offline account book
         nonce = Channel.new_nonce(channel_name)
@@ -157,46 +264,59 @@ class RsmcMessage(RsmcBase):
             raise GoTo(EnumResponseStatus.RESPONSE_TRADE_WITH_INCORRECT_NONCE,
                        'RsmcMessage::create: Incorrect nonce<{}> for channel<{}>'.format(nonce, channel_name))
 
-        # to get channel balance
-        balance = channel.balance
-        payer_address, _, _ = uri_parser(sender)
-        payee_address, _, _ = uri_parser(receiver)
-        asset_type = asset_type.upper()
+        # to check whether there's a transaction which is needed to resign
+        resign_body, valid_trade = RsmcMessage.create_resign_message_body(channel_name, nonce)
+
+        # there're one trade need resign, we need adjust the nonce value
+        if valid_trade and valid_trade.state in [EnumTradeState.confirming.name]:
+            nonce = valid_trade.nonce + 1
+            if EnumTradeRole.TRADE_ROLE_PARTNER.name == valid_trade.role:
+                payer_balance = valid_trade.peer_balance
+                payee_balance = valid_trade.balance
+            else:
+                payer_balance = valid_trade.balance
+                payee_balance = valid_trade.peer_balance
+        else:
+            # to get channel balance
+            balance = channel.balance
+            payer_balance = balance.get(payer_address).get(asset_type)
+            payee_balance = balance.get(payee_address).get(asset_type)
 
         # judge whether it is htlc lock part to rsmc trade or not
         hlock_to_rsmc = RsmcMessage.is_hlock_to_rsmc(hashcode)
         _, payer_balance, payee_balance = RsmcBase.calculate_balance_after_payment(
-            balance.get(payer_address).get(asset_type), balance.get(payee_address).get(asset_type), payment,
-            hlock_to_rsmc=hlock_to_rsmc)
+            payer_balance, payee_balance, payment, hlock_to_rsmc=hlock_to_rsmc
+        )
 
-        APIStatistics.update_statistics(payer_address, rsmc='rsmc')
+        # sign the trade
+        sign_hashcode, sign_rcode = RsmcMessage.get_rcode(channel_name, hashcode)
+        rsmc_trade = Channel.rsmc_trade(
+            type=EnumTradeType.TRADE_TYPE_RSMC, role=EnumTradeRole.TRADE_ROLE_FOUNDER, asset_type=asset_type,
+            balance=payer_balance, peer_balance=payee_balance, payment=payment,
+            hashcode=sign_hashcode, rcode=sign_rcode
+        )
 
         # create message
-        message_body = {
-            'AssetType':asset_type.upper(),
-            'PaymentCount': str(payment),
-            'SenderBalance': str(payer_balance),
-            'ReceiverBalance': str(payee_balance),
-        }
-
-        if hlock_to_rsmc:
-            message_body.update({'HashR': hashcode})
+        rsmc_request = RsmcMessage.request(asset_type, payment, payer_balance, payee_balance, hashcode)
+        # has transaction which is needed to be resigned
+        if resign_body:
+            rsmc_request.update({'ResignBody': resign_body})
 
         # start to create message
         message = RsmcMessage.create_message_header(sender, receiver, RsmcMessage._message_name,
                                                     channel_name, asset_type, nonce)
-        message = message.message_header
-        message.update({'MessageBody': message_body})
+        message.update({'MessageBody': rsmc_request})
         if comments:
             message.update({'Comments': comments})
 
         RsmcMessage.send(message)
 
+        # record the transaction
+        Channel.add_trade(channel_name, nonce=nonce, **rsmc_trade)
+        APIStatistics.update_statistics(payer_address, rsmc='rsmc')
+
         return None
 
-    @classmethod
-    def get_payer_and_payee(cls, role_index, sender, receiver):
-        return super(RsmcMessage, cls).get_payer_and_payee(role_index, receiver, sender)
 
 class RsmcResponsesMessage(RsmcBase):
     """
@@ -223,7 +343,6 @@ class RsmcResponsesMessage(RsmcBase):
     def __init__(self, message, wallet):
         super(RsmcResponsesMessage, self).__init__(message, wallet)
         self.rsmc_sign_role = 1
-        self.payer, self.payee = self.get_payer_and_payee(self.role_index, self.sender_address, self.receiver_address)
 
     def handle_message(self):
         self.handle()
@@ -237,46 +356,36 @@ class RsmcResponsesMessage(RsmcBase):
             if not self.check_response_status(self.status):
                 self.rollback_resource(self.channel_name, self.nonce, self.payment, self.status)
                 return
-
             # common check
             self.check_channel_state(self.channel_name)
             self.verify()
             self.check_role(self.role_index)
-            nonce = self.nonce if 0 == self.role_index else self.nonce + 1 # this is just used for check nonce
-            self.check_nonce(nonce, self.channel_name)
+
+            if 0 == self.role_index:
+                need_update_balance, rsmc_sign_body = self.handle_partner_response()
+            elif 1 == self.role_index:
+                need_update_balance, rsmc_sign_body = self.handle_founder_response()
+            else:
+                raise GoTo(EnumResponseStatus.RESPONSE_FAIL, 'Invalid Role<{}> of RsmcResponse'.format(self.role_index))
+
+            # send RsmcSign to peer
+            if rsmc_sign_body:
+                response_message = self.create_message_header(self.receiver, self.sender, self._message_name,
+                                                              self.channel_name, self.asset_type, self.nego_nonce or self.nonce)
+                response_message.update({'MessageBody': rsmc_sign_body})
+                response_message.update({'Status': status.name})
+                self.send(response_message)
 
             is_htlc_to_rsmc = self.is_hlock_to_rsmc(self.hashcode)
-            self.check_balance(self.channel_name, self.asset_type, self.payer, self.sender_balance,
-                               self.payee, self.receiver_balance, hlock_to_rsmc=is_htlc_to_rsmc, payment=self.payment)
-
-            sign_hashcode, sign_rcode = self.get_rcode(self.channel_name, self.hashcode)
-            self.check_signature(
-                self.wallet, self.sender_address,
-                type_list=self._sign_type_list,
-                value_list=[self.channel_name, self.nonce, self.payer, int(self.sender_balance),
-                            self.payee, int(self.receiver_balance), sign_hashcode, sign_rcode],
-                signature=self.commitment
-            )
-
-            if 0 == self.role_index:
-                self.rsmc_sign(self.wallet, self.channel_name, self.asset_type, self.nonce, self.sender, self.receiver,
-                               self.payment, self.sender_balance, self.receiver_balance, self.rsmc_sign_role,
-                               self.hashcode, self.comments)
-            
-            # update transaction
-            Channel.update_trade(self.channel_name, self.nonce, peer_commitment=self.commitment,
-                                 state=EnumTradeState.confirmed.name)
-
-            if 0 == self.role_index:
-                APIStatistics.update_statistics(self.wallet.address, payment=self.payment, payer=True)
-            else:
-                APIStatistics.update_statistics(self.wallet.address, payment=self.payment, payer=False)
-
-            Channel.confirm_payment(self.channel_name, self.hashcode, is_htlc_to_rsmc)
+            if is_htlc_to_rsmc:
+                # update the htlc transaction state.
+                Channel.confirm_payment(self.channel_name, self.hashcode, is_htlc_to_rsmc)
 
             # update the channel balance
-            self.update_balance_for_channel(self.channel_name, self.asset_type, self.payer, self.payee, self.payment,
-                                            is_htlc_to_rsmc)
+            if need_update_balance:
+                APIStatistics.update_statistics(self.wallet.address, payment=self.payment, payer=(0==self.role_index))
+                self.update_balance_for_channel(self.channel_name, self.asset_type, self.payer_address,
+                                                self.payee_address, self.payment, is_htlc_to_rsmc)
         except GoTo as error:
             LOG.error(error)
             status = error.reason
@@ -296,110 +405,164 @@ class RsmcResponsesMessage(RsmcBase):
 
         return
 
-    @classmethod
-    def rsmc_sign(cls, wallet, channel_name, asset_type, nonce, sender, receiver, payment,
-                  sender_balance, receiver_balance, role_index=0, hashcode=None, comments=None):
+    def handle_partner_response(self):
         """
-        Descriptions: create and send RsmcSign messages.
-        :param wallet:
-        :param channel_name:
-        :param asset_type:
-        :param nonce:
-        :param sender:
-        :param receiver:
-        :param payment:
-        :param sender_balance:
-        :param receiver_balance:
-        :param role_index:
-        :param comments:
-        :param hashcode:
+
+        :return: response to send to peer
+        """
+        # local variables
+        need_update_balance = False
+
+        # handle the resign body firstly
+        resign_ack = None
+        if self.resign_body:
+            resign_ack, resign_trade = self.handle_resign_body(self.wallet, self.channel_name, self.resign_body)
+
+            # here if the peer not provide the signature, we need re-calculate the balance
+            if not self.commitment:
+                self.sender_balance = str(int(resign_trade.balance) - int(self.payment))
+                self.receiver_balance = str(int(resign_trade.peer_balance) + int(self.payment))
+
+        # check the trade state by the nego_nonce if provided by peer
+        if self.nego_nonce:
+            try:
+                trade = Channel.query_trade(self.channel_name, self.nego_nonce)
+            except:
+                trade = None
+
+            if trade and trade.state not in [EnumTradeState.init.name]:
+                raise GoTo(
+                    EnumResponseStatus.RESPONSE_TRADE_COULD_NOT_BE_OVERWRITTEN,
+                    'Could not use negotiated nonce <{}>'.format(self.nego_nonce)
+                )
+
+        rsmc_sign_body = self.response(self.asset_type, self.payment, self.sender_balance, self.receiver_balance,
+                                       1, self.hashcode)
+
+        # get some common local variables
+        sign_hashcode, sign_rcode = self.get_rcode(self.channel_name, self.hashcode)
+        is_htlc_to_rsmc = self.is_hlock_to_rsmc(self.hashcode)
+        payer_balance = int(self.sender_balance)
+        payee_balance = int(self.receiver_balance)
+        payment = int(self.payment)
+        commitment = None
+
+        # use this nonce for following message of current transaction
+        nonce = self.nego_nonce or self.nonce
+
+        # start to sign this new transaction and save it
+        try:
+            old_trade = Channel.query_trade(self.channel_name, self.nonce)
+            payment = int(old_trade.payment)
+
+            if self.nonce == nonce:
+                commitment = old_trade.commitment
+        except:
+            pass
+        finally:
+            if not commitment:
+                # check balance
+                self.check_balance(self.channel_name, self.asset_type, self.payer_address, payer_balance,
+                                   self.payee_address, payee_balance, hlock_to_rsmc=is_htlc_to_rsmc, payment=payment)
+
+                # sign the transaction
+                commitment = RsmcResponsesMessage.sign_content(
+                    self.wallet, self._sign_type_list, [self.channel_name, nonce, self.payer_address, payer_balance,
+                                                        self.payee_address, payee_balance, sign_hashcode, sign_rcode]
+                )
+
+                # generate the rsmc trade part
+                rsmc_trade = Channel.rsmc_trade(
+                    type=EnumTradeType.TRADE_TYPE_RSMC, role=EnumTradeRole.TRADE_ROLE_FOUNDER, asset_type=self.asset_type,
+                    balance=payer_balance, peer_balance=payee_balance, payment=payment,
+                    hashcode=sign_hashcode, rcode=sign_rcode, commitment=commitment
+                )
+
+                Channel.update_trade(self.channel_name, nonce, **rsmc_trade)
+
+        # if negotiated nonce by peer, delete the transaction with self.nonce ????
+        if nonce != self.nonce:
+            Channel.delete_trade(self.channel_name, self.nonce)
+
+        # peer has already sign the new transaction with nonce
+        if self.commitment:
+            # check the signature
+            self.check_signature(
+                self.wallet, self.sender_address,
+                type_list=self._sign_type_list,
+                value_list=[self.channel_name, nonce, self.payer_address, int(self.sender_balance),
+                            self.payee_address, int(self.receiver_balance), sign_hashcode, sign_rcode],
+                signature=self.commitment
+            )
+
+            # update this trade confirmed state
+            Channel.update_trade(self.channel_name, nonce, commitment=commitment, peer_commitment=self.commitment,
+                                 state=EnumTradeState.confirmed.name)
+            need_update_balance = True
+
+            rsmc_sign_body.update({'Commitment': commitment})
+
+        # has resign response ??
+        if resign_ack:
+            rsmc_sign_body.update({'ResignBody': resign_ack})
+
+        return need_update_balance, rsmc_sign_body
+
+    def handle_founder_response(self):
+        """
+
         :return:
         """
-        asset_type = asset_type.upper()
+        need_update_balance = False
+        # handle the resign body firstly
+        resign_ack = None
+        if self.resign_body:
+            resign_ack, _ = self.handle_resign_body(self.wallet, self.channel_name, self.resign_body)
 
-        # different ROLE by role index
-        role_index = int(role_index)
-        payer, payee = RsmcMessage.get_payer_and_payee(role_index, sender, receiver)
-        payer_address, _, _ = uri_parser(payer)
-        payee_address, _, _ = uri_parser(payee)
-
-        # check balance
-        is_hlock_to_rsmc = RsmcResponsesMessage.is_hlock_to_rsmc(hashcode)
-        _, payer_balance, payee_balance = RsmcResponsesMessage.check_balance(
-            channel_name, asset_type, payer_address, sender_balance, payee_address, receiver_balance,
-            hlock_to_rsmc=is_hlock_to_rsmc, payment=payment
-        )
-
-        # sign the trade
-        sign_hashcode, sign_rcode = cls.get_rcode(channel_name, hashcode)
-        commitment = RsmcResponsesMessage.sign_content(
-            typeList=RsmcResponsesMessage._sign_type_list,
-            valueList=[channel_name, nonce, payer_address, payer_balance, payee_address, payee_balance,
-                       sign_hashcode, sign_rcode],
-            privtKey = wallet._key.private_key_string)
-
-
-        # add trade to database
-        if 0 == role_index:
-            trade_role = EnumTradeRole.TRADE_ROLE_PARTNER
-            self_balance = payee_balance
-            peer_balance = payer_balance
+        sign_hashcode, sign_rcode = self.get_rcode(self.channel_name, self.hashcode)
+        # has already signed by peer
+        if self.commitment:
+            # check the signature
+            self.check_signature(
+                self.wallet, self.sender_address,
+                type_list=self._sign_type_list,
+                value_list=[self.channel_name, self.nonce, self.payer_address, int(self.sender_balance),
+                            self.payee_address, int(self.receiver_balance), sign_hashcode, sign_rcode],
+                signature=self.commitment
+            )
+            # Just update current transaction confirmed:
+            Channel.update_trade(self.channel_name, self.nonce, peer_commitment=self.commitment,
+                                 state=EnumTradeState.confirmed.name)
+            need_update_balance = True
         else:
-            trade_role = EnumTradeRole.TRADE_ROLE_FOUNDER
-            self_balance = payer_balance
-            peer_balance = payee_balance
+            # to check the latest confirmed nonce
+            confirmed_nonce = Channel.latest_confirmed_nonce(self.channel_name)
+            if confirmed_nonce != self.nonce - 1:
+                raise GoTo(
+                    EnumResponseStatus.RESPONSE_TRADE_RESIGN_REQUEST_NOT_IMPLEMENTED,
+                    'Wait for next resign. current confirmed nonce<{}>, request nonce<{}>'.format(confirmed_nonce,
+                                                                                                  self.nonce)
+                )
 
-        # ToDo: need re-sign all unconfirmed htlc message later
-        rsmc_trade = Channel.rsmc_trade(
-            type=EnumTradeType.TRADE_TYPE_RSMC, role=trade_role, asset_type=asset_type,
-            balance=self_balance, peer_balance=peer_balance, payment=payment,
-            hashcode=sign_hashcode, rcode=sign_rcode, commitment=commitment)
-        Channel.add_trade(channel_name, nonce=nonce, **rsmc_trade)
+            # if running here, it means that the transaction has been succeeded to resign
+            is_htlc_to_rsmc = self.is_hlock_to_rsmc(self.hashcode)
+            self.check_balance(self.channel_name, self.asset_type, self.payer_address, self.sender_balance,
+                               self.payee_address, self.receiver_balance, hlock_to_rsmc=is_htlc_to_rsmc, payment=self.payment)
 
-        # update message body
-        message_body = {
-            'AssetType': asset_type.upper(),
-            'PaymentCount': str(payment),
-            'SenderBalance': str(payer_balance),
-            'ReceiverBalance': str(payee_balance),
-            'Commitment': commitment,
-            'RoleIndex': str(role_index),
-        }
+            # sign this transaction
+            commitment = RsmcResponsesMessage.sign_content(
+                self.wallet, self._sign_type_list, [self.channel_name, self.nonce, self.payer_address, self.sender_balance,
+                                                    self.payer_address, self.receiver_balance, sign_hashcode, sign_rcode]
+            )
 
-        if hashcode:
-            message_body.update({'HashR': hashcode})
+            # update the transaction confirming state
+            Channel.update_trade(self.channel_name, self.nonce, commitment=commitment,
+                                 state=EnumTradeState.confirming.name)
 
-        # generate the message header
-        message = RsmcResponsesMessage.create_message_header(receiver, sender, RsmcResponsesMessage._message_name,
-                                                             channel_name, asset_type, nonce)
-        message = message.message_header
+            rsmc_sign_body = self.response(self.asset_type, self.payment, self.sender_balance, self.receiver_balance,
+                                           0, self.hashcode)
+            rsmc_sign_body.update({'Commitment': commitment})
 
-        # to send response OK message
-        message.update({'MessageBody': message_body})
-        message.update({'Status': EnumResponseStatus.RESPONSE_OK.name})
-        if comments:
-            message.update({'Comments': comments})
+            return need_update_balance, rsmc_sign_body
 
-        # send RsmcSign message
-        RsmcResponsesMessage.send(message)
-
-        return
-
-    @staticmethod
-    def create(wallet, channel_name, asset_type, tx_nonce, network_magic, sender, receiver, payment,
-               sender_balance, receiver_balance, role_index=0, hashcode=None, comments=None, cli=False):
-        """
-        Descriptions: RsmcSign API called by other classes
-        :param cli:
-        :param Other parameters could refer to details of rsmc_sign
-        :return:
-        """
-        # some common checks, such as channe state, role_index, etc.
-        RsmcResponsesMessage.check_channel_state(channel_name)
-        RsmcResponsesMessage.common_check(sender, receiver, asset_type, network_magic)
-        RsmcResponsesMessage.check_nonce(tx_nonce, channel_name)
-
-        RsmcResponsesMessage.rsmc_sign(wallet, channel_name, asset_type, tx_nonce, sender, receiver, payment,
-                                       sender_balance, receiver_balance, role_index, hashcode, comments)
-
-        return
+        return need_update_balance, None

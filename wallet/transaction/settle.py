@@ -199,9 +199,9 @@ class SettleMessage(SettleBase):
         receiver_balance = balance.get(receiver_address, {}).get(asset_type)
 
         commitment = SettleMessage.sign_content(
-            typeList=SettleMessage._sign_type_list,
-            valueList=[channel_name, nonce, sender_address, int(sender_balance), receiver_address, int(receiver_balance)],
-            privtKey = wallet._key.private_key_string)
+            wallet, SettleMessage._sign_type_list,
+            [channel_name, nonce, sender_address, int(sender_balance), receiver_address, int(receiver_balance)]
+        )
 
         # add trade to database
         settle_trade = Channel.settle_trade(
@@ -213,7 +213,6 @@ class SettleMessage(SettleBase):
         # create settle request message
         message = SettleMessage.create_message_header(sender, receiver, SettleMessage._message_name,
                                                       channel_name, asset_type, nonce)
-        message = message.message_header
         message_body = {
             "Commitment": commitment,
             "SenderBalance": sender_balance,
@@ -300,9 +299,9 @@ class SettleResponseMessage(SettleBase):
 
         # sign the contents
         commitment = SettleResponseMessage.sign_content(
-            typeList=SettleResponseMessage._sign_type_list,
-            valueList=[channel_name, nonce, sender_address, int(sender_balance), receiver_address, int(receiver_balance)],
-            privtKey = wallet._key.private_key_string)
+            wallet, SettleResponseMessage._sign_type_list,
+            [channel_name, nonce, sender_address, int(sender_balance), receiver_address, int(receiver_balance)]
+        )
 
         # finally, add the transaction information to database
         settle_trade = Channel.settle_trade(
@@ -313,7 +312,6 @@ class SettleResponseMessage(SettleBase):
 
         message = SettleResponseMessage.create_message_header(receiver, sender, SettleResponseMessage._message_name,
                                                               channel_name, asset_type, nonce)
-        message = message.message_header
 
         message.update({"MessageBody": {"Commitment": commitment}})
 

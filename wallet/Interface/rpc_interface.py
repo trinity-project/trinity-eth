@@ -182,35 +182,6 @@ class RpcInteraceApi(object):
             return {'MessageType': 'GetChannelState',
                     'MessageBody': get_channel_via_name(params)}
 
-        # elif method == "CloseChannel":
-        #     class TestWallet():
-        #         def __init__(self):
-        #             self.url = params[1]
-        #     close_channel(params[0], TestWallet())
-
-        # elif method == "GenerateRSMCMessage":
-        #     tx_nonce = transaction.TrinityTransaction(params[0], None).get_latest_nonceid()
-        #     tx_nonce = int(tx_nonce)
-        #
-        #     return message.RsmcMessage.create(params[0], None, params[1], params[3], params[5], params[4], params[2] ,
-        #                                             tx_nonce+1, asset_type="TNC",cli =False,router = None, next_router=None,
-        #                                             role_index=0, comments=None)
-
-        # elif method == "GetRSMCMessage":
-        #     if not params:
-        #         LOG.error('Parameters <{}> is used for GetRSMCMessage')
-        #         return {'MessageType': 'GetRSMCAck',
-        #                 'MessageBody': None}
-        #
-        #     sender_list = params[1].split('@')
-        #     receiver_list = params[2].split('@')
-        #
-        #     rsmc_message = message.RsmcMessage.generateRSMC(params[0], None, sender_list[0], receiver_list[0], float(params[4]),
-        #                                                receiver_list[1], sender_list[1], int(params[5]), params[3],
-        #                                                role_index=int(params[6]))
-
-            # return rsmc_message
-
         elif method == "GetChannelList":
             LOG.debug("GetChannelList")
             from wallet.utils import get_wallet_info

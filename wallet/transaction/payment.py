@@ -49,7 +49,6 @@ class PaymentAck(Message):
     def create(sender, receiver, channel_name, asset_type, nonce, hr):
         message = PaymentAck.create_message_header(sender, receiver, PaymentAck._message_name,
                                                    channel_name, asset_type, nonce)
-        message = message.message_header
         message_body = {'HashR': hr}
         message.update({'MessageBody': message_body})
         message.update({'Status': EnumResponseStatus.RESPONSE_OK.name})
@@ -113,7 +112,6 @@ class PaymentLinkAck(Message):
         Channel.add_payment(channel_name, hashcode=hashcode, rcode=rcode, payment=payment)
         pycode = Payment.generate_payment_code(sender, asset_type, payment, hashcode, comments)
 
-        message = message.message_header
         message_body = {'PaymentLink': pycode}
         message.update({'MessageBody': message_body})
         message.update({'Status': EnumResponseStatus.RESPONSE_OK.name})

@@ -217,9 +217,9 @@ class FounderMessage(FounderBase):
 
         # Sign this data to hash value
         commitment = FounderMessage.sign_content(
-            typeList=FounderMessage._sign_type_list,
-            valueList=[channel_name, nonce, founder_address, founder_deposit, partner_address, partner_deposit],
-            privtKey = wallet._key.private_key_string )
+            wallet, FounderMessage._sign_type_list,
+            [channel_name, nonce, founder_address, founder_deposit, partner_address, partner_deposit]
+        )
 
         # add channel
         asset_type = asset_type.upper()
@@ -241,7 +241,6 @@ class FounderMessage(FounderBase):
         # create founder request message
         message = FounderMessage.create_message_header(founder, partner, FounderMessage._message_name,
                                                        channel_name, asset_type, nonce)
-        message = message.message_header
         message_body = {
             "FounderDeposit": str(founder_deposit),
             "PartnerDeposit": str(partner_deposit),
@@ -334,9 +333,9 @@ class FounderResponsesMessage(FounderBase):
         partner_address, _, _ = uri_parser(partner)
         # Sign this data to the
         commitment = FounderResponsesMessage.sign_content(
-            typeList=FounderResponsesMessage._sign_type_list,
-            valueList=[channel_name, nonce, founder_address, founder_deposit, partner_address, partner_deposit],
-            privtKey = wallet._key.private_key_string )
+            wallet, FounderResponsesMessage._sign_type_list,
+            [channel_name, nonce, founder_address, founder_deposit, partner_address, partner_deposit]
+        )
 
         # start add channel
         deposit = {founder_address: {asset_type: str(founder_deposit)},
@@ -362,7 +361,6 @@ class FounderResponsesMessage(FounderBase):
         asset_type = asset_type.upper()
         message = FounderResponsesMessage.create_message_header(partner, founder, FounderResponsesMessage._message_name,
                                                                 channel_name, asset_type, nonce)
-        message = message.message_header
         message_body = {"Commitment": commitment}
         message.update( {"MessageBody": message_body})
 
