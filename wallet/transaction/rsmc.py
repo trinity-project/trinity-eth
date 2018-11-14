@@ -112,7 +112,6 @@ class RsmcBase(TransactionBase):
         return response_message_body
 
 
-
 class RsmcMessage(RsmcBase):
     """
     {

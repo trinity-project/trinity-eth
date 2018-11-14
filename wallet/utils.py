@@ -113,9 +113,9 @@ class DepositAuth(object):
         :return:
         """
 
-        deposit = cls.calculate_deposit()
-        cls.DefaultDeposit = deposit
-        cls.LastGetTime = datetime.date.today()
+        # deposit = cls.calculate_deposit()
+        # cls.DefaultDeposit = deposit
+        # cls.LastGetTime = datetime.date.today()
 
         return cls.DefaultDeposit
 
