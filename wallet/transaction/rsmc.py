@@ -547,7 +547,8 @@ class RsmcResponsesMessage(RsmcBase):
             )
 
             # update the transaction confirming state
-            Channel.update_trade(self.channel_name, self.nonce, commitment=commitment,
+            Channel.update_trade(self.channel_name, self.nonce, balance=self.receiver_balance,
+                                 peer_balance=self.sender_balance, commitment=commitment,
                                  state=EnumTradeState.confirming.name)
 
             rsmc_sign_body = self.response(self.asset_type, self.payment, self.sender_balance, self.receiver_balance,
