@@ -92,6 +92,7 @@ class EnumResponseStatus(IntEnum):
 
     # router related error
     RESPONSE_ROUTER_VOID_ROUTER = 0x800
+    RESPONSE_ROUTER_WITHOUT_CURRENT_WALLET = 0x801
 
     # Common response error
     RESPONSE_ILLEGAL_INPUT_PARAMETER = 0xFFFD

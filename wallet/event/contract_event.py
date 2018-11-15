@@ -70,6 +70,7 @@ class ContractEventInterface(metaclass=SingletonClass):
         privtKey = args[2] if 2 < len(args) else kwargs.get('privtKey')
 
         content = cls._eth_client.sign_args(typeList, valueList, privtKey)
+        LOG.debug('Sign_content<{}> with value<{}>'.format(content, valueList))
         return '0x' + content
 
     @classmethod

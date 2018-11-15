@@ -88,7 +88,7 @@ class Message(object):
         self.receiver = message.get('Receiver')
         self.receiver_address, _, _, = uri_parser(self.receiver)
 
-        self.message_type = message.get('MessageType')
+        self.message_type = message.get('MessageType', '')
         self.message_body = message.get('MessageBody')
         self.resign_body = self.message_body.get('ResignBody')
         self.channel_name = message.get('ChannelName')
@@ -390,6 +390,19 @@ class TransactionBase(Message):
     _htlc_sign_type_list = ['bytes32', 'address', 'address', 'uint256', 'uint256', 'bytes32']
     _rsmc_sign_type_list = ['bytes32', 'uint256', 'address', 'uint256', 'address', 'uint256', 'bytes32', 'bytes32']
 
+    def get_payer_and_payee_address(self):
+        """"""
+        if self.role_index in [-1, 1]:
+            self.payer = self.sender
+            self.payer_address = self.sender_address
+            self.payee = self.receiver
+            self.payee_address = self.receiver_address
+        else:
+            self.payer = self.receiver
+            self.payer_address = self.receiver_address
+            self.payee = self.sender
+            self.payee_address = self.sender_address
+
     @classmethod
     def check_rcode(cls, hashcode, rcode):
         """
@@ -529,7 +542,9 @@ class TransactionBase(Message):
 
     @classmethod
     def is_hlock_to_rsmc(cls, hashcode):
-        return hashcode not in [None, Channel._trade_hash_rcode_default]
+        if isinstance(hashcode, str):
+            hashcode = hashcode.strip(' 0x')
+        return hashcode not in [None, '']
 
     @classmethod
     def get_rcode(cls, channel_name, hashcode):
