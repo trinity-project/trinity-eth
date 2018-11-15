@@ -419,6 +419,7 @@ class RsmcResponsesMessage(RsmcBase):
 
         # handle the resign body firstly
         resign_ack = None
+        resign_trade = None
         if self.resign_body:
             resign_ack, resign_trade = self.handle_resign_body(self.wallet, self.channel_name, self.resign_body)
 
@@ -429,15 +430,16 @@ class RsmcResponsesMessage(RsmcBase):
 
         # check the trade state by the nego_nonce if provided by peer
         if self.nego_nonce:
-            try:
-                trade = Channel.query_trade(self.channel_name, self.nego_nonce)
-            except:
-                trade = None
+            # to check whether the negotiated nonce is legal or not
+            valid_trade = Channel.latest_valid_trade(self.channel_name)
+            valid_nonce = valid_trade and valid_trade.nonce
 
-            if trade and trade.state not in [EnumTradeState.init.name]:
+            if valid_trade and valid_trade.nonce+1 == self.nego_nonce:
+                pass
+            else:
                 raise GoTo(
                     EnumResponseStatus.RESPONSE_TRADE_COULD_NOT_BE_OVERWRITTEN,
-                    'Could not use negotiated nonce <{}>'.format(self.nego_nonce)
+                    'Could not use negotiated nonce <{}>, current valid nonce<{}>'.format(self.nego_nonce, valid_nonce)
                 )
 
         rsmc_sign_body = self.response(self.asset_type, self.payment, self.sender_balance, self.receiver_balance,
