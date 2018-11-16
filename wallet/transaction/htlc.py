@@ -425,7 +425,7 @@ class HtlcMessage(HtlcBase):
                 hashcode=self.hashcode, delay_block=self.delay_block, channel=self.channel_name)
 
             # if need resign, just send resign message body
-            sign_hashcode, sign_rcode = self.get_rcode(self.channel_name, self.hashcode)
+            sign_hashcode, sign_rcode = self.get_default_rcode()
             if resign_request:
                 # add resign body to response body
                 htlc_sign_body.update({'ResignBody': resign_request})
@@ -437,7 +437,6 @@ class HtlcMessage(HtlcBase):
 
                 # sign the transaction
                 # 2 parts in htlc message: conclusive and inconclusive part
-                sign_hashcode, sign_rcode = self.get_default_rcode()
                 rsmc_commitment = HtlcMessage.sign_content(
                     self.wallet, RsmcMessage._sign_type_list,
                     [self.channel_name, nonce, self.payer_address, payer_balance, self.payee_address, payee_balance,
@@ -715,7 +714,7 @@ class HtlcResponsesMessage(HtlcBase):
                                        self.delay_block)
 
         # get some common local variables
-        sign_hashcode, sign_rcode = self.get_rcode(self.channel_name, self.hashcode)
+        sign_hashcode, sign_rcode = self.get_default_rcode()
         payer_balance = int(self.sender_balance)
         payee_balance = int(self.receiver_balance)
         payment = int(self.payment)
@@ -812,7 +811,7 @@ class HtlcResponsesMessage(HtlcBase):
         if self.resign_body:
             resign_ack, _ = self.handle_resign_body(self.wallet, self.channel_name, self.resign_body)
 
-        sign_hashcode, sign_rcode = self.get_rcode(self.channel_name, self.hashcode)
+        sign_hashcode, sign_rcode = self.get_default_rcode()
         # has already signed by peer
         if self.commitment and self.delay_commitment:
             # check the signature
