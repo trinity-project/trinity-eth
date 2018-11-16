@@ -151,7 +151,7 @@ class RResponse(TransactionBase):
         try:
             # change htlc to rsmc
             RsmcMessage.create(self.channel_name, self.asset_type, self.wallet.url, self.sender, self.payment,
-                               self.hashcode, comments=self.comments)
+                               self.hashcode, comments=self.hashcode)
         except Exception as error:
             LOG.error('Failed to pay from htlc<{}> to rsmc. Need timer to handle later.'.format(self.hashcode))
 

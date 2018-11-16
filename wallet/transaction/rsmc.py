@@ -24,7 +24,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 from .message import TransactionBase
 from .response import EnumResponseStatus
-from .payment import Payment
+from .payment import Payment, PaymentAck
 
 from common.log import LOG
 from common.common import uri_parser
@@ -267,16 +267,17 @@ class RsmcResponsesMessage(RsmcBase):
             Channel.update_trade(self.channel_name, self.nonce, peer_commitment=self.commitment,
                                  state=EnumTradeState.confirmed.name)
 
-            if 0 == self.role_index:
-                APIStatistics.update_statistics(self.wallet.address, payment=self.payment, payer=True)
-            else:
-                APIStatistics.update_statistics(self.wallet.address, payment=self.payment, payer=False)
-
+            APIStatistics.update_statistics(self.wallet.address, payment=self.payment, payer=0==self.role_index)
             Channel.confirm_payment(self.channel_name, self.hashcode, is_htlc_to_rsmc)
 
             # update the channel balance
             self.update_balance_for_channel(self.channel_name, self.asset_type, self.payer, self.payee, self.payment,
                                             is_htlc_to_rsmc)
+
+            # inform peer the receiver payment is successful
+            if self.comments and 1 == self.role_index:
+                PaymentAck.create(self.receiver, self.sender, self.channel_name, self.asset_type, self.nonce,
+                                  self.comments)
         except GoTo as error:
             LOG.error(error)
             status = error.reason
