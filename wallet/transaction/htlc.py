@@ -310,7 +310,10 @@ class HtlcBase(TransactionBase):
 
     @property
     def next_jump(self):
-        return self.router[0][0] if self.router and self.router[0] else None
+        try:
+            return self.router[1][0]
+        except:
+            return None
 
     @classmethod
     def request(cls, sender_balance, receiver_balance, payment, hashcode, unlocked_block):
