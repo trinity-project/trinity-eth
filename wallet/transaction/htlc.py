@@ -782,7 +782,7 @@ class HtlcResponsesMessage(HtlcBase):
             self.check_signature(
                 self.wallet, self.sender_address,
                 type_list=self._sign_type_list,
-                value_list=[self.channel_name, self.payer_address, self.payee_address, self.delay_block,
+                value_list=[self.channel_name, self.payer_address, self.payee_address, int(self.delay_block),
                             int(payment), self.hashcode],
                 signature=self.delay_commitment
             )
@@ -828,7 +828,7 @@ class HtlcResponsesMessage(HtlcBase):
             self.check_signature(
                 self.wallet, self.sender_address,
                 type_list=self._sign_type_list,
-                value_list=[self.channel_name, self.payer_address, self.payee_address, self.delay_block,
+                value_list=[self.channel_name, self.payer_address, self.payee_address, int(self.delay_block),
                             int(self.payment), self.hashcode],
                 signature=self.delay_commitment
             )
