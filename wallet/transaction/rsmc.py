@@ -79,6 +79,19 @@ class RsmcBase(TransactionBase):
 
         return True
 
+    def notify_peer_payment_finished(self,):
+        try:
+            payment_record = Channel.query_payment(self.channel_name, self.comments)[0]
+            receiver = payment_record.receiver
+        except:
+            LOG.warning('No payment record with code<{}> is found'.format(self.comments))
+            pass
+        else:
+            PaymentAck.create(self.wallet.url, receiver, self.channel_name, self.asset_type, self.nonce,
+                              self.comments)
+
+        return
+
 
 class RsmcMessage(RsmcBase):
     """
@@ -276,8 +289,7 @@ class RsmcResponsesMessage(RsmcBase):
 
             # inform peer the receiver payment is successful
             if self.comments and 1 == self.role_index:
-                PaymentAck.create(self.receiver, self.sender, self.channel_name, self.asset_type, self.nonce,
-                                  self.comments)
+                self.notify_peer_payment_finished()
         except GoTo as error:
             LOG.error(error)
             status = error.reason

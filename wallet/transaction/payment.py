@@ -110,7 +110,7 @@ class PaymentLinkAck(Message):
                                                        channel_name, asset_type, nonce)
 
         hashcode, rcode = Payment.create_hr()
-        Channel.add_payment(channel_name, hashcode=hashcode, rcode=rcode, payment=payment)
+        Channel.add_payment(channel_name, hashcode=hashcode, rcode=rcode, payment=payment, receiver=receiver)
         pycode = Payment.generate_payment_code(sender, asset_type, payment, hashcode, comments)
 
         message = message.message_header
