@@ -750,7 +750,7 @@ class HtlcResponsesMessage(HtlcBase):
 
                 delay_commitment = self.sign_content(
                     self.wallet, self._sign_type_list,
-                    [self.channel_name, self.payer_address, self.payee_address, self.delay_block,
+                    [self.channel_name, self.payer_address, self.payee_address, int(self.delay_block),
                      int(payment), self.hashcode],
                     start=5
                 )
@@ -863,7 +863,7 @@ class HtlcResponsesMessage(HtlcBase):
 
             delay_commitment = self.sign_content(
                 self.wallet, self._sign_type_list,
-                [self.channel_name, self.payer_address, self.payee_address, self.delay_block,
+                [self.channel_name, self.payer_address, self.payee_address, int(self.delay_block),
                  int(self.payment), self.hashcode],
                 start=5
             )
