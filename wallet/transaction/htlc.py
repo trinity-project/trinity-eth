@@ -469,6 +469,7 @@ class HtlcMessage(HtlcBase):
                 self.nonce, nego_nonce
             )
             response_message.update({'MessageBody': htlc_sign_body})
+            response_message.update({'Router': self.router})
             response_message.update({'Status': status.name})
             self.send(response_message)
 
