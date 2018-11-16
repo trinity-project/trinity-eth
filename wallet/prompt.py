@@ -389,7 +389,7 @@ class UserPromptInterface(PromptInterface):
         channel_set = Channel.get_channel(self.Wallet.url, receiver, EnumChannelState.OPENED)
         if channel_set and channel_set[0]:
             Channel.transfer(channel_set[0].channel, self.Wallet, receiver, asset_type, count,
-                             cli=True, trigger=RsmcMessage.create)
+                             cli=True, comments=hashcode, trigger=RsmcMessage.create)
         else:
             if not hashcode:
                 console_log.error("No hashcode")

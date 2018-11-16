@@ -769,3 +769,20 @@ class TransactionBase(Message):
 
         # return resign message body
         return cls.create_resign_message_body(channel_name, resign_nonce, True)
+
+    def validate_negotiated_nonce(self):
+        """
+
+        :return:
+        """
+        # to validate the negotiated nonce
+        valid_trade = Channel.latest_valid_trade(self.channel_name)
+        valid_nonce = valid_trade and valid_trade.nonce
+
+        if valid_trade and valid_trade.nonce+1 == self.nego_nonce:
+            return valid_trade
+        else:
+            raise GoTo(
+                EnumResponseStatus.RESPONSE_TRADE_COULD_NOT_BE_OVERWRITTEN,
+                'Could not use negotiated nonce <{}>, current valid nonce<{}>'.format(self.nego_nonce, valid_nonce)
+            )

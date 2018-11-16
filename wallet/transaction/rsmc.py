@@ -24,7 +24,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 from .message import TransactionBase
 from .response import EnumResponseStatus
-from .payment import Payment
+from .payment import PaymentAck
 
 from common.log import LOG
 from common.common import uri_parser
@@ -100,6 +100,18 @@ class RsmcBase(TransactionBase):
         response_message_body.update({'RoleIndex': role_index})
         return response_message_body
 
+    def notify_peer_payment_finished(self,):
+        try:
+            payment_record = Channel.query_payment(self.channel_name, self.comments)[0]
+            receiver = payment_record.receiver
+        except:
+            LOG.warning('No payment record with code<{}> is found'.format(self.comments))
+            pass
+        else:
+            PaymentAck.create(self.wallet.url, receiver, self.channel_name, self.asset_type, self.nonce,
+                              self.comments)
+
+        return
 
 class RsmcMessage(RsmcBase):
     """
@@ -417,16 +429,7 @@ class RsmcResponsesMessage(RsmcBase):
         # check the trade state by the nego_nonce if provided by peer
         if self.nego_nonce:
             # to check whether the negotiated nonce is legal or not
-            valid_trade = Channel.latest_valid_trade(self.channel_name)
-            valid_nonce = valid_trade and valid_trade.nonce
-
-            if valid_trade and valid_trade.nonce+1 == self.nego_nonce:
-                pass
-            else:
-                raise GoTo(
-                    EnumResponseStatus.RESPONSE_TRADE_COULD_NOT_BE_OVERWRITTEN,
-                    'Could not use negotiated nonce <{}>, current valid nonce<{}>'.format(self.nego_nonce, valid_nonce)
-                )
+            self.validate_negotiated_nonce()
 
         rsmc_sign_body = self.response(self.asset_type, self.payment, self.sender_balance, self.receiver_balance,
                                        1, self.hashcode)
@@ -525,6 +528,9 @@ class RsmcResponsesMessage(RsmcBase):
             Channel.update_trade(self.channel_name, self.nonce, peer_commitment=self.commitment,
                                  state=EnumTradeState.confirmed.name)
             need_update_balance = True
+
+            if self.comments:
+                self.notify_peer_payment_finished()
         else:
             # to check the latest confirmed nonce
             confirmed_nonce = Channel.latest_confirmed_nonce(self.channel_name)
