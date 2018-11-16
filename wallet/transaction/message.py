@@ -635,7 +635,8 @@ class TransactionBase(Message):
                     return None, pre_trade
                 elif EnumTradeType.TRADE_TYPE_HTLC.name == trade_type:
                     # already signed HTLC transaction ??
-                    Channel.update_trade(channel_name, pre_nonce, state=EnumTradeState.confirmed.name)
+                    if pre_trade.rcode:
+                        Channel.update_trade(channel_name, pre_nonce, state=EnumTradeState.confirmed.name)
                     if pre_trade.peer_delay_commitment:
                         return None, pre_trade
                     else:

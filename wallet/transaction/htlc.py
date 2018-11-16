@@ -675,6 +675,9 @@ class HtlcResponsesMessage(HtlcBase):
                                                 self.payee_address, self.payment, is_htlc_type=True)
 
                 # now we need trigger htlc to next jump
+                if 1 == self.role_index:
+                    # trigger htlc or RResponse
+                    self.trigger_htlc_to_next_jump()
 
         except TrinityException as error:
             LOG.exception(error)
@@ -839,8 +842,6 @@ class HtlcResponsesMessage(HtlcBase):
             Channel.update_trade(self.channel_name, self.nonce, peer_commitment=self.commitment,
                                  state=EnumTradeState.confirmed.name)
 
-            # trigger htlc or RResponse
-            self.trigger_htlc_to_next_jump()
             need_update_balance = True
         else:
             # to check the latest confirmed nonce
