@@ -468,7 +468,7 @@ class Channel(object):
         try:
             if router:
                 # HTLC transaction
-                trigger(wallet, channel_name, asset_type, wallet.url, receiver, count, hashcode, router, next_jump,
+                trigger(channel_name, asset_type, wallet.url, receiver, count, hashcode, router, current_channel=None,
                         comments=comments)
             else:
                 # RSMC transaction
