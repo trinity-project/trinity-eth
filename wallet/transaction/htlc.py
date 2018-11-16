@@ -336,7 +336,7 @@ class HtlcBase(TransactionBase):
         return request_message_body
 
     @classmethod
-    def response(cls, sender_balance, receiver_balance, payment, hashcode, role_index=0):
+    def response(cls, sender_balance, receiver_balance, payment, hashcode, role_index=0, delay_block=None):
         """
 
         :param payment:
@@ -346,7 +346,7 @@ class HtlcBase(TransactionBase):
         :param hashcode:
         :return:
         """
-        response_message_body = cls.request(sender_balance, receiver_balance, payment, hashcode, cls.delay_block)
+        response_message_body = cls.request(sender_balance, receiver_balance, payment, hashcode, delay_block)
         response_message_body.update({'RoleIndex': role_index})
         return response_message_body
 
@@ -418,7 +418,7 @@ class HtlcMessage(HtlcBase):
 
             # some local variables to save later
             htlc_sign_body = self.response(self.sender_balance, self.receiver_balance, self.payment, self.hashcode,
-                                           self.htlc_sign_role)
+                                           self.htlc_sign_role, self.delay_block)
             htlc_trade = Channel.htlc_trade(
                 type=EnumTradeType.TRADE_TYPE_HTLC, role=EnumTradeRole.TRADE_ROLE_PARTNER, asset_type=self.asset_type,
                 balance=self.receiver_balance, peer_balance=self.sender_balance, payment=self.payment,
@@ -479,11 +479,11 @@ class HtlcMessage(HtlcBase):
             else:
                 Channel.add_trade(self.channel_name, nonce=nonce, **htlc_trade)
         except TrinityException as error:
-            LOG.error(error)
+            LOG.exception(error)
             status = error.reason
         except Exception as error:
-            LOG.error('Failed to handle Htlc message for channel<{}>, HashR<{}>. Exception:{}'
-                      .format(self.channel_name, self.hashcode, error))
+            LOG.exception('Failed to handle Htlc message for channel<{}>, HashR<{}>. Exception:{}'
+                          .format(self.channel_name, self.hashcode, error))
             status = EnumResponseStatus.RESPONSE_EXCEPTION_HAPPENED
         finally:
             # failed operation
@@ -674,10 +674,10 @@ class HtlcResponsesMessage(HtlcBase):
                 # now we need trigger htlc to next jump
 
         except TrinityException as error:
-            LOG.error(error)
+            LOG.exception(error)
             status = error.reason
         except Exception as error:
-            LOG.error('Transaction with none<{}> not found. Error: {}'.format(self.nonce, error))
+            LOG.exception('Transaction with none<{}> not found. Error: {}'.format(self.nonce, error))
             status = EnumResponseStatus.RESPONSE_EXCEPTION_HAPPENED
         else:
             # successful action
@@ -711,7 +711,8 @@ class HtlcResponsesMessage(HtlcBase):
         if self.nego_nonce:
             self.validate_negotiated_nonce()
 
-        htlc_sign_body = self.response(self.sender_balance, self.receiver_balance, self.payment, self.hashcode, 1)
+        htlc_sign_body = self.response(self.sender_balance, self.receiver_balance, self.payment, self.hashcode, 1,
+                                       self.delay_block)
 
         # get some common local variables
         sign_hashcode, sign_rcode = self.get_rcode(self.channel_name, self.hashcode)
@@ -874,7 +875,8 @@ class HtlcResponsesMessage(HtlcBase):
             )
 
             # re-trigger the new transaction saved in db before
-            htlc_sign_body = self.response(self.sender_balance, self.receiver_balance, self.payment, self.hashcode, 0)
+            htlc_sign_body = self.response(self.sender_balance, self.receiver_balance, self.payment, self.hashcode, 0,
+                                           self.delay_block)
             htlc_sign_body.update({'Commitment': commitment, 'DelayCommitment': delay_commitment})
 
             return need_update_balance, htlc_sign_body
@@ -930,5 +932,5 @@ class HtlcResponsesMessage(HtlcBase):
                 # update the htlc trade history
                 Channel.update_trade(self.channel_name, self.nonce, rcode=payment_trade.rcode)
             except Exception as error:
-                LOG.error('Failed triggerring to send RResponse for HashR<{}>. Exception: {}'
-                          .format(self.hashcode, error))
+                LOG.exception('Failed triggerring to send RResponse for HashR<{}>. Exception: {}'
+                              .format(self.hashcode, error))
