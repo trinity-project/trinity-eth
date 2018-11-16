@@ -319,7 +319,7 @@ class EventMachine(object):
         except Exception as error:
             name = None
             event = None
-            LOG.error('event machine get_event exception: {}'.format(error))
+            LOG.exception('event machine get_event exception: {}'.format(error))
         finally:
             self.event_lock.release()
 
@@ -335,7 +335,7 @@ class EventMachine(object):
                 self.__event_queue.update({name: event})
                 self.__event_ordered_list.append(name)
         except Exception as error:
-            LOG.error('event machine insert_event_back_into_queue<{}> exception: {}'.format(name, error))
+            LOG.exception('event machine insert_event_back_into_queue<{}> exception: {}'.format(name, error))
         finally:
             self.event_lock.release()
 
@@ -346,7 +346,7 @@ class EventMachine(object):
             self.event_lock.acquire()
             self.__event_queue.update({name: event})
         except Exception as error:
-            LOG.error('event machine register_event<{}> exception: {}'.format(name, error))
+            LOG.exception('event machine register_event<{}> exception: {}'.format(name, error))
         finally:
             self.event_lock.release()
 
@@ -359,7 +359,7 @@ class EventMachine(object):
             if name in self.__event_queue.keys():
                 self.__event_queue.pop(name)
         except Exception as error:
-            LOG.error('event machine unregister_event<{}> exception: {}'.format(name, error))
+            LOG.exception('event machine unregister_event<{}> exception: {}'.format(name, error))
         finally:
             self.event_lock.release()
 
@@ -372,7 +372,7 @@ class EventMachine(object):
             if name not in self.__event_ordered_list:
                 self.__event_ordered_list.append(name)
         except Exception as error:
-            LOG.error('event machine trigger_start_event<{}> exception: {}'.format(name, error))
+            LOG.exception('event machine trigger_start_event<{}> exception: {}'.format(name, error))
         finally:
             self.event_lock.release()
 

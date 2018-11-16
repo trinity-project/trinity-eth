@@ -120,7 +120,7 @@ class WebSocketConnection(metaclass=SingletonClass):
                                                     (socket.IPPROTO_TCP, socket.TCP_NODELAY, 1),),
                                            timeout=self.timeout)
         except Exception as error:
-            LOG.error('Connect to server error. {}'.format(error))
+            LOG.exception('Connect to server error. {}'.format(error))
         else:
             if self.wallet_address and retry:
                 self.notify_wallet_info()
@@ -130,19 +130,19 @@ class WebSocketConnection(metaclass=SingletonClass):
         try:
             self._conn.send(payload)
         except WebSocketConnectionClosedException as error:
-            LOG.error('send: Websocket was closed: {}'.format(error))
+            LOG.exception('send: Websocket was closed: {}'.format(error))
             self.reconnect()
             # re-send this payload
             if self._conn:
                 self._conn.send(payload)
         except Exception as error:
-            LOG.error('send: Websocket exception: {}'.format(error))
+            LOG.exception('send: Websocket exception: {}'.format(error))
 
     def receive(self):
         try:
             return self._conn.recv()
         except WebSocketConnectionClosedException as error:
-            LOG.error('receive: Websocket was closed: {}'.format(error))
+            LOG.exception('receive: Websocket was closed: {}'.format(error))
             self.reconnect()
 
             return self._conn.recv() if self._conn else None
@@ -151,7 +151,7 @@ class WebSocketConnection(metaclass=SingletonClass):
         except Exception as error:
             if not self._conn:
                 self.reconnect()
-            LOG.error('receive: Websocket exception: {}'.format(error))
+            LOG.exception('receive: Websocket exception: {}'.format(error))
 
         return None
 
@@ -200,7 +200,7 @@ class WebSocketConnection(metaclass=SingletonClass):
 
                 time.sleep(0.5)
             except Exception as error:
-                LOG.debug('websocket handle: {}'.format(error))
+                LOG.exception('websocket handle: {}'.format(error))
                 time.sleep(1)
 
         ucoro_event(_event_coroutine, None)
@@ -255,7 +255,7 @@ class WebSocketConnection(metaclass=SingletonClass):
             event_list.append(event)
             self.__monitor_queue.update({block_height:event_list})
         except Exception as error:
-            LOG.error('websocket register_event exception: {}'.format(error))
+            LOG.exception('websocket register_event exception: {}'.format(error))
         finally:
             self.event_lock.release()
 
@@ -267,7 +267,7 @@ class WebSocketConnection(metaclass=SingletonClass):
             event =  self.__monitor_queue.pop(key, [])
         except Exception as error:
             event = None
-            LOG.error('websocket get_event exception: {}'.format(error))
+            LOG.exception('websocket get_event exception: {}'.format(error))
         finally:
             self.event_lock.release()
 
@@ -317,7 +317,7 @@ class WebSocketConnection(metaclass=SingletonClass):
             nonce = message.get('nonce')
             end_time = int(message.get('blockNumber'))
         except Exception as error:
-            LOG.error('Invalid message: {}. Exception: {}'.format(message, error))
+            LOG.exception('Invalid message: {}. Exception: {}'.format(message, error))
         else:
             if not (self.wallet_address and invoker):
                 LOG.error('Wallet address<{}> or invoker<{}> should not be none'.format(self.wallet_address, invoker))
@@ -356,7 +356,7 @@ class WebSocketConnection(metaclass=SingletonClass):
                 channel_event = ChannelSettledEvent(channel_name)
                 channel_event.execute(get_block_count(), channel_name)
         except Exception as error:
-            LOG.error('Invalid message: {}. Exception: {}'.format(message, error))
+            LOG.exception('Invalid message: {}. Exception: {}'.format(message, error))
 
         return
 
@@ -377,7 +377,7 @@ class WebSocketConnection(metaclass=SingletonClass):
             rcode = message.get('secret')
             end_time = int(message.get('blockNumber'))
         except Exception as error:
-            LOG.error('Invalid message: {}. Exception: {}'.format(message, error))
+            LOG.exception('Invalid message: {}. Exception: {}'.format(message, error))
         else:
             if not (self.wallet_address and invoker):
                 LOG.error('monitorWithdraw: Wallet address<{}> or invoker<{}> should not be none' \
@@ -409,7 +409,7 @@ class WebSocketConnection(metaclass=SingletonClass):
             invoker = message.get('invoker').strip()
             channel_name = message.get('channelId')
         except Exception as error:
-            LOG.error('Invalid message: {}. Exception: {}'.format(message, error))
+            LOG.exception('Invalid message: {}. Exception: {}'.format(message, error))
         else:
             if invoker.lower() != self.wallet_address.lower() and channel_name:
                 ChannelStateManageEvent(channel_name).execute(get_block_count(), channel_name)
@@ -429,7 +429,7 @@ class WebSocketConnection(metaclass=SingletonClass):
                 channel_event = ChannelHtlcUnlockedEvent(channel_name)
                 channel_event.execute(get_block_count(), channel_name, hashcode)
         except Exception as error:
-            LOG.error('Invalid message: {}. Exception: {}'.format(message, error))
+            LOG.exception('Invalid message: {}. Exception: {}'.format(message, error))
 
         return
 

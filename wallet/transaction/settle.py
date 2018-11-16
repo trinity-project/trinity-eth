@@ -87,7 +87,7 @@ class SettleBase(Message):
             # register arguments for termination action
             channel_event.register_args(EnumEventAction.EVENT_TERMINATE, asset_type=self.asset_type)
         except Exception as error:
-            LOG.error('Failed to regiser quick close channel event since {}'.format(error))
+            LOG.exception('Failed to regiser quick close channel event since {}'.format(error))
         else:
             # register and trigger the event
             event_machine.register_event(self.channel_name, channel_event)
@@ -160,10 +160,10 @@ class SettleMessage(SettleBase):
                                          self.sender, self.sender_balance, self.receiver, self.receiver_balance,
                                          self.commitment)
         except GoTo as error:
-            LOG.error(error)
+            LOG.exception(error)
             status = error.reason
         except Exception as error:
-            LOG.error(error)
+            LOG.exception(error)
             status = EnumResponseStatus.RESPONSE_EXCEPTION_HAPPENED
         finally:
             if EnumResponseStatus.RESPONSE_OK != status:
@@ -268,9 +268,9 @@ class SettleResponseMessage(SettleBase):
             # update the trade
             Channel.update_trade(self.channel_name, SettleResponseMessage._SETTLE_NONCE, peer_commitment=self.commitment)
         except GoTo as error:
-            LOG.error(error)
+            LOG.exception(error)
         except Exception as error:
-            LOG.error('Handle Settle Response error. Exception: {}'.format(error))
+            LOG.exception('Handle Settle Response error. Exception: {}'.format(error))
         else:
             # register the event to quick close channel
             self.register_quick_close_event()

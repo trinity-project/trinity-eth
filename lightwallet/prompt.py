@@ -40,7 +40,7 @@ def command_wapper(command):
                 callback(*args, **kwargs)
             except Exception as error:
                 console_log.error('Error occurred to run command: {}. Please check logs for details.'.format(command))
-                LOG.error('Error occurred to run command: {}. Exception: {}'.format(command, error))
+                LOG.exception('Error occurred to run command: {}. Exception: {}'.format(command, error))
 
         return wrapper
     return handler

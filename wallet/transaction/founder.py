@@ -119,7 +119,7 @@ class FounderBase(Message):
             )
             channel_event.register_args(EnumEventAction.EVENT_TERMINATE, asset_type=self.asset_type)
         except Exception as error:
-            LOG.error('Failed to register deposit event since {}'.format(error))
+            LOG.exception('Failed to register deposit event since {}'.format(error))
         else:
             # register and trigger event
             event_machine.register_event(self.channel_name, channel_event)

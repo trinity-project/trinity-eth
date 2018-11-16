@@ -333,7 +333,7 @@ class ChannelHtlcUnlockedEvent(ChannelOfflineEventBase):
                 htlc_trade = Channel.batch_query_trade(channel_name, filters={'type': EnumTradeType.TRADE_TYPE_HTLC.name,
                                                                               'hashcode': hashcode})[0]
             except Exception as error:
-                LOG.error('Htlc trade with HashR<{}> not found for channel<{}>. Exception: {}'\
+                LOG.exception('Htlc trade with HashR<{}> not found for channel<{}>. Exception: {}'\
                           .format(hashcode, channel_name, error))
             else:
                 Channel.update_trade(channel_name, htlc_trade.nonce, state=EnumTradeState.confirmed_onchain.name)
@@ -363,6 +363,6 @@ class ChannelStateManageEvent(ChannelOfflineEventBase):
                 if 0 >= balance_of_channel:
                     Channel.update_channel(channel_name, state=EnumChannelState.SETTLED.name)
         except Exception as error:
-            LOG.error('Keep the channel current state because of exception: {}'.format(error))
+            LOG.exception('Keep the channel current state because of exception: {}'.format(error))
 
         return

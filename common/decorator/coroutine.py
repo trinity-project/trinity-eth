@@ -40,7 +40,7 @@ def ucoro(timeout=0.1, once=False):
                     kwargs.update({'received': received})
                     callback(*args, **kwargs)
                 except Exception as error:
-                    LOG.error('Co-routine received<{}>, error: {}'.format(received, error))
+                    LOG.exception('Co-routine received<{}>, error: {}'.format(received, error))
                 finally:
                     # only run once time
                     if once:
@@ -58,4 +58,4 @@ def ucoro_event(coro, iter_data):
     except StopIteration as error:
         LOG.debug('Co-routine has been killed.')
     except Exception as error:
-        LOG.warning('Error occurred during using co-routine. error: {}'.format(error))
+        LOG.exception('Error occurred during using co-routine. error: {}'.format(error))

@@ -301,7 +301,7 @@ class Channel(object):
         try:
             trade = APITransaction(channel_name).sort(key='nonce')[0]
         except Exception as error:
-            LOG.error('No transaction records were found for channel<{}>. Exception: {}'.format(channel_name, error))
+            LOG.exception('No transaction records were found for channel<{}>. Exception: {}'.format(channel_name, error))
             return None
         else:
             return trade
@@ -323,7 +323,7 @@ class Channel(object):
                                {'state': EnumTradeState.confirmed.name}]}
             trade = APITransaction(channel_name).sort(key='nonce', filters=filters)[0]
         except Exception as error:
-            LOG.error('No transaction records were found for channel<{}>. Exception: {}'.format(channel_name, error))
+            LOG.exception('No transaction records were found for channel<{}>. Exception: {}'.format(channel_name, error))
             return None
         else:
             return trade
@@ -351,7 +351,7 @@ class Channel(object):
                                {'state': EnumTradeState.confirming.name}]}
             valid_trade = APITransaction(channel_name).sort(key='nonce', filters=filters)[0]
         except Exception as error:
-            LOG.error('No valid transaction records were found for channel<{}>.'.format(channel_name))
+            LOG.exception('No valid transaction records were found for channel<{}>.'.format(channel_name))
             return None, None
         else:
             return valid_trade, valid_trade.nonce
@@ -446,7 +446,7 @@ class Channel(object):
             try:
                 trigger(wallet, channel_name, asset_type, founder, deposit, partner, partner_deposit, comments)
             except Exception as error:
-                LOG.info('Create channel<{}> failed. Exception: {}'.format(channel_name, error))
+                LOG.exception('Create channel<{}> failed. Exception: {}'.format(channel_name, error))
                 return False
 
         return True
@@ -474,7 +474,7 @@ class Channel(object):
                 # RSMC transaction
                 trigger(channel_name, asset_type, wallet.url, receiver, count, hashcode, comments=comments)
         except Exception as error:
-            LOG.error('Failed to transfer {} {} to receiver<{}>. Exception: {}' \
+            LOG.exception('Failed to transfer {} {} to receiver<{}>. Exception: {}' \
                       .format(count, asset_type, receiver, error))
 
         return
@@ -502,7 +502,7 @@ class Channel(object):
         except Exception as error:
             if cli :
                 console_log.error('Failed to close channel: {}'.format(channel_name))
-            LOG.error('Failed to close channel<{}>, Exception: {}'.format(channel_name, error))
+            LOG.exception('Failed to close channel<{}>, Exception: {}'.format(channel_name, error))
 
     @classmethod
     def force_release_rsmc(cls, uri=None, channel_name=None, nonce=None, sign_key=None, gwei_coef=1, trigger=None,
@@ -538,7 +538,7 @@ class Channel(object):
                     return None
                 nonce = latest_nonce
         except Exception as error:
-            LOG.error('No trade record could be forced to release. channel<{}>, nonce<{}>. Exception: {}' \
+            LOG.exception('No trade record could be forced to release. channel<{}>, nonce<{}>. Exception: {}' \
                       .format(channel_name, nonce, error))
         else:
             channel = cls(channel_name)
@@ -676,7 +676,7 @@ class Channel(object):
                         return {'result': 'No Need Update'}
 
         except Exception as error:
-            LOG.error('No Htlc trade was found or rcode is error. channel<{}>, HashR<{}>. Exception: {}' \
+            LOG.exception('No Htlc trade was found or rcode is error. channel<{}>, HashR<{}>. Exception: {}' \
                       .format(channel_name, hashcode, error))
         else:
             channel = cls(channel_name)
@@ -745,7 +745,7 @@ class Channel(object):
             return
         except Exception as error:
             LOG.error('Payment for channel<{}> with HashR<{}> Not found from the DB'.format(channel_name, hashcode))
-            LOG.error('confirm payament Exception: {}'.format(error))
+            LOG.exception('confirm payament Exception: {}'.format(error))
 
         return
 

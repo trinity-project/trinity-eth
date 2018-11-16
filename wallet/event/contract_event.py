@@ -107,7 +107,7 @@ class ContractEventInterface(metaclass=SingletonClass):
             LOG.debug('ContractEventInterface::approve: txId: {}'.format(tx_id))
             return tx_id
         except Exception as error:
-            LOG.error('authorized deposit error: {}'.format(error))
+            LOG.exception('authorized deposit error: {}'.format(error))
 
         return False
 
@@ -122,7 +122,7 @@ class ContractEventInterface(metaclass=SingletonClass):
 
             return result
         except Exception as error:
-            LOG.error('get_approved_asset error: {}'.format(error))
+            LOG.exception('get_approved_asset error: {}'.format(error))
             return 0
 
     @classmethod
@@ -133,7 +133,7 @@ class ContractEventInterface(metaclass=SingletonClass):
                 print(result)
             return result
         except Exception as error:
-            LOG.error('get_approved_asset error: {}'.format(error))
+            LOG.exception('get_approved_asset error: {}'.format(error))
             return None
 
     @classmethod
@@ -145,7 +145,7 @@ class ContractEventInterface(metaclass=SingletonClass):
                                        partner, int(partner_amount),
                                        founder_sign, partner_sign, private_key, gwei_coef=gwei_coef)
         except Exception as error:
-            LOG.error('approve_deposit error: {}'.format(error))
+            LOG.exception('approve_deposit error: {}'.format(error))
             return None
 
     @classmethod
@@ -176,7 +176,7 @@ class ContractEventInterface(metaclass=SingletonClass):
                                                    founder_signature, partner_signature, invoker_key,
                                                           gwei_coef=gwei_coef)
         except Exception as error:
-            LOG.error('quick_settle error: {}'.format(error))
+            LOG.exception('quick_settle error: {}'.format(error))
             LOG.error('quick_settle parameters: '
                       'channel<{}>, nonce<{}>, '
                       'founder<{}>, founder_balance<{}>, founder_signature<{}>, '
@@ -202,7 +202,7 @@ class ContractEventInterface(metaclass=SingletonClass):
             LOG.debug('close_channel result: {}'.format(result))
             return result
         except Exception as error:
-            LOG.error('force_settle error: {}'.format(error))
+            LOG.exception('force_settle error: {}'.format(error))
             return None
 
     @classmethod
@@ -222,7 +222,7 @@ class ContractEventInterface(metaclass=SingletonClass):
             LOG.debug('update_close_channel result: {}'.format(result))
             return result
         except Exception as error:
-            LOG.error('update_close_channel error: {}'.format(error))
+            LOG.exception('update_close_channel error: {}'.format(error))
             return None
 
     @classmethod
@@ -232,7 +232,7 @@ class ContractEventInterface(metaclass=SingletonClass):
             LOG.debug('end_close_channel result: {}'.format(result))
             return result
         except Exception as error:
-            LOG.error('end force_settle error: {}'.format(error))
+            LOG.exception('end force_settle error: {}'.format(error))
             return None
 
     @classmethod
@@ -245,7 +245,7 @@ class ContractEventInterface(metaclass=SingletonClass):
             LOG.debug('htlc_unlock_payment result: {}'.format(result))
             return result
         except Exception as error:
-            LOG.error('htlc_unlock_payment error: {}'.format(error))
+            LOG.exception('htlc_unlock_payment error: {}'.format(error))
             return None
 
     @classmethod
@@ -265,5 +265,5 @@ class ContractEventInterface(metaclass=SingletonClass):
             LOG.debug('settle_after_htlc_unlock_payment result: {}'.format(result))
             return result
         except Exception as error:
-            LOG.error('settle_after_htlc_unlock_payment error: {}'.format(error))
+            LOG.exception('settle_after_htlc_unlock_payment error: {}'.format(error))
             return None

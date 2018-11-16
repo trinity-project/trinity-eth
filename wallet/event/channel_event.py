@@ -150,7 +150,7 @@ class ChannelDepositEvent(ChannelEventBase):
                 self.deposit_tx_id = '0x'+result.strip()
 
         except Exception as error:
-            LOG.warning('Failed to approve deposit of Channel<{}>. Exception: {}'.format(self.channel_name, error))
+            LOG.exception('Failed to approve deposit of Channel<{}>. Exception: {}'.format(self.channel_name, error))
 
         return False
 

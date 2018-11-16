@@ -211,10 +211,10 @@ class RsmcMessage(RsmcBase):
             APIStatistics.update_statistics(self.wallet.address, rsmc='rsmc')
         except TrinityException as error:
             status = error.reason
-            LOG.error(error)
+            LOG.exception(error)
         except Exception as error:
             status = EnumResponseStatus.RESPONSE_EXCEPTION_HAPPENED
-            LOG.error('Failed to handle RsmcMessage. Exception: {}'.format(error))
+            LOG.exception('Failed to handle RsmcMessage. Exception: {}'.format(error))
         finally:
             if EnumResponseStatus.RESPONSE_OK != status:
                 # nofify error response
@@ -375,11 +375,11 @@ class RsmcResponsesMessage(RsmcBase):
                 self.update_balance_for_channel(self.channel_name, self.asset_type, self.payer_address,
                                                 self.payee_address, self.payment, is_htlc_to_rsmc)
         except GoTo as error:
-            LOG.error(error)
+            LOG.exception(error)
             status = error.reason
         except Exception as error:
             status = EnumResponseStatus.RESPONSE_EXCEPTION_HAPPENED
-            LOG.error('Failed to handle RsmcSign for channel<{}> nonce<{}>, role_index<{}>.Exception: {}' \
+            LOG.exception('Failed to handle RsmcSign for channel<{}> nonce<{}>, role_index<{}>.Exception: {}' \
                       .format(self.channel_name, self.nonce, self.role_index, error))
         finally:
             # send error response
@@ -410,7 +410,7 @@ class RsmcResponsesMessage(RsmcBase):
 
             # here if the peer not provide the signature, we need re-calculate the balance
             if not self.commitment:
-                self.sender_balance, self.receiver_balance = self.calculate_balance_after_payment(
+                _, self.sender_balance, self.receiver_balance = self.calculate_balance_after_payment(
                     resign_trade.balance, resign_trade.peer_balance, self.payment, is_htlc_to_rsmc
                 )
 
