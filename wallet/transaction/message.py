@@ -776,10 +776,9 @@ class TransactionBase(Message):
         :return:
         """
         # to validate the negotiated nonce
-        valid_trade = Channel.latest_valid_trade(self.channel_name)
-        valid_nonce = valid_trade and valid_trade.nonce
+        valid_trade, valid_nonce = Channel.latest_valid_trade(self.channel_name)
 
-        if valid_trade and valid_trade.nonce+1 == self.nego_nonce:
+        if valid_nonce and valid_nonce+1 == self.nego_nonce:
             return valid_trade
         else:
             raise GoTo(
