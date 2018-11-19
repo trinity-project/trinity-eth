@@ -730,6 +730,7 @@ class HtlcResponsesMessage(HtlcBase):
 
         # use this nonce for following message of current transaction
         nonce = self.nego_nonce or self.nonce
+        old_trade = None
 
         # start to sign this new transaction and save it
         try:
@@ -740,6 +741,7 @@ class HtlcResponsesMessage(HtlcBase):
                 commitment = old_trade.commitment
                 delay_commitment = old_trade.delay_commitment
         except:
+            old_trade = None
             pass
         finally:
             if not (commitment and delay_commitment):
@@ -766,6 +768,10 @@ class HtlcResponsesMessage(HtlcBase):
                     type=EnumTradeType.TRADE_TYPE_HTLC, role=EnumTradeRole.TRADE_ROLE_PARTNER, asset_type=self.asset_type,
                     balance=payer_balance, peer_balance=payee_balance, payment=payment, hashcode=self.hashcode,
                     delay_block=self.delay_block, commitment=commitment, delay_commitment=delay_commitment)
+
+                # channel router info
+                if old_trade and old_trade.channel:
+                    htlc_trade.update({'channel': old_trade.channel})
 
                 Channel.update_trade(self.channel_name, nonce, **htlc_trade)
 
@@ -840,6 +846,7 @@ class HtlcResponsesMessage(HtlcBase):
             )
             # Just update current transaction confirmed:
             Channel.update_trade(self.channel_name, self.nonce, peer_commitment=self.commitment,
+                                 peer_delay_commitment=self.delay_commitment,
                                  state=EnumTradeState.confirmed.name)
 
             need_update_balance = True
