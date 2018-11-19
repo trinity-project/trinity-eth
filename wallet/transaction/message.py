@@ -321,7 +321,7 @@ class Message(object):
             channel_set = Channel.query_channel(channel_name)[0]
             expected_balance = int(channel_set.balance.get(address).get(asset_type))
             expected_peer_balance = int(channel_set.balance.get(peer_address).get(asset_type))
-            print(expected_balance, expected_peer_balance, hlock_to_rsmc)
+
             # to calculate the balance after payment
             if kwargs and kwargs.__contains__('payment'):
                 _, expected_balance, expected_peer_balance = \
