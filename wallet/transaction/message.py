@@ -307,11 +307,13 @@ class Message(object):
 
         :param channel_name:
         :param asset_type:
-        :param address: payer's address
-        :param balance: payer's balance
-        :param peer_address: payee's address
-        :param peer_balance: payee's balance
-        :param payment:
+        :param address:
+        :param balance:
+        :param peer_address:
+        :param peer_balance:
+        :param hlock_to_rsmc:
+        :param is_htcl_type:
+        :param kwargs:
         :return:
         """
         try:
@@ -319,7 +321,7 @@ class Message(object):
             channel_set = Channel.query_channel(channel_name)[0]
             expected_balance = int(channel_set.balance.get(address).get(asset_type))
             expected_peer_balance = int(channel_set.balance.get(peer_address).get(asset_type))
-
+            print(expected_balance, expected_peer_balance, hlock_to_rsmc)
             # to calculate the balance after payment
             if kwargs and kwargs.__contains__('payment'):
                 _, expected_balance, expected_peer_balance = \

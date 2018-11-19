@@ -185,7 +185,7 @@ class RsmcMessage(RsmcBase):
                 htlc_to_rsmc = self.is_hlock_to_rsmc(self.hashcode)
                 _, payer_balance, payee_balance = self.check_balance(
                     self.channel_name, self.asset_type, self.payer_address, self.sender_balance,
-                    self.payee_address, self.receiver_balance, htlc_to_rsmc=htlc_to_rsmc, payment=self.payment
+                    self.payee_address, self.receiver_balance, hlock_to_rsmc=htlc_to_rsmc, payment=self.payment
                 )
 
                 # sign the trade
