@@ -165,7 +165,7 @@ class RResponse(TransactionBase):
         peer = None
         try:
             # original payer is found
-            if not next_channel:
+            if not next_channel or next_channel == self.channel_name:
                 LOG.info('HTLC Founder with HashR<{}> received the R-code<{}>'.format(self.hashcode, self.rcode))
                 return
 
@@ -912,6 +912,10 @@ class HtlcResponsesMessage(HtlcBase):
                 raise GoTo(EnumResponseStatus.RESPONSE_CHANNEL_NOT_FOUND,
                            'No OPENED channel is found between {} and {}.'.format(self.wallet.url, next_router))
             channel_set = channel_set[0]
+
+            if channel_set.channel == self.channel_name:
+                LOG.warn('Has reached receiver of HTLC transaction.')
+                return
 
             # calculate fee and transfer to next jump
             fee = TrinityNumber(str(self.get_fee(self.wallet.url))).number
