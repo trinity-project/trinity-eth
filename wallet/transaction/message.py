@@ -747,11 +747,14 @@ class TransactionBase(Message):
             }
 
             # check the htlc part signature
-            channel_hlock = None
             if EnumTradeType.TRADE_TYPE_HTLC.name == resign_trade.type:
                 cls.check_signature(wallet, peer_address, cls._htlc_sign_type_list,
                                     htlc_list, peer_delay_commitment)
                 update_trade_db.update({'peer_delay_commitment': peer_delay_commitment})
+
+                # just only the rcode is noe null, update this transaction confirmed
+                if resign_trade.rcode:
+                    update_trade_db.update({'state': EnumTradeState.confirmed.name})
 
                 # need update the hlock part
                 if payer_address == self_address:
@@ -761,8 +764,8 @@ class TransactionBase(Message):
                         payer_hlock = int(resign_trade.payment) + int(channel_hlock.get(payer_address).get(asset_type))
                         channel_hlock.update({payer_address: {asset_type: str(payer_hlock)}})
                         update_channel_db.update({'hlock': channel_hlock})
-
-            update_trade_db.update({'state': EnumTradeState.confirmed.name})
+            else: # RSMC type transaction
+                update_trade_db.update({'state': EnumTradeState.confirmed.name})
 
             # update transaction
             Channel.update_trade(channel_name, resign_nonce, **update_trade_db)
