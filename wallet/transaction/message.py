@@ -724,7 +724,7 @@ class TransactionBase(Message):
         htlc_list = None
         delay_commitment = None
         if EnumTradeType.TRADE_TYPE_HTLC.name == resign_trade.type:
-            htlc_list = [channel_name, payer_address, payee_address, resign_trade.delay_block,
+            htlc_list = [channel_name, payer_address, payee_address, int(resign_trade.delay_block),
                          int(resign_trade.payment), resign_trade.hashcode]
             delay_commitment = cls.sign_content(wallet, cls._htlc_sign_type_list, htlc_list)
             update_trade_db.update({'delay_commitment':delay_commitment})
