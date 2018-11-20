@@ -895,7 +895,7 @@ class HtlcResponsesMessage(HtlcBase):
 
     def trigger_htlc_to_next_jump(self):
         """"""
-        router = self.exclude_wallet_from_router(self.wallet.url, self.router)
+        self.router = self.exclude_wallet_from_router(self.wallet.url, self.router)
         if not self.check_if_the_last_router():
             next_router = self.next_jump
             LOG.debug('Get Next Router {}'.format(str(next_router)))
@@ -903,7 +903,7 @@ class HtlcResponsesMessage(HtlcBase):
             if not next_router:
                 raise GoTo(
                     EnumResponseStatus.RESPONSE_ROUTER_WITH_ILLEGAL_NEXT_JUMP,
-                    'Illegal next jump<{}> in router<{}>'.format(next_router, router)
+                    'Illegal next jump<{}> in router<{}>'.format(next_router, self.router)
                 )
 
             # to get channel between current wallet and next jump
@@ -922,7 +922,7 @@ class HtlcResponsesMessage(HtlcBase):
             payment = self.big_number_calculate(self.payment, fee, False)
             receiver = next_router
             HtlcMessage.create(channel_set.channel, self.asset_type, self.wallet.url, receiver, payment, self.hashcode,
-                               router, current_channel=self.channel_name, comments=self.comments)
+                               self.router, current_channel=self.channel_name, comments=self.comments)
 
             # record channel of next jump in current htlc trade
             Channel.update_trade(self.channel_name, self.nonce, channel=channel_set.channel)
