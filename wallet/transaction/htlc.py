@@ -477,10 +477,9 @@ class HtlcMessage(HtlcBase):
             self.send(response_message)
 
             # record the transaction
-            if nonce != self.nonce:
-                Channel.update_trade(self.channel_name, nonce=nonce, **htlc_trade)
-            else:
-                Channel.add_trade(self.channel_name, nonce=nonce, **htlc_trade)
+            Channel.add_trade(self.channel_name, nonce=nonce, **htlc_trade)
+            if nonce < self.nonce:
+                Channel.delete_trade(self.channel_name, self.nonce)
         except TrinityException as error:
             LOG.exception(error)
             status = error.reason
@@ -895,10 +894,10 @@ class HtlcResponsesMessage(HtlcBase):
 
     def trigger_htlc_to_next_jump(self):
         """"""
-        self.router = self.exclude_wallet_from_router(self.wallet.url, self.router)
+        self.router, _ = self.exclude_wallet_from_router(self.wallet.url, self.router)
         if not self.check_if_the_last_router():
             next_router = self.next_jump
-            LOG.debug('Get Next Router {}'.format(str(next_router)))
+            LOG.debug('Get Next Router {} from {}'.format(str(next_router), self.router))
 
             if not next_router:
                 raise GoTo(
