@@ -79,9 +79,10 @@ class EventBase(object):
     """
 
     """
-    def __init__(self, event_name, event_type, is_event_founder=True):
+    def __init__(self, event_name, event_type, is_event_founder=True, asset_type='TNC'):
         self.event_name = event_name
         self.event_type = event_type
+        self.asset_type = asset_type
 
         self.is_event_founder = is_event_founder
         self.retry = False

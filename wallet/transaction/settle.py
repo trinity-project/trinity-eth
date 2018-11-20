@@ -70,7 +70,7 @@ class SettleBase(Message):
         :return:
         """
         try:
-            channel_event = ChannelQuickSettleEvent(self.channel_name, self.wallet.address, is_founder)
+            channel_event = ChannelQuickSettleEvent(self.channel_name, self.wallet.address, is_founder, self.asset_type)
 
             if is_founder:
                 settle_trade = Channel.query_trade(self.channel_name, SettleBase._SETTLE_NONCE)

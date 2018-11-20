@@ -191,7 +191,7 @@ class ChannelQuickSettleEvent(ChannelEventBase):
     """
         Descriptions: Quick close channel event
     """
-    def __init__(self, channel_name, wallet_address, is_event_founder=True):
+    def __init__(self, channel_name, wallet_address, is_event_founder=True, asset_type='TNC'):
         super(ChannelQuickSettleEvent, self).__init__(channel_name, EnumEventType.EVENT_TYPE_QUICK_SETTLE,wallet_address,
                                                       is_event_founder)
 
@@ -203,13 +203,16 @@ class ChannelQuickSettleEvent(ChannelEventBase):
         # record the tx id for quick settle
         self.settle_tx_id = None
 
+        self.asset_type = asset_type
+
     def prepare(self, block_height, *args, **kwargs):
         super(ChannelQuickSettleEvent, self).prepare(block_height, *args, **kwargs)
 
         # update the channel OPENING State after trigger the deposit event, wait for OPENED
         if self.retry is False:
             Channel.update_channel(self.channel_name, state=EnumChannelState.CLOSING.name)
-            LOG.info('Start to quick-close channel<{}>. State: CLOSING.'.format(self.channel_name))
+            sync_channel_info_to_gateway(self.channel_name, 'DeleteChannel', self.asset_type)
+            LOG.info('Start to quick-close {} channel<{}>. State: CLOSING.'.format(self.channel_name, self.asset_type))
             console_log.info('Channel<{}> is closing'.format(self.channel_name))
 
         # go to next stage
@@ -256,6 +259,5 @@ class ChannelQuickSettleEvent(ChannelEventBase):
         if 0 >= total_deposit:
             Channel.update_channel(self.channel_name, state=EnumChannelState.CLOSED.name)
             APIStatistics.update_statistics(self.wallet_address, state=EnumChannelState.CLOSED.name)
-            sync_channel_info_to_gateway(self.channel_name, 'DeleteChannel', asset_type)
             console_log.info('Channel {} state is {}'.format(self.channel_name, EnumChannelState.CLOSED.name))
             self.next_stage()
