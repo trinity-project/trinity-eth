@@ -266,3 +266,12 @@ class ChannelQuickSettleEvent(ChannelEventBase):
             APIStatistics.update_statistics(self.wallet_address, state=EnumChannelState.CLOSED.name)
             console_log.info('Channel {} state is {}'.format(self.channel_name, EnumChannelState.CLOSED.name))
             self.next_stage()
+
+    def error_handler(self, block_height, *args, **kwargs):
+        super(ChannelQuickSettleEvent, self).error_handler(block_height, *args, **kwargs)
+
+        # if running here, it means the channel is still OPENED
+        total_deposit = self.contract_event_api.get_channel_total_balance(self.channel_name)
+        if 0 < total_deposit:
+            Channel.update_channel(self.channel_name, state=EnumChannelState.OPENED.name)
+            sync_channel_info_to_gateway(self.channel_name, 'AddChannel', self.asset_type)
