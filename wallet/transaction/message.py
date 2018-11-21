@@ -711,23 +711,32 @@ class TransactionBase(Message):
                 EnumResponseStatus.RESPONSE_DATABASE_ERROR_TRADE_ROLE,
                 'Error trade role<{}> for nonce<{}>'.format(resign_trade.role, resign_nonce)
             )
+
+        if EnumTradeType.TRADE_TYPE_HTLC.name == resign_trade.type:
+            rsmc_sign_hashcode, rsmc_sign_rcode = cls.get_default_rcode()
+        elif EnumTradeType.TRADE_TYPE_RSMC.name == resign_trade.type:
+            rsmc_sign_hashcode, rsmc_sign_rcode = resign_trade.hashcode, resign_trade.rcode
+        else:
+            raise GoTo(
+                EnumResponseStatus.RESPONSE_TRADE_RESIGN_NOT_SUPPORTED_TYPE,
+                'Only support HTLC and RSMC resign. Current transaction type: {}'.format(resign_trade.type)
+            )
+
         rsmc_list = [channel_name, resign_nonce, payer_address, int(payer_balance),
-                     payee_address, int(payee_balance), resign_trade.hashcode, resign_trade.rcode]
+                     payee_address, int(payee_balance), rsmc_sign_hashcode, rsmc_sign_rcode]
 
         # self commitment is None
-        commitment = None
         if not resign_trade.commitment:
             commitment = cls.sign_content( wallet, cls._rsmc_sign_type_list, rsmc_list)
-            update_trade_db.update({'commitment':commitment})
+            update_trade_db.update({'commitment': commitment})
 
         # self lock commitment is none
         htlc_list = None
-        delay_commitment = None
         if EnumTradeType.TRADE_TYPE_HTLC.name == resign_trade.type:
             htlc_list = [channel_name, payer_address, payee_address, int(resign_trade.delay_block),
                          int(resign_trade.payment), resign_trade.hashcode]
             delay_commitment = cls.sign_content(wallet, cls._htlc_sign_type_list, htlc_list)
-            update_trade_db.update({'delay_commitment':delay_commitment})
+            update_trade_db.update({'delay_commitment': delay_commitment})
 
         # check whether the trade need update or not
         if resign_trade.state not in [EnumTradeState.confirmed.name, EnumTradeState.confirmed_onchain.name]:
