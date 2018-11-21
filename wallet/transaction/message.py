@@ -791,3 +791,24 @@ class TransactionBase(Message):
                 EnumResponseStatus.RESPONSE_TRADE_COULD_NOT_BE_OVERWRITTEN,
                 'Could not use negotiated nonce <{}>, current valid nonce<{}>'.format(self.nego_nonce, valid_nonce)
             )
+    
+    def record_transaction(self, nonce, **update_args):
+        """
+        
+        :param nonce:
+        :param update_args:
+        :return:
+        """
+        # check the trade with nonce existed or not
+        try:
+            new_trade = Channel.query_trade(self.channel_name, nonce)
+        except Exception as error:
+            new_trade = None
+
+        # add new transaction
+        if new_trade:
+            Channel.update_trade(self.channel_name, nonce=nonce, **update_args)
+        else:
+            Channel.add_trade(self.channel_name, nonce=nonce, **update_args)
+
+        return

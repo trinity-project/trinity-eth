@@ -477,9 +477,7 @@ class HtlcMessage(HtlcBase):
             self.send(response_message)
 
             # record the transaction
-            Channel.add_trade(self.channel_name, nonce=nonce, **htlc_trade)
-            if nonce < self.nonce:
-                Channel.delete_trade(self.channel_name, self.nonce)
+            self.record_transaction(nonce, **htlc_trade)
         except TrinityException as error:
             LOG.exception(error)
             status = error.reason

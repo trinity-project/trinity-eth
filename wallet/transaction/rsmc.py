@@ -215,11 +215,7 @@ class RsmcMessage(RsmcBase):
             self.send(response_message)
 
             # record the transaction
-            if nonce != self.nonce:
-                Channel.delete_trade(self.channel_name, nonce)
-                Channel.add_trade(self.channel_name, nonce=nonce, **rsmc_trade)
-            else:
-                Channel.add_trade(self.channel_name, nonce=nonce, **rsmc_trade)
+            self.record_transaction(nonce, **rsmc_trade)
             APIStatistics.update_statistics(self.wallet.address, rsmc='rsmc')
         except TrinityException as error:
             status = error.reason
