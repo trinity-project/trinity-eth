@@ -1,5 +1,8 @@
 # --*-- coding : utf-8 --*--
-"""Author: Trinity Core Team
+"""
+Package : system -- Trinity OS platform
+
+Author  : Trinity Core Team
 
 MIT License
 
@@ -21,4 +24,10 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE."""
+SOFTWARE.
+"""
+from .coroutine import *
+from .process import *
+
+__all__ = []
+
