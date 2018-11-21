@@ -227,6 +227,11 @@ class ChannelQuickSettleEvent(ChannelEventBase):
             self.next_stage()
             return True
 
+        total_deposit = self.contract_event_api.get_channel_total_balance(self.channel_name)
+        if 0 >= total_deposit:
+            self.next_stage()
+            return True
+
         # only executed by the event founder
         # to check settle ID firslty
         if self.settle_tx_id:
