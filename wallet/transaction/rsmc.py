@@ -434,6 +434,8 @@ class RsmcResponsesMessage(RsmcBase):
         sign_hashcode, sign_rcode = self.get_rcode(self.channel_name, self.hashcode)
         payer_balance = int(self.sender_balance)
         payee_balance = int(self.receiver_balance)
+        payment = int(self.payment)
+        commitment = None
 
         # use this nonce for following message of current transaction
         nonce = self.nego_nonce or self.nonce
@@ -441,10 +443,14 @@ class RsmcResponsesMessage(RsmcBase):
         # start to sign this new transaction and save it
         try:
             old_trade = Channel.query_trade(self.channel_name, self.nonce)
+            payment = int(old_trade.payment)
+
+            if self.nonce == nonce:
+                commitment = old_trade.commitment
         except:
             pass
-        else:
-            if self.nonce == nonce and not old_trade.commitment:
+        finally:
+            if not commitment:
                 # check balance
                 self.check_balance(self.channel_name, self.asset_type, self.payer_address, payer_balance,
                                    self.payee_address, payee_balance, hlock_to_rsmc=is_htlc_to_rsmc, payment=payment)
@@ -455,8 +461,14 @@ class RsmcResponsesMessage(RsmcBase):
                                                         self.payee_address, payee_balance, sign_hashcode, sign_rcode]
                 )
 
-                # store the commitment
-                Channel.update_trade(self.channel_name, nonce, commitment=commitment)
+                # generate the rsmc trade part
+                rsmc_trade = Channel.rsmc_trade(
+                    type=EnumTradeType.TRADE_TYPE_RSMC, role=EnumTradeRole.TRADE_ROLE_FOUNDER,
+                    asset_type=self.asset_type, balance=payer_balance, peer_balance=payee_balance, payment=payment,
+                    hashcode=sign_hashcode, rcode=sign_rcode, commitment=commitment
+                )
+
+                Channel.update_trade(self.channel_name, nonce, **rsmc_trade)
 
         # if negotiated nonce by peer, delete the transaction with self.nonce ????
         if nonce != self.nonce:

@@ -726,15 +726,21 @@ class HtlcResponsesMessage(HtlcBase):
 
         # use this nonce for following message of current transaction
         nonce = self.nego_nonce or self.nonce
+        old_trade = None
 
         # start to sign this new transaction and save it
         try:
             old_trade = Channel.query_trade(self.channel_name, self.nonce)
             payment = int(old_trade.payment)
+
+            if self.nonce == nonce:
+                commitment = old_trade.commitment
+                delay_commitment = old_trade.delay_commitment
         except:
+            old_trade = None
             pass
-        else:
-            if self.nonce == nonce and not (old_trade.commitment and old_trade.delay_commitment):
+        finally:
+            if not (commitment and delay_commitment):
                 # check balance
                 self.check_balance(self.channel_name, self.asset_type, self.payer_address, payer_balance,
                                    self.payee_address, payee_balance, is_htcl_type=True, payment=payment)
@@ -754,7 +760,10 @@ class HtlcResponsesMessage(HtlcBase):
                 )
 
                 # generate the htlc trade
-                htlc_trade = {'commitment': commitment, 'delay_commitment': delay_commitment}
+                htlc_trade = Channel.htlc_trade(
+                    type=EnumTradeType.TRADE_TYPE_HTLC, role=EnumTradeRole.TRADE_ROLE_FOUNDER, asset_type=self.asset_type,
+                    balance=payer_balance, peer_balance=payee_balance, payment=payment, hashcode=self.hashcode,
+                    delay_block=self.delay_block, commitment=commitment, delay_commitment=delay_commitment)
 
                 # channel router info
                 if old_trade and old_trade.channel:
