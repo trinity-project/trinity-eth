@@ -822,3 +822,31 @@ class TransactionBase(Message):
             Channel.add_trade(self.channel_name, nonce=nonce, **update_args)
 
         return
+
+    def validate_transaction(self):
+        """
+
+        :return:
+        """
+        # check the trade with nonce existed or not
+        try:
+            pre_trade = Channel.query_trade(self.channel_name, self.nonce-1)
+        except Exception as error:
+            # should never go here
+            raise(
+                EnumResponseStatus.RESPONSE_TRADE_NOT_FOUND,
+                'Transaction with nonce<{}> is not found'.format(self.nonce-1)
+            )
+        else:
+            if pre_trade.state in [EnumTradeState.confirmed.name or EnumTradeState.confirmed_onchain.name]:
+                return True
+            elif pre_trade.state in [EnumTradeState.confirming.name] \
+                    and EnumTradeType.TRADE_TYPE_HTLC.name == pre_trade.type \
+                    and pre_trade.peer_commitment and pre_trade.peer_delay_commitment:
+                return True
+
+            raise GoTo(
+                EnumResponseStatus.RESPONSE_TRADE_RESIGN_REQUEST_NOT_IMPLEMENTED,
+                'Wait for next resign. current confirmed nonce<{}>, request nonce<{}>'.format(
+                    Channel.latest_confirmed_nonce(), self.nonce)
+            )

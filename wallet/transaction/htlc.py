@@ -848,13 +848,7 @@ class HtlcResponsesMessage(HtlcBase):
             need_update_balance = True
         else:
             # to check the latest confirmed nonce
-            confirmed_nonce = Channel.latest_confirmed_nonce(self.channel_name)
-            if confirmed_nonce != self.nonce - 1:
-                raise GoTo(
-                    EnumResponseStatus.RESPONSE_TRADE_RESIGN_REQUEST_NOT_IMPLEMENTED,
-                    'Wait for next resign. current confirmed nonce<{}>, request nonce<{}>'.format(confirmed_nonce,
-                                                                                                  self.nonce)
-                )
+            self.validate_transaction()
 
             # check balance after resign successfully
             self.check_balance(self.channel_name, self.asset_type, self.payer_address, self.sender_balance,

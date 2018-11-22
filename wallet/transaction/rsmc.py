@@ -529,13 +529,7 @@ class RsmcResponsesMessage(RsmcBase):
                 self.notify_peer_payment_finished()
         else:
             # to check the latest confirmed nonce
-            confirmed_nonce = Channel.latest_confirmed_nonce(self.channel_name)
-            if confirmed_nonce != self.nonce - 1:
-                raise GoTo(
-                    EnumResponseStatus.RESPONSE_TRADE_RESIGN_REQUEST_NOT_IMPLEMENTED,
-                    'Wait for next resign. current confirmed nonce<{}>, request nonce<{}>'.format(confirmed_nonce,
-                                                                                                  self.nonce)
-                )
+            self.validate_transaction()
 
             # if running here, it means that the transaction has been succeeded to resign
             is_htlc_to_rsmc = self.is_hlock_to_rsmc(self.hashcode)
