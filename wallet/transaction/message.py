@@ -651,7 +651,8 @@ class TransactionBase(Message):
                     resign_body.update({'DelayCommitment': pre_trade.delay_commitment})
 
         elif is_resign_response is True and EnumTradeRole.TRADE_ROLE_FOUNDER.name == trade_role and \
-                EnumTradeState.confirmed.name == trade_state:
+                (EnumTradeState.confirmed.name == trade_state or (EnumTradeState.confirming.name == trade_state and
+                                                                  EnumTradeType.TRADE_TYPE_HTLC.name == trade_type)):
             # check the signature is completed
             if pre_trade.peer_commitment:
                 resign_body.update({'Commitment': pre_trade.commitment})
