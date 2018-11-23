@@ -549,12 +549,8 @@ class HtlcMessage(HtlcBase):
         # there're one trade need resign, we need adjust the nonce value
         if valid_trade and valid_trade.state in [EnumTradeState.confirming.name]:
             nonce = valid_trade.nonce + 1
-            if EnumTradeRole.TRADE_ROLE_PARTNER.name == valid_trade.role:
-                payer_balance = valid_trade.peer_balance
-                payee_balance = valid_trade.balance
-            else:
-                payer_balance = valid_trade.balance
-                payee_balance = valid_trade.peer_balance
+            payer_balance = valid_trade.balance
+            payee_balance = valid_trade.peer_balance
         else:
             # to get channel balance
             balance = channel.balance
