@@ -20,9 +20,25 @@ copies or substantial portions of the Software.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
+
+
+class SingletonFactory(type):
+    """
+    Description: Basic type for singleton class type
+    """
+    def __init__(cls, name, *args, **kwargs):
+        super(SingletonFactory, cls).__init__(name, *args, **kwargs)
+
+    def __call__(cls, *args, **kwargs):
+        if not hasattr(cls, '_singleton_instance'):
+            cls._singleton_instance = super(SingletonFactory, cls).__call__(*args, **kwargs)
+        return cls._singleton_instance
+
+    def __new__(mcs, name, *args, **kwargs):
+        return type.__new__(mcs, name, *args, **kwargs)

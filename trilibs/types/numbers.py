@@ -1,6 +1,6 @@
 # --*-- coding : utf-8 --*--
 """
-Package : trim - Trinity Model for Database
+Package : Trinity basic numbers
 
 Author  : Trinity Core Team
 
