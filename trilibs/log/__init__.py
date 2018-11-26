@@ -120,6 +120,3 @@ def init_logger(level=logging.DEBUG, path=None, file_name=None,
 
     # set logger configuration
     logging.config.dictConfig(log_settings)
-
-init_logger()
-LOG.debug('test')
