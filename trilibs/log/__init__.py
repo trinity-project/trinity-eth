@@ -27,6 +27,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 import os
+import copy
 import logging.config
 
 
@@ -34,11 +35,39 @@ __all__ = ['init_logger']
 
 LOG = logging.getLogger(__name__)
 
+# This is a default configuration for Trinity system.
+# DO NOT CHANGE THIS CONFIGURATION!!!!!
+# Any developers want to set the log configuration, he/she could use BasicConfig
+# to configure it.
+log_default_settings = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'default': {
+            'format': '[%(asctime)s] %(pathname)s line %(lineno)d '
+                      '%(levelname)s :%(message)s'
+        }
+    },
+    'handlers': {
+        'default': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'default',
+        }
+    },
+    'loggers': {
+        '': {
+            'handlers': ['default'],
+            'level': 'DEBUG'
+        }
+    }
+}
+
 log_settings = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
-        'standard': {
+        'formatter': {
             'format': '[%(asctime)s] %(pathname)s line %(lineno)d '
                       '%(levelname)s :%(message)s'
         }
@@ -64,6 +93,49 @@ log_settings = {
         }
     },
 }
+
+
+class BasicConfig(object):
+    """
+    Descriptions: Generate one basic dictionary as default configuration of
+                  trinity LOG system.
+    """
+    def __init__(self):
+        """
+        Description: Constructor for logging system basic configuration
+        """
+        # use
+        self.basic_config = copy.deepcopy(log_default_settings)
+        logging.config.dictConfig(self.basic_config)
+
+    def setup(self, path=None, file_name=None, level=logging.DEBUG,
+              log_format=None, handlers=None, **kwargs):
+        """
+        Description: Setup the user loggers
+        :param path: The path where saved the logs if file handler is set
+        :param file_name: The log file name
+        :param level: Log level settings. Please refer to the logging package.
+        :param log_format: Define the log output format. Please refer to class
+                           'Formatter' defined in the logging package.
+        :param handlers:
+        :param kwargs:
+        :return:
+        """
+
+        # Finally, use the new dict to configure the loggers
+        logging.config.dictConfig(self.basic_config)
+
+    def _parse_handlers(self):
+        pass
+
+    def _parse_loggers(self):
+        pass
+
+    def _parse_formatter(self):
+        pass
+
+    def __parse_file_path(self):
+        pass
 
 
 def init_logger(level=logging.DEBUG, path=None, file_name=None,
@@ -120,3 +192,9 @@ def init_logger(level=logging.DEBUG, path=None, file_name=None,
 
     # set logger configuration
     logging.config.dictConfig(log_settings)
+
+
+final_init_logger = BasicConfig().setup
+
+final_init_logger()
+LOG.debug('test')
