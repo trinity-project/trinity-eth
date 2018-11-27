@@ -95,7 +95,12 @@ class ChannelDepositEvent(ChannelEventBase):
             else:
                 # new transaction is pushed to chain
                 self.approved_tx_id = None
-
+        else:
+            approved_deposit = self.contract_event_api.get_approved_asset(address)
+            if approved_deposit >= int(deposit):
+                LOG.debug('Has already approved: {}'.format(approved_deposit))
+                return True
+            
         # make transaction to chain
         result = self.contract_event_api.approve(address, int(deposit), key, gwei_coef=self.gwei_coef)
         if result:
