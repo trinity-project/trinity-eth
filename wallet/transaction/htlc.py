@@ -567,7 +567,7 @@ class HtlcMessage(HtlcBase):
         )
 
         # exclude current router from the router
-        end_block_height = cls.get_unlocked_block_height(len(router)-1)
+        end_block_height = cls.get_unlocked_block_height(len(router))
 
         # generate htlc transaction and record it into database later
         htlc_trade = Channel.htlc_trade(
