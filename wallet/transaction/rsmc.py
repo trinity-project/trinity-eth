@@ -534,8 +534,8 @@ class RsmcResponsesMessage(RsmcBase):
 
             # sign this transaction
             commitment = RsmcResponsesMessage.sign_content(
-                self.wallet, self._sign_type_list, [self.channel_name, self.nonce, self.payer_address, self.sender_balance,
-                                                    self.payee_address, self.receiver_balance, sign_hashcode, sign_rcode]
+                self.wallet, self._sign_type_list, [self.channel_name, self.nonce, self.payer_address, int(self.sender_balance),
+                                                    self.payee_address, int(self.receiver_balance), sign_hashcode, sign_rcode]
             )
 
             # update the transaction confirming state
