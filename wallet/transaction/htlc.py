@@ -507,7 +507,11 @@ class HtlcMessage(HtlcBase):
         if not isinstance(total_routers, int):
             return 0
 
-        unlocked_block_height = get_block_count() + HtlcMessage._block_per_day*total_routers
+        lock_day = total_routers - 1
+        if 0 >= lock_day:
+            return 0
+
+        unlocked_block_height = get_block_count() + HtlcMessage._block_per_day*lock_day
 
         return unlocked_block_height
 
@@ -563,10 +567,7 @@ class HtlcMessage(HtlcBase):
         )
 
         # exclude current router from the router
-        if 0 >= len(router) - 1:
-            end_block_height = 0
-        else:
-            end_block_height = cls.get_unlocked_block_height(len(router)-1)
+        end_block_height = cls.get_unlocked_block_height(len(router)-1)
 
         # generate htlc transaction and record it into database later
         htlc_trade = Channel.htlc_trade(

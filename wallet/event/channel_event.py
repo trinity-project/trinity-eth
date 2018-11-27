@@ -83,12 +83,12 @@ class ChannelDepositEvent(ChannelEventBase):
         if self.approved_tx_id:
             checked = self.check_transaction_success(self.approved_tx_id)
             if checked:
-                # go to next stage
-                self.next_stage()
                 LOG.debug('Approved asset by address<{}:{}>'.format(address, deposit))
                 Channel.update_channel(self.channel_name, state=EnumChannelState.OPENING.name)
                 LOG.info('Start to create channel<{}>. State: OPENING.'.format(self.channel_name))
                 console_log.info('Channel<{}> is opening'.format(self.channel_name))
+                # go to next stage
+                self.next_stage()
                 return True
             elif checked is False:
                 return False
@@ -99,6 +99,8 @@ class ChannelDepositEvent(ChannelEventBase):
             approved_deposit = self.contract_event_api.get_approved_asset(address)
             if approved_deposit >= int(deposit):
                 LOG.debug('Has already approved: {}'.format(approved_deposit))
+                # go to next stage
+                self.next_stage()
                 return True
             
         # make transaction to chain
