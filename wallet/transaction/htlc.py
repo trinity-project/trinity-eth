@@ -413,7 +413,7 @@ class HtlcMessage(HtlcBase):
                 resign_ack, nego_trade = self.handle_resign_body(self.wallet, self.channel_name, self.resign_body)
             else:
                 # check whether need resign previous transaction
-                resign_request, nego_trade = self.create_resign_message_body(self.channel_name, self.nonce)
+                resign_request, nego_trade = self.create_resign_message_body(self.wallet.url, self.channel_name, self.nonce)
 
             # real nonce
             nego_nonce = nego_trade and (nego_trade.nonce+1)
@@ -544,7 +544,7 @@ class HtlcMessage(HtlcBase):
                        'HtlcMessage::create: Incorrect nonce<{}> for channel<{}>'.format(nonce, channel_name))
 
         # to check whether previous transaction need be resigned or not
-        resign_body, valid_trade = HtlcMessage.create_resign_message_body(channel_name, nonce)
+        resign_body, valid_trade = HtlcMessage.create_resign_message_body(sender, channel_name, nonce)
 
         # there're one trade need resign, we need adjust the nonce value
         if valid_trade and valid_trade.state in [EnumTradeState.confirming.name]:

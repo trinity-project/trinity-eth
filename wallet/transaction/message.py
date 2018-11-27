@@ -587,9 +587,10 @@ class TransactionBase(Message):
                        'Htlc trade not found by the HashR<{}> in channel<{}>'.format(hashcode, channel_name))
 
     @classmethod
-    def create_resign_message_body(cls, wallet, channel_name, nonce, is_resign_response=False):
+    def create_resign_message_body(cls, wallet_url, channel_name, nonce, is_resign_response=False):
         """
 
+        :param wallet_url: current opened wallet url
         :param channel_name:
         :param nonce:
         :param is_resign_response: if True, it means has received the peer resign request
@@ -652,14 +653,14 @@ class TransactionBase(Message):
                     resign_body.update({'DelayCommitment': pre_trade.delay_commitment})
             else:
                 LOG.error('Unsupported trade type<{}> to resign in partner<{}> side'
-                          .format(trade_type, wallet.url))
+                          .format(trade_type, wallet_url))
                 return None, pre_trade
 
             # need update the channel balance or not???
             if need_update_balance:
                 channel = Channel(channel_name)
-                self_address, _, _ = uri_parser(wallet.url)
-                peer_address, _, _ = uri_parser(channel.peer_uri(wallet.url))
+                self_address, _, _ = uri_parser(wallet_url)
+                peer_address, _, _ = uri_parser(channel.peer_uri(wallet_url))
 
                 # ToDo: if need, here need add asset type check in future
                 Channel.update_channel(channel_name, balance={
@@ -682,7 +683,7 @@ class TransactionBase(Message):
                     resign_body.update({'DelayCommitment': pre_trade.delay_commitment})
             else:
                 LOG.error('Unsupported trade type<{}> to resign in founder<{}> side'
-                          .format(trade_type, wallet.url))
+                          .format(trade_type, wallet_url))
                 return None, pre_trade
         else:
             return None, pre_trade
@@ -802,7 +803,7 @@ class TransactionBase(Message):
             Channel.update_channel(channel_name, **update_channel_db)
 
         # return resign message body
-        return cls.create_resign_message_body(channel_name, resign_nonce, True)
+        return cls.create_resign_message_body(wallet.url, channel_name, resign_nonce, True)
 
     def validate_negotiated_nonce(self):
         """
