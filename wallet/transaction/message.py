@@ -587,7 +587,7 @@ class TransactionBase(Message):
                        'Htlc trade not found by the HashR<{}> in channel<{}>'.format(hashcode, channel_name))
 
     @classmethod
-    def create_resign_message_body(cls, channel_name, nonce, is_resign_response=False):
+    def create_resign_message_body(cls, wallet, channel_name, nonce, is_resign_response=False):
         """
 
         :param channel_name:
@@ -625,52 +625,73 @@ class TransactionBase(Message):
 
         # local variables
         resign_body = {'Nonce' : str(pre_nonce)}
+        need_update_balance = False
 
         # is partner role of this transaction
         if EnumTradeRole.TRADE_ROLE_PARTNER.name == trade_role and EnumTradeState.confirming.name == trade_state:
-            # already signed trade ???
-            if pre_trade.peer_commitment:
-                # RSMC trade ??
-                if EnumTradeType.TRADE_TYPE_RSMC.name == trade_type:
+            # update the resign_body by the different trade type
+            if EnumTradeType.TRADE_TYPE_RSMC.name == trade_type:
+                if pre_trade.peer_commitment:
                     # update the trade to confirmed state directly
                     Channel.update_trade(channel_name, pre_nonce, state=EnumTradeState.confirmed.name)
-                    return None, pre_trade
-                elif EnumTradeType.TRADE_TYPE_HTLC.name == trade_type:
-                    # already signed HTLC transaction ??
-                    if pre_trade.rcode:
-                        Channel.update_trade(channel_name, pre_nonce, state=EnumTradeState.confirmed.name)
-                    if pre_trade.peer_delay_commitment:
-                        return None, pre_trade
-                    else:
-                        LOG.warning('Dismiss update HTLC locked part signature of the peer.')
-                        resign_body.update({'DelayCommitment': pre_trade.delay_commitment})
-            else:
-                resign_body.update({'Commitment': pre_trade.commitment})
 
-                if EnumTradeType.TRADE_TYPE_HTLC.name == trade_type:
+                    # need update channel balance
+                    need_update_balance = True
+                else:
+                    # need resign this RSMC transaction by peer
+                    resign_body.update({'Commitment': pre_trade.commitment})
+            elif EnumTradeType.TRADE_TYPE_HTLC.name == trade_type:
+                if pre_trade.peer_commitment and pre_trade.peer_delay_commitment:
+                    # update the trade to confirmed state directly
+                    Channel.update_trade(channel_name, pre_nonce, state=EnumTradeState.confirming.name)
+                    # need update channel balance
+                    need_update_balance = True
+                else:
+                    # need resign this HTLC transaction by peer
+                    resign_body.update({'Commitment': pre_trade.commitment})
                     resign_body.update({'DelayCommitment': pre_trade.delay_commitment})
+            else:
+                LOG.error('Unsupported trade type<{}> to resign in partner<{}> side'
+                          .format(trade_type, wallet.url))
+                return None, pre_trade
 
+            # need update the channel balance or not???
+            if need_update_balance:
+                channel = Channel(channel_name)
+                self_address, _, _ = uri_parser(wallet.url)
+                peer_address, _, _ = uri_parser(channel.peer_uri(wallet.url))
+
+                # ToDo: if need, here need add asset type check in future
+                Channel.update_channel(channel_name, balance={
+                    self_address: {pre_trade.asset_type: pre_trade.balance},
+                    peer_address: {pre_trade.asset_type: pre_trade.peer_balance}
+                })
         elif is_resign_response is True and EnumTradeRole.TRADE_ROLE_FOUNDER.name == trade_role and \
                 (EnumTradeState.confirmed.name == trade_state or (EnumTradeState.confirming.name == trade_state and
                                                                   EnumTradeType.TRADE_TYPE_HTLC.name == trade_type)):
-            # check the signature is completed
-            if pre_trade.peer_commitment:
-                resign_body.update({'Commitment': pre_trade.commitment})
 
-                # fill the htlc lock signature part
-                if EnumTradeType.TRADE_TYPE_HTLC.name == trade_type:
-                    if pre_trade.peer_delay_commitment:
-                        resign_body.update({'DelayCommitment': pre_trade.delay_commitment})
-                    else:
-                        # raise error.
-                        raise GoTo(
-                            EnumResponseStatus.RESPONSE_FAIL,
-                            'Not found the HTLC locked signature part.'
-                        )
+            if EnumTradeType.TRADE_TYPE_RSMC.name == trade_type:
+                if pre_trade.peer_commitment:
+                    resign_body.update({'Commitment': pre_trade.commitment})
+                else:
+                    # stop transaction ????
+                    pass
+            elif EnumTradeType.TRADE_TYPE_HTLC.name == trade_type:
+                if pre_trade.peer_commitment and pre_trade.peer_delay_commitment:
+                    resign_body.update({'Commitment': pre_trade.commitment})
+                    resign_body.update({'DelayCommitment': pre_trade.delay_commitment})
+            else:
+                LOG.error('Unsupported trade type<{}> to resign in founder<{}> side'
+                          .format(trade_type, wallet.url))
+                return None, pre_trade
         else:
             return None, pre_trade
 
-        return resign_body, pre_trade
+        # Previous transaction need to be resigned by peer
+        if 'Commitment' in resign_body:
+            return resign_body, pre_trade
+
+        return None, pre_trade
 
     @classmethod
     def handle_resign_body(cls, wallet, channel_name, resign_body):
@@ -761,10 +782,7 @@ class TransactionBase(Message):
                 cls.check_signature(wallet, peer_address, cls._htlc_sign_type_list,
                                     htlc_list, peer_delay_commitment)
                 update_trade_db.update({'peer_delay_commitment': peer_delay_commitment})
-
-                # just only the rcode is noe null, update this transaction confirmed
-                if resign_trade.rcode:
-                    update_trade_db.update({'state': EnumTradeState.confirmed.name})
+                update_trade_db.update({'state': EnumTradeState.confirming.name})
 
                 # need update the hlock part
                 if payer_address == self_address:

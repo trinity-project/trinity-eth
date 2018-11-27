@@ -794,7 +794,7 @@ class HtlcResponsesMessage(HtlcBase):
             # update this trade confirmed state
             Channel.update_trade(self.channel_name, nonce, commitment=commitment, delay_commitment=delay_commitment,
                                  peer_commitment=self.commitment, peer_delay_commitment=self.delay_commitment,
-                                 state=EnumTradeState.confirmed.name)
+                                 state=EnumTradeState.confirming.name)
             need_update_balance = True
 
             htlc_sign_body.update({'Commitment': commitment, 'DelayCommitment': delay_commitment})
@@ -839,7 +839,7 @@ class HtlcResponsesMessage(HtlcBase):
             # Just update current transaction confirmed:
             Channel.update_trade(self.channel_name, self.nonce, peer_commitment=self.commitment,
                                  peer_delay_commitment=self.delay_commitment,
-                                 state=EnumTradeState.confirmed.name)
+                                 state=EnumTradeState.confirming.name)
 
             need_update_balance = True
         else:
