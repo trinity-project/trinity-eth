@@ -58,40 +58,9 @@ log_default_settings = {
     'loggers': {
         '': {
             'handlers': ['default'],
-            'level': 'DEBUG'
+            'level': 'INFO'
         }
     }
-}
-
-log_settings = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'formatter': {
-            'format': '[%(asctime)s] %(pathname)s line %(lineno)d '
-                      '%(levelname)s :%(message)s'
-        }
-    },
-    'handlers': {
-        'console': {
-            'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
-        },
-        'default': {
-            'level': 'DEBUG',
-            'class': 'cloghandler.ConcurrentRotatingFileHandler',
-            'filename': 'trinity.log',
-            'formatter': 'standard',
-            'maxBytes': 5 * 1024 * 1024,
-            'backupCount': 10
-        }
-    },
-    'loggers': {
-        '': {
-            'handlers': ['default'],
-            'level': 'DEBUG'
-        }
-    },
 }
 
 
@@ -104,12 +73,15 @@ class BasicConfig(object):
         """
         Description: Constructor for logging system basic configuration
         """
-        # use
+        # Use default logging settings to initialize the logger
         self.basic_config = copy.deepcopy(log_default_settings)
         logging.config.dictConfig(self.basic_config)
 
-    def setup(self, path=None, file_name=None, level=logging.DEBUG,
-              log_format=None, handlers=None, **kwargs):
+        # Default log file path and name
+        self.__log_file = './temp/trinity.log'
+
+    def setup(self, path=None, file_name=None, level=logging.INFO,
+              log_format=None, handlers='file', **kwargs):
         """
         Description: Setup the user loggers
         :param path: The path where saved the logs if file handler is set
@@ -117,84 +89,177 @@ class BasicConfig(object):
         :param level: Log level settings. Please refer to the logging package.
         :param log_format: Define the log output format. Please refer to class
                            'Formatter' defined in the logging package.
+        :param handlers: handlers name. default file handler name: 'file'
+        :param kwargs:
+        :return:
+        """
+        # Parse the log file
+        file_name = self._parse_file_path(path, file_name)
+
+        # Parse logger formatter
+        self._parse_formatter(log_format)
+
+        # Parse logger handlers
+        self._parse_handlers(handlers, filename=file_name, **kwargs)
+
+        # Parse which handler the logger uses
+        self._parse_loggers(handlers, level, **kwargs)
+
+        print(self.basic_config)
+        # Finally, use the new dict to configure the loggers
+        logging.config.dictConfig(self.basic_config)
+
+    def set_level(self, level: int):
+        """
+        Description: set level by CLI to trace log conveniently.
+        :param level: Refer to definition in logging package
+        :return:
+        """
+        # set level
+        level_name = logging.getLevelName(level)
+        if level_name.__contains__('Level'):
+            level_name = 'INFO'
+
+        # Update this settings to the config dict
+        self.basic_config['loggers']['']['level'] = level_name
+
+        # Reset the logger
+        logging.config.dictConfig(self.basic_config)
+
+        return level_name
+
+    def _parse_handlers(self, handlers=None, **kwargs):
+        """
+        Description: Set the file handlers for logger.
+        :param handlers: String type.
+        :param kwargs:
+            ~
+        :return:
+        """
+        # Valid handler name
+        if not (handlers and isinstance(handlers, str)):
+            # Use default handler name for file handler
+            handlers = 'file'
+
+        # Is it set a new handler for logger?
+        handlers = handlers.strip()
+        if 'default' == handlers:
+            LOG.warning('Default handler should not be changed')
+            return
+        self.basic_config['handlers'][handlers] = dict()
+        log_handler = self.basic_config['handlers'][handlers]
+
+        # Start to parse the other parameters from kwargs
+        # Get which class will be used by the file logger
+        handler_class = kwargs.get('class') if kwargs.get('class') \
+            else 'cloghandler.ConcurrentRotatingFileHandler'
+
+        # Get the log file name
+        log_file = kwargs.get('filename') if kwargs.get('filename') \
+            else self.__log_file
+
+        # Get the output formatter
+        formatter = kwargs.get('formatter')
+        formatter = formatter if formatter in self.basic_config['formatters'] \
+            else 'default'
+
+        # Get the count of files to saved and the size of each file
+        # Default size: 5M
+        max_size = kwargs.get('maxBytes') if kwargs.get('maxBytes') \
+            else 5 * 1024 * 1024
+        # Default total count of files: 10
+        max_count = kwargs.get('backupCount') if kwargs.get('backupCount') \
+            else 10
+
+        # to set this handler with DEBUG level
+        log_handler.update({
+            'level': 'DEBUG',
+            'class': handler_class,
+            'filename': log_file,
+            'formatter': formatter,
+            'maxBytes': max_size,
+            'backupCount': max_count
+        })
+
+        pass
+
+    def _parse_loggers(self, handlers='file', level=logging.INFO, **kwargs):
+        """
+
         :param handlers:
         :param kwargs:
         :return:
         """
+        # Check whether this handler is in settings or not
+        if handlers not in self.basic_config['handlers']:
+            return
 
-        # Finally, use the new dict to configure the loggers
-        logging.config.dictConfig(self.basic_config)
+        default_logger = {'': {
+            'handlers': ['default'],
+            'level': 'INFO'
+        }}
+        # Get the flag which indicate keep default console output
+        keep_default_logger = kwargs.get('use_default')
+        if keep_default_logger:
+            default_logger['']['handlers'] = ['default', handlers]
+        else:
+            default_logger['']['handlers'] = [handlers]
 
-    def _parse_handlers(self):
-        pass
+        # set level
+        level_name = logging.getLevelName(level)
+        if level_name.__contains__('Level'):
+            level_name = 'INFO'
+        default_logger['']['level'] = level_name
 
-    def _parse_loggers(self):
-        pass
+        # Update this settings to the config dict
+        self.basic_config['loggers'].update(default_logger)
 
-    def _parse_formatter(self):
-        pass
+        return
 
-    def __parse_file_path(self):
-        pass
+    def _parse_formatter(self, formatter=None):
+        """
+        Description: Set the log output format.
+                     Default format is defined in the log_default_settings.
+        :param formatter: Dict type. Details to refer to the class 'Formatter'
+        :return:
+        """
+        if isinstance(formatter, dict) and formatter:
+            self.basic_config['formatters'].update(formatter)
 
+        return
 
-def init_logger(level=logging.DEBUG, path=None, file_name=None,
-                log_handler=None, handler='default'):
-    """
+    @classmethod
+    def _parse_file_path(cls, path=None, file_name=None):
+        """
 
-    :param level:       set the log level. Please refer to logging package
-    :param path:        the path where saving the log file
-    :param file_name:   log file name
-    :param log_handler: new key word under the log_settings['loggers']
-    :param handler:     print the log to file or console. currently it support
-                        'default' and 'console' options.
-    :return:
-    """
-    logging.basicConfig(stream="logging.StreamHandler")
-    # add new handler inside the loggers
-    if log_handler and log_handler not in log_settings['loggers'].keys():
-        # This log system just provides 2 handlers: console and default.
-        # Customers could add new handlers under keyword "handlers" in
-        # log_settings to configure new one.
-        log_settings['loggers'][log_handler] = \
-            {'handlers': ['default'], 'level': 'DEBUG'}
+        :param path: String type. Refer to the comments of method 'setup'
+        :param file_name:
+        :return:
+        """
+        default_path = './temp'
 
-    # set the logger's log level
-    for logger_module in log_settings['loggers'].keys():
-        # This system use debug level as default value.
-        # if
-        log_settings['loggers'][logger_module]['level'] = \
-            logging.getLevelName(level) if level else logging.DEBUG
+        try:
+            # Create the folders to store the log files
+            if path and isinstance(path, str) and not os.path.exists(path):
+                os.makedirs(path)
+                path = path.rstrip(r'/')
+            else:
+                path = default_path
 
-        # is
-        if handler and handler not in \
-                log_settings['loggers'][logger_module]['handlers']:
+        except Exception as error:
+            LOG.warning(
+                'Path<{}> should be string type or fail to be created.'
+                'Exception: {}'.format(path, error)
+            )
 
-            # add logger handlers in the loggers
-            handler_list = log_settings['loggers'][logger_module]['handlers']
-            if isinstance(handler_list, list):
-                handler_list.append(handler)
+            # use default path is current folder
+            path = default_path
 
-    # set log path
-    log_path = path if path else './temp'
-    file_name = file_name if file_name else 'trinity.log'
+        file_name = file_name if file_name else 'trinity.log'
 
-    # create the log folder
-    try:
-        if not os.path.exists(log_path):
-            os.makedirs(log_path)
-    except Exception as error:
-        LOG.exception('Failed to set log path. Exception'.format(error))
-        log_path = '.'
-    finally:
-        log_settings['handlers']['default']['filename'] = '{}{}{}'\
-            .format(log_path, os.sep, file_name)
-
-    # set logger configuration
-    logging.config.dictConfig(log_settings)
+        return path + os.sep + file_name
 
 
-final_init_logger = BasicConfig().setup
-
-final_init_logger()
-LOG.debug('test')
+LoggerSetter = BasicConfig()
+init_logger = LoggerSetter.setup
+set_logger_level = LoggerSetter.set_level
