@@ -1,6 +1,6 @@
 # --*-- coding : utf-8 --*--
 """
-Package :
+Package : 
 
 Author  : Trinity Core Team
 
@@ -26,41 +26,25 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
-import platform
-import os
 
 
-# Trinity version for whole packages
-# version x.y.z
-#   This version will have same meaning as Linux
-#       x -- Production version with big different feature
-#       y -- Odd number means formal version, Even number means beta/development
-#            version
-#       z -- Count of fixing bugs
-__version__ = '0.3.0'
+def validate_basic_types(exception_class, error_code):
+    """
+    Description: Decorators for validating the Trinity basic types
 
+    :param exception_class: Exception class will be used by raise
+    :param error_code: error code will be filled inside the exception info.
+    :return:
+    """
+    def handler(validator_callback):
+        def wrapper(value):
+            if validator_callback(value) is True:
+                return value
+            else:
+                raise exception_class(
+                    error_code,
+                    error_code.value.format(value, type(value))
+                )
 
-# Trinity running OS type
-__os_platform__ = platform.system().upper() if platform.system() else 'LINUX'
-
-
-# Trinity running network settings
-__running_over_main_net__ = \
-    ('MainNet'.upper() == os.getenv('TRINITY_NET', '').upper().strip())
-
-
-# Database basic configuration. Default the mongodb is chosen.
-DATABASE_CONFIGURATION = {
-    'authentication': {
-        'user': os.getenv('DB_USER'),
-        'password': os.getenv('DB_PASSWORD'),
-    },
-    'type': os.getenv('DB_TYPE', 'mongodb'),
-    'name': os.getenv('DB_TRINITY', 'trinity')
-    if __running_over_main_net__ else os.getenv('DB_TRINITY', 'beta-trinity'),
-    'host': os.getenv('DB_HOST', '127.0.0.1'),
-    'port': int(os.getenv('DB_PORT', 27017))
-}
-
-
-# Supported Asset List Settings
+        return wrapper
+    return handler

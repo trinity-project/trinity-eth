@@ -1,6 +1,6 @@
 # --*-- coding : utf-8 --*--
 """
-Package :
+Package : 
 
 Author  : Trinity Core Team
 
@@ -26,41 +26,33 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
-import platform
-import os
+# Import System or 3rd-party libs
+from enum import IntEnum
+
+# Import Trinity Sw libs
+from trilibs.exceptions import TrinityException
 
 
-# Trinity version for whole packages
-# version x.y.z
-#   This version will have same meaning as Linux
-#       x -- Production version with big different feature
-#       y -- Odd number means formal version, Even number means beta/development
-#            version
-#       z -- Count of fixing bugs
-__version__ = '0.3.0'
+class EnumAssetCode(IntEnum):
+    """
+    Description: Asset type validation error code definition
+    """
+    # common error
+    ASSET_ERROR = 0x0
+
+    # Future asset typ support
+    ASSET_TYPE_BE_SUPPORTED_IN_FUTURE = 0x1
+
+    # Asset type or ID error code
+    ASSET_ID_OR_TYPE_NOT_FOUND = 0x40
+    ASSET_WITH_ERROR_TYPES = 0x41
 
 
-# Trinity running OS type
-__os_platform__ = platform.system().upper() if platform.system() else 'LINUX'
+class AssetException(TrinityException):
+    """Description: basic exception for asset validation"""
+    pass
 
 
-# Trinity running network settings
-__running_over_main_net__ = \
-    ('MainNet'.upper() == os.getenv('TRINITY_NET', '').upper().strip())
-
-
-# Database basic configuration. Default the mongodb is chosen.
-DATABASE_CONFIGURATION = {
-    'authentication': {
-        'user': os.getenv('DB_USER'),
-        'password': os.getenv('DB_PASSWORD'),
-    },
-    'type': os.getenv('DB_TYPE', 'mongodb'),
-    'name': os.getenv('DB_TRINITY', 'trinity')
-    if __running_over_main_net__ else os.getenv('DB_TRINITY', 'beta-trinity'),
-    'host': os.getenv('DB_HOST', '127.0.0.1'),
-    'port': int(os.getenv('DB_PORT', 27017))
-}
-
-
-# Supported Asset List Settings
+class AssetFutureException(TrinityException):
+    """Description: Asset will be used in future"""
+    pass
