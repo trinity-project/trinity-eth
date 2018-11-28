@@ -208,7 +208,7 @@ class RsmcMessage(RsmcBase):
             # Response message header
             response_message = RsmcResponsesMessage.create_message_header(
                 self.receiver, self.sender, RsmcResponsesMessage._message_name, self.channel_name, self.asset_type,
-                self.nonce, nego_nonce
+                self.nonce, nonce
             )
             response_message.update({'MessageBody': rsmc_sign_body})
             response_message.update({'Status': status.name})

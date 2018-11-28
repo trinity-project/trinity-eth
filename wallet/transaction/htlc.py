@@ -469,7 +469,7 @@ class HtlcMessage(HtlcBase):
             # Response message header
             response_message = HtlcResponsesMessage.create_message_header(
                 self.receiver, self.sender, HtlcResponsesMessage._message_name, self.channel_name, self.asset_type,
-                self.nonce, nego_nonce
+                self.nonce, nonce
             )
             response_message.update({'MessageBody': htlc_sign_body})
             response_message.update({'Router': self.router})

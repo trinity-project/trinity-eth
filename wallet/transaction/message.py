@@ -58,7 +58,10 @@ class MessageHeader(object):
             'NetMagic': get_magic()
         }
 
-        if nego_nonce and nego_nonce < nonce:
+        if not nego_nonce:
+            nego_nonce = nonce
+
+        if 1 < nego_nonce and nonce != nego_nonce:
             self.message_header.update({'ResetTxNonce': nego_nonce})
 
 
