@@ -264,7 +264,6 @@ class RsmcMessage(RsmcBase):
 
         # there're one trade need resign, we need adjust the nonce value
         if valid_trade and valid_trade.state in [EnumTradeState.confirming.name]:
-            nonce = valid_trade.nonce + 1
             payer_balance = valid_trade.balance
             payee_balance = valid_trade.peer_balance
         else:
@@ -408,7 +407,6 @@ class RsmcResponsesMessage(RsmcBase):
 
         # handle the resign body firstly
         resign_ack = None
-        resign_trade = None
         if self.resign_body:
             resign_ack, resign_trade = self.handle_resign_body(self.wallet, self.channel_name, self.resign_body)
 
@@ -418,57 +416,52 @@ class RsmcResponsesMessage(RsmcBase):
                     resign_trade.balance, resign_trade.peer_balance, self.payment, is_htlc_to_rsmc
                 )
 
-        # check the trade state by the nego_nonce if provided by peer
-        if self.nego_nonce:
-            # to check whether the negotiated nonce is legal or not
-            self.validate_negotiated_nonce()
+        # to check whether the negotiated nonce is legal or not
+        self.validate_negotiated_nonce()
 
+        # create RSMC response message with RoleIndex==1
         rsmc_sign_body = self.response(self.asset_type, self.payment, self.sender_balance, self.receiver_balance,
                                        1, self.hashcode)
 
         # get some common local variables
-        sign_hashcode, sign_rcode = self.get_rcode(self.channel_name, self.hashcode)
         payer_balance = int(self.sender_balance)
         payee_balance = int(self.receiver_balance)
         payment = int(self.payment)
-        commitment = None
-
         # use this nonce for following message of current transaction
         nonce = self.nego_nonce or self.nonce
 
-        # start to sign this new transaction and save it
-        try:
-            old_trade = Channel.query_trade(self.channel_name, self.nonce)
-            payment = int(old_trade.payment)
+        # query the trade by nonce
+        current_trade = Channel.query_trade(self.channel_name, nonce)
+        if current_trade.commitment:
+            # It means that the transaction is already signed during resign
+            # previous transaction record.
+            commitment = current_trade.commitment
+        else:
+            # start to sign this new transaction and save it
+            # check balance
+            self.check_balance(self.channel_name, self.asset_type, self.payer_address, payer_balance,
+                               self.payee_address, payee_balance, hlock_to_rsmc=is_htlc_to_rsmc, payment=payment)
 
-            if self.nonce == nonce:
-                commitment = old_trade.commitment
-        except:
-            pass
-        finally:
-            if not commitment:
-                # check balance
-                self.check_balance(self.channel_name, self.asset_type, self.payer_address, payer_balance,
-                                   self.payee_address, payee_balance, hlock_to_rsmc=is_htlc_to_rsmc, payment=payment)
+            # sign the transaction
+            sign_hashcode, sign_rcode = self.get_rcode(self.channel_name, self.hashcode)
+            commitment = RsmcResponsesMessage.sign_content(
+                self.wallet, self._sign_type_list, [self.channel_name, nonce, self.payer_address, payer_balance,
+                                                    self.payee_address, payee_balance, sign_hashcode, sign_rcode]
+            )
 
-                # sign the transaction
-                commitment = RsmcResponsesMessage.sign_content(
-                    self.wallet, self._sign_type_list, [self.channel_name, nonce, self.payer_address, payer_balance,
-                                                        self.payee_address, payee_balance, sign_hashcode, sign_rcode]
-                )
+            # generate the rsmc trade part
+            rsmc_trade = Channel.rsmc_trade(
+                type=EnumTradeType.TRADE_TYPE_RSMC, role=EnumTradeRole.TRADE_ROLE_FOUNDER,
+                asset_type=self.asset_type, balance=payer_balance, peer_balance=payee_balance, payment=payment,
+                hashcode=sign_hashcode, rcode=sign_rcode, commitment=commitment
+            )
 
-                # generate the rsmc trade part
-                rsmc_trade = Channel.rsmc_trade(
-                    type=EnumTradeType.TRADE_TYPE_RSMC, role=EnumTradeRole.TRADE_ROLE_FOUNDER,
-                    asset_type=self.asset_type, balance=payer_balance, peer_balance=payee_balance, payment=payment,
-                    hashcode=sign_hashcode, rcode=sign_rcode, commitment=commitment
-                )
+            # update the transaction
+            Channel.update_trade(self.channel_name, nonce, **rsmc_trade)
 
-                Channel.update_trade(self.channel_name, nonce, **rsmc_trade)
-
-        # if negotiated nonce by peer, delete the transaction with self.nonce ????
-        if nonce != self.nonce:
-            Channel.delete_trade(self.channel_name, self.nonce)
+            # if negotiated nonce by peer, delete the transaction with self.nonce
+            if nonce != self.nonce:
+                Channel.delete_trade(self.channel_name, self.nonce)
 
         # peer has already sign the new transaction with nonce
         if self.commitment:
@@ -482,8 +475,10 @@ class RsmcResponsesMessage(RsmcBase):
             )
 
             # update this trade confirmed state
-            Channel.update_trade(self.channel_name, nonce, commitment=commitment, peer_commitment=self.commitment,
-                                 state=EnumTradeState.confirmed.name)
+            Channel.update_channel(
+                self.channel_name, nonce, peer_commitment=self.commitment,
+                state=EnumTradeState.confirmed.name
+            )
             need_update_balance = True
 
             rsmc_sign_body.update({'Commitment': commitment})
@@ -501,7 +496,6 @@ class RsmcResponsesMessage(RsmcBase):
         """
         need_update_balance = False
         # handle the resign body firstly
-        resign_ack = None
         if self.resign_body:
             resign_ack, _ = self.handle_resign_body(self.wallet, self.channel_name, self.resign_body)
 

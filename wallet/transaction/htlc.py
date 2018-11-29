@@ -171,8 +171,8 @@ class RResponse(TransactionBase):
 
             htlc_trade = self.get_htlc_trade_by_hashr(next_channel, self.hashcode)
             if htlc_trade.role == EnumTradeRole.TRADE_ROLE_PARTNER.name and next_channel != htlc_trade.channel:
-                LOG.warning('Why the channel is different. next_channel<{}>, stored channel<{}>' \
-                          .format(next_channel, htlc_trade.channel))
+                LOG.warning('Why the channel is different. next_channel<{}>, stored channel<{}>'
+                            .format(next_channel, htlc_trade.channel))
 
             # notify the previous node the R-code
             LOG.debug('Payment get channel {}/{}'.format(next_channel, self.hashcode))
@@ -552,7 +552,6 @@ class HtlcMessage(HtlcBase):
 
         # there're one trade need resign, we need adjust the nonce value
         if valid_trade and valid_trade.state in [EnumTradeState.confirming.name]:
-            nonce = valid_trade.nonce + 1
             payer_balance = valid_trade.balance
             payee_balance = valid_trade.peer_balance
         else:
@@ -709,10 +708,10 @@ class HtlcResponsesMessage(HtlcBase):
                     resign_trade.balance, resign_trade.peer_balance, self.payment, is_htlc_type=True
                 )
 
-        # if transaction partner provide the negotiated nonce
-        if self.nego_nonce:
-            self.validate_negotiated_nonce()
+        # to check whether the negotiated nonce is legal or not
+        self.validate_negotiated_nonce()
 
+        # create htlc response message
         htlc_sign_body = self.response(self.sender_balance, self.receiver_balance, self.payment, self.hashcode, 1,
                                        self.delay_block)
 
@@ -721,59 +720,51 @@ class HtlcResponsesMessage(HtlcBase):
         payer_balance = int(self.sender_balance)
         payee_balance = int(self.receiver_balance)
         payment = int(self.payment)
-        commitment = None
-        delay_commitment = None
 
         # use this nonce for following message of current transaction
         nonce = self.nego_nonce or self.nonce
-        old_trade = None
 
-        # start to sign this new transaction and save it
-        try:
-            old_trade = Channel.query_trade(self.channel_name, self.nonce)
-            payment = int(old_trade.payment)
+        # Get current transaction record
+        current_trade = Channel.query_trade(self.channel_name, nonce)
+        if current_trade.commitment and current_trade.delay_commitment:
+            # it means the htlc has already signed before.
+            commitment = current_trade.commitment
+            delay_commitment = current_trade.delay_commitment
+        else:
+            # start to sign this new transaction and save it
+            # check balance
+            self.check_balance(self.channel_name, self.asset_type, self.payer_address, payer_balance,
+                               self.payee_address, payee_balance, is_htcl_type=True, payment=payment)
 
-            if self.nonce == nonce:
-                commitment = old_trade.commitment
-                delay_commitment = old_trade.delay_commitment
-        except:
-            old_trade = None
-            pass
-        finally:
-            if not (commitment and delay_commitment):
-                # check balance
-                self.check_balance(self.channel_name, self.asset_type, self.payer_address, payer_balance,
-                                   self.payee_address, payee_balance, is_htcl_type=True, payment=payment)
+            # sign the transaction with 2 parts: rsmc and htlc-locked part
+            commitment = self.sign_content(
+                self.wallet, RsmcMessage._sign_type_list,
+                [self.channel_name, nonce, self.payer_address, payer_balance,
+                 self.payee_address, payee_balance, sign_hashcode, sign_rcode]
+            )
 
-                # sign the transaction with 2 parts: rsmc and htlc-locked part
-                commitment = self.sign_content(
-                    self.wallet, RsmcMessage._sign_type_list,
-                    [self.channel_name, nonce, self.payer_address, payer_balance,
-                     self.payee_address, payee_balance, sign_hashcode, sign_rcode]
-                )
+            delay_commitment = self.sign_content(
+                self.wallet, self._sign_type_list,
+                [self.channel_name, self.payer_address, self.payee_address, int(self.delay_block),
+                 int(payment), self.hashcode],
+                start=5
+            )
 
-                delay_commitment = self.sign_content(
-                    self.wallet, self._sign_type_list,
-                    [self.channel_name, self.payer_address, self.payee_address, int(self.delay_block),
-                     int(payment), self.hashcode],
-                    start=5
-                )
+            # generate the htlc trade
+            htlc_trade = Channel.htlc_trade(
+                type=EnumTradeType.TRADE_TYPE_HTLC, role=EnumTradeRole.TRADE_ROLE_FOUNDER, asset_type=self.asset_type,
+                balance=payer_balance, peer_balance=payee_balance, payment=payment, hashcode=self.hashcode,
+                delay_block=self.delay_block, commitment=commitment, delay_commitment=delay_commitment)
 
-                # generate the htlc trade
-                htlc_trade = Channel.htlc_trade(
-                    type=EnumTradeType.TRADE_TYPE_HTLC, role=EnumTradeRole.TRADE_ROLE_FOUNDER, asset_type=self.asset_type,
-                    balance=payer_balance, peer_balance=payee_balance, payment=payment, hashcode=self.hashcode,
-                    delay_block=self.delay_block, commitment=commitment, delay_commitment=delay_commitment)
+            # delete the transaction with self.nonce ????
+            if nonce != self.nonce:
+                # to get the the channel info of router from old trade
+                old_trade = Channel.query_trade(self.channel_name, self.nonce)
+                htlc_trade.update({'channel': old_trade.channel})
+                Channel.delete_trade(self.channel_name, self.nonce)
 
-                # channel router info
-                if old_trade and old_trade.channel:
-                    htlc_trade.update({'channel': old_trade.channel})
-
-                Channel.update_trade(self.channel_name, nonce, **htlc_trade)
-
-        # delete the transaction with self.nonce ????
-        if nonce != self.nonce:
-            Channel.delete_trade(self.channel_name, self.nonce)
+            # update the transaction info
+            Channel.update_trade(self.channel_name, nonce, **htlc_trade)
 
         # peer has already sign the new transaction with nonce
         if self.commitment and self.delay_commitment:

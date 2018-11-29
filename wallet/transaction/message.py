@@ -816,7 +816,8 @@ class TransactionBase(Message):
         # to validate the negotiated nonce
         valid_trade, valid_nonce = Channel.latest_valid_trade(self.channel_name)
 
-        if valid_nonce and valid_nonce+1 == self.nego_nonce:
+        nonce = self.nego_nonce or self.nonce
+        if valid_nonce and valid_nonce+1 == nonce:
             return valid_trade
         else:
             raise GoTo(
