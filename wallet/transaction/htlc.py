@@ -397,7 +397,6 @@ class HtlcMessage(HtlcBase):
     def handle(self):
         super(HtlcMessage, self).handle()
 
-        trigger_rresponse = False
         status = EnumResponseStatus.RESPONSE_OK
         resign_ack = None
         resign_request = None
@@ -755,6 +754,9 @@ class HtlcResponsesMessage(HtlcBase):
                 type=EnumTradeType.TRADE_TYPE_HTLC, role=EnumTradeRole.TRADE_ROLE_FOUNDER, asset_type=self.asset_type,
                 balance=payer_balance, peer_balance=payee_balance, payment=payment, hashcode=self.hashcode,
                 delay_block=self.delay_block, commitment=commitment, delay_commitment=delay_commitment)
+
+            # Remove the channel from the dict to avoid re-write previous correct value
+            htlc_trade.pop('channel')
 
             # delete the transaction with self.nonce ????
             if nonce != self.nonce:
