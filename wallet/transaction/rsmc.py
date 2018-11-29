@@ -475,7 +475,7 @@ class RsmcResponsesMessage(RsmcBase):
             )
 
             # update this trade confirmed state
-            Channel.update_channel(
+            Channel.update_trade(
                 self.channel_name, nonce, peer_commitment=self.commitment,
                 state=EnumTradeState.confirmed.name
             )

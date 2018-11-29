@@ -628,7 +628,7 @@ class TransactionBase(Message):
         trade_state = pre_trade.state
 
         # local variables
-        resign_body = {'Nonce' : str(pre_nonce)}
+        resign_body = {'Nonce': str(pre_nonce)}
         need_update_balance = False
 
         # is partner role of this transaction
@@ -640,7 +640,7 @@ class TransactionBase(Message):
                     Channel.update_trade(channel_name, pre_nonce, state=EnumTradeState.confirmed.name)
 
                     # need update channel balance
-                    need_update_balance = True
+                    # need_update_balance = True
                 else:
                     # need resign this RSMC transaction by peer
                     resign_body.update({'Commitment': pre_trade.commitment})
@@ -649,7 +649,7 @@ class TransactionBase(Message):
                     # update the trade to confirmed state directly
                     Channel.update_trade(channel_name, pre_nonce, state=EnumTradeState.confirming.name)
                     # need update channel balance
-                    need_update_balance = True
+                    # need_update_balance = True
                 else:
                     # need resign this HTLC transaction by peer
                     resign_body.update({'Commitment': pre_trade.commitment})
@@ -660,16 +660,16 @@ class TransactionBase(Message):
                 return None, pre_trade
 
             # need update the channel balance or not???
-            if need_update_balance:
-                channel = Channel(channel_name)
-                self_address, _, _ = uri_parser(wallet_url)
-                peer_address, _, _ = uri_parser(channel.peer_uri(wallet_url))
-
-                # ToDo: if need, here need add asset type check in future
-                Channel.update_channel(channel_name, balance={
-                    self_address: {pre_trade.asset_type: pre_trade.balance},
-                    peer_address: {pre_trade.asset_type: pre_trade.peer_balance}
-                })
+            # if need_update_balance:
+            #     channel = Channel(channel_name)
+            #     self_address, _, _ = uri_parser(wallet_url)
+            #     peer_address, _, _ = uri_parser(channel.peer_uri(wallet_url))
+            #
+            #     # ToDo: if need, here need add asset type check in future
+            #     Channel.update_channel(channel_name, balance={
+            #         self_address: {pre_trade.asset_type: pre_trade.balance},
+            #         peer_address: {pre_trade.asset_type: pre_trade.peer_balance}
+            #     })
         elif is_resign_response is True and EnumTradeRole.TRADE_ROLE_FOUNDER.name == trade_role and \
                 (EnumTradeState.confirmed.name == trade_state or (EnumTradeState.confirming.name == trade_state and
                                                                   EnumTradeType.TRADE_TYPE_HTLC.name == trade_type)):
