@@ -46,8 +46,33 @@ class EnumTrinityNumberError(Enum):
     TRINITY_NUMBER_WITH_ILLEGAL_FORMAT = \
         '{} number<{}> not match to the regexp {}!'
 
+    # operator error definition
     TRINITY_OPERATOR_WITH_INVALID_TYPE = \
-        'Number<{}> should be int or TrinityNumber Type, but {} Type!'
+        'Number<{}> should be int or TrinityNumber type, but {} type!'
+
+    TRINITY_ADD_WITH_ERROR_TYPE = \
+        'Operator "+" should be with int or TrinityNumber type, but {} type!'
+
+    TRINITY_SUB_WITH_ERROR_TYPE = \
+        'Operator "-" should be with int or TrinityNumber type, but {} type!'
+
+    TRINITY_EQUAL_WITH_ERROR_TYPE = \
+        'Operator "==" should be with int or TrinityNumber type, but {} type!'
+
+    TRINITY_NOT_EQUAL_WITH_ERROR_TYPE = \
+        'Operator "!=" should be with int or TrinityNumber type, but {} type!'
+
+    TRINITY_GREATER_EQUAL_WITH_ERROR_TYPE = \
+        'Operator ">=" should be with int or TrinityNumber type, but {} type!'
+
+    TRINITY_GREATER_THAN_WITH_ERROR_TYPE = \
+        'Operator ">" should be with int or TrinityNumber type, but {} type!'
+
+    TRINITY_LESS_EQUAL_WITH_ERROR_TYPE = \
+        'Operator "<=" should be with int or TrinityNumber type, but {} type!'
+
+    TRINITY_LESS_THAN_WITH_ERROR_TYPE = \
+        'Operator "<" should be with int or TrinityNumber type, but {} type!'
 
 
 class TrinityNumberException(TrinityException):
@@ -128,38 +153,92 @@ class TrinityNumber(object):
             return r'1[0]{9}$|\d{1,9}$|\d{1,9}\.\d+$', 8, pow(10, 8)
 
     def __add__(self, other):
-        """
-        Description: Add operators
-        :param other: int or TrinityNumber type
-        :return:
-        """
-        if isinstance(other, int):
-            return self.number + other
-        elif isinstance(other, TrinityNumber):
-            return self.number + other.number
-        else:
-            raise TrinityNumberException(
-                EnumTrinityNumberError.TRINITY_OPERATOR_WITH_INVALID_TYPE.value
-                .format(other, type(other))
-            )
+        """ Return self.number + other or self.number + other.number """
+        other = self.__other__(
+            other, EnumTrinityNumberError.TRINITY_ADD_WITH_ERROR_TYPE
+        )
+
+        return self.number.__add__(other)
 
     def __sub__(self, other):
+        """ Return self.number - other or self.number - other.number """
+        other = self.__other__(
+            other, EnumTrinityNumberError.TRINITY_SUB_WITH_ERROR_TYPE
+        )
+
+        return self.number.__sub__(other)
+
+    def __eq__(self, other):
+        """ Return self.number == other or self.number == other.number """
+        other = self.__other__(
+            other, EnumTrinityNumberError.TRINITY_EQUAL_WITH_ERROR_TYPE
+        )
+
+        return self.number.__eq__(other)
+
+    def __ne__(self, other):
+        """ Return self.number != other or self.number != other.number """
+        other = self.__other__(
+            other, EnumTrinityNumberError.TRINITY_NOT_EQUAL_WITH_ERROR_TYPE
+        )
+
+        return self.number.__ne__(other)
+
+    def __le__(self, other):
+        """ Return self.number <= other or self.number <= other.number """
+        other = self.__other__(
+            other, EnumTrinityNumberError.TRINITY_LESS_EQUAL_WITH_ERROR_TYPE
+        )
+
+        return self.number.__le__(other)
+
+    def __lt__(self, other):
+        """" Return self.number < other or self.number < other.number """
+        other = self.__other__(
+            other, EnumTrinityNumberError.TRINITY_LESS_THAN_WITH_ERROR_TYPE
+        )
+
+        return self.number.__lt__(other)
+
+    def __ge__(self, other):
+        """ Return self.number >= other or self.number > other.number """
+        other = self.__other__(
+            other, EnumTrinityNumberError.TRINITY_GREATER_EQUAL_WITH_ERROR_TYPE
+        )
+
+        return self.number.__ge__(other)
+
+    def __gt__(self, other):
+        """ Return self.number > other or self.number > other.number """
+        other = self.__other__(
+            other, EnumTrinityNumberError.TRINITY_GREATER_THAN_WITH_ERROR_TYPE
+        )
+
+        return self.number.__gt__(other)
+
+    @classmethod
+    def __other__(cls, other, error_code=None):
         """
-        Description: subtract operators
-        :param other: int or TrinityNumber type
+        Description: pre-process the other number before operating with
+                     TrinityNumber.
+
+        :param other: the number is used to operate with self
+        :param error_code: Defined in EnumTrinityNumberError
         :return:
         """
         if isinstance(other, int):
-            return self.number - other
+            return other
         elif isinstance(other, TrinityNumber):
-            return self.number - other.number
-        else:
+            return other.number
+
+        # raise error or return 0
+        if error_code:
             raise TrinityNumberException(
-                EnumTrinityNumberError.TRINITY_OPERATOR_WITH_INVALID_TYPE.value
+                error_code, error_code.value.format(other, type(other))
+            )
+        else:
+            LOG.error(
+                'Number<{}> should be int or TrinityNumber type, but {} type'
                 .format(other, type(other))
             )
-
-
-if '__main__' == __name__:
-    a = TrinityNumber('100884.001')
-    print(type(a-TrinityNumber('1')))
+            return 0
