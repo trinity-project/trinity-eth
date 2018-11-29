@@ -424,6 +424,7 @@ class RsmcResponsesMessage(RsmcBase):
                                        1, self.hashcode)
 
         # get some common local variables
+        sign_hashcode, sign_rcode = self.get_rcode(self.channel_name, self.hashcode)
         payer_balance = int(self.sender_balance)
         payee_balance = int(self.receiver_balance)
         payment = int(self.payment)
@@ -443,7 +444,6 @@ class RsmcResponsesMessage(RsmcBase):
                                self.payee_address, payee_balance, hlock_to_rsmc=is_htlc_to_rsmc, payment=payment)
 
             # sign the transaction
-            sign_hashcode, sign_rcode = self.get_rcode(self.channel_name, self.hashcode)
             commitment = RsmcResponsesMessage.sign_content(
                 self.wallet, self._sign_type_list, [self.channel_name, nonce, self.payer_address, payer_balance,
                                                     self.payee_address, payee_balance, sign_hashcode, sign_rcode]
