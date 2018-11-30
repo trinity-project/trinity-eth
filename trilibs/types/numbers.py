@@ -43,8 +43,12 @@ class EnumTrinityNumberError(Enum):
     """
     Description: Trinity number error code definition
     """
+    # General error definition
     TRINITY_NUMBER_WITH_ILLEGAL_FORMAT = \
         '{} number<{}> not match to the regexp {}!'
+
+    TRINITY_CONVERT_NOT_SUPPORT_SUCH_TYPE = \
+        'Supported type: int, str or TrinityNumber, but {} type!'
 
     # operator error definition
     TRINITY_OPERATOR_WITH_INVALID_TYPE = \
@@ -75,6 +79,26 @@ class EnumTrinityNumberError(Enum):
         'Operator "<" should be with int or TrinityNumber type, but {} type!'
 
 
+global_trinity_triple_unit = {
+    # Trinity number triple unit definition.
+    # Define 3 useful parameters: regular expression, exponent,
+    # and multiply coefficient.
+    #
+    # Utility of these parameters:
+    #   regular expression: Protect the TrinityNumber is in legal range
+    #   exponent: Adjust the string for displaying the data correctly
+    #   multiply coefficient: Change one float or int number to correct big
+    #                         number, especially for float or double, it could
+    #                         keep the precision of the number.
+    #
+    # ATTENTION: Currently, only TNC definition is correct. Please update this
+    #            dict if needed in the future.
+    'ETH': (None, 18, pow(10, 18)),
+    'NEO': (None, 1, pow(10, 0)),
+    'TNC': (r'1[0]{9}$|\d{1,9}$|\d{1,9}\.\d+$', 8, pow(10, 8))
+}
+
+
 class TrinityNumberException(TrinityException):
     """Description: Trinity number base exception class"""
     pass
@@ -99,7 +123,7 @@ class TrinityNumber(object):
 
         self.asset_type = asset_type.upper()
         self.pattern, self.exponent, self.coefficient = \
-            self.get_triple_unit(self.asset_type)
+            get_triple_unit(self.asset_type)
 
         # check whether this number is matched with the regular expression
         if not re.match(self.pattern, number):
@@ -132,25 +156,6 @@ class TrinityNumber(object):
             return '{}.{}'.format(self.integer, fragment.rstrip('0'))
 
         return '{}'.format(self.integer)
-
-    @classmethod
-    def get_triple_unit(cls, asset_type):
-        """
-        Description: triple-unit property of the trinity number:
-                     regular expression;
-                     number exponent;
-                     number multiply coefficient
-        :return:
-        """
-        if asset_type in ['ETH']:
-            # TODO: replace the return value in the future
-            return None, 18, pow(10, 18)
-        elif asset_type in ['NEO']:
-            # TODO: replace the return value in the future
-            return None, 1, pow(10, 0)
-        else:
-            # Default: TNC type
-            return r'1[0]{9}$|\d{1,9}$|\d{1,9}\.\d+$', 8, pow(10, 8)
 
     def __add__(self, other):
         """ Return self.number + other or self.number + other.number """
@@ -242,3 +247,53 @@ class TrinityNumber(object):
                 .format(other, type(other))
             )
             return 0
+
+
+# Auxiliary method to handle Trinity Number
+def convert_big_number(big_number, asset_type='TNC'):
+    """
+    Description: Convert big number to string
+
+    :param big_number: Big number need to be converted
+    :param asset_type: Default asset type: TNC
+    :return:
+    """
+    if isinstance(big_number, (int, str)):
+        _, exp, _ = get_triple_unit(asset_type)
+        big_number = big_number.__str__().zfill(exp)
+        dot_position = len(big_number) - exp
+        big_number = \
+            big_number[0:dot_position] + '.' + big_number[dot_position:]
+
+        big_number = big_number.strip(' 0')
+        if big_number.startswith('.'):
+            big_number = '0' + big_number
+
+        return big_number.strip('.')
+    elif isinstance(big_number, TrinityNumber):
+        return big_number.__str__()
+    else:
+        raise (
+            EnumTrinityNumberError.TRINITY_CONVERT_NOT_SUPPORT_SUCH_TYPE,
+            EnumTrinityNumberError.TRINITY_CONVERT_NOT_SUPPORT_SUCH_TYPE.value
+            .format()
+        )
+
+
+def get_triple_unit(asset_type='TNC'):
+    """
+    Description: triple-unit property of the trinity number:
+                 regular expression;
+                 number exponent;
+                 number multiply coefficient
+
+    :param asset_type: Asset type. Default is TNC type
+    :return:
+    """
+    if isinstance(asset_type, str):
+        asset_type = asset_type.upper()
+
+    return global_trinity_triple_unit.get(
+        asset_type,
+        global_trinity_triple_unit.get('TNC')
+    )

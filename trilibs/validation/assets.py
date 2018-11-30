@@ -38,7 +38,7 @@ class EnumAssetCode(IntEnum):
     Description: Asset type validation error code definition
     """
     # common error
-    ASSET_ERROR = 0x0
+    ASSET_ID_OR_TYPE_ERROR = 0x0
 
     # Future asset typ support
     ASSET_TYPE_BE_SUPPORTED_IN_FUTURE = 0x1
