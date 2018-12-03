@@ -37,7 +37,7 @@ class SettingsHolder:
         self.NODEURL = "https://ropsten.infura.io"
         self.TNC = SUPPORTED_ASSET_TYPE['TNC']
         self.TNC_abi = erc20_asset_abi
-        self.Eth_Contract_address = "0x8A1956591FF19Aa4AdA437AF158404acfA40876C"
+        self.Eth_Contract_address = "0x5eC045d849539688e6Ab70946c94834AEED84d74"
         self.Eth_Contract_abi = eth_contract_abi
         self.ETH_Data_Contract_address = "0xD634eFCA91cA716A46C3C603e29200b3907e4524"
         self.create_client()
