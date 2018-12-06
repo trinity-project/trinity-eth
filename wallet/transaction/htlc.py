@@ -723,6 +723,23 @@ class HtlcResponsesMessage(HtlcBase):
         # use this nonce for following message of current transaction
         nonce = self.nego_nonce or self.nonce
 
+        # special case when nego-nonce is setting
+        if nonce != self.nonce:
+            # get previous record
+            old_trade = Channel.query_trade(self.channel_name, self.nonce)
+
+            # generate the htlc trade
+            htlc_trade = Channel.htlc_trade(
+                type=EnumTradeType.TRADE_TYPE_HTLC, role=EnumTradeRole.TRADE_ROLE_FOUNDER, asset_type=self.asset_type,
+                balance=payer_balance, peer_balance=payee_balance, payment=payment, hashcode=self.hashcode,
+                delay_block=old_trade.delay_block, channel=old_trade.channel)
+            #
+            # Update the trade or add new one
+            self.record_transaction(nonce, **htlc_trade)
+
+            # delete old one
+            Channel.delete_trade(self.channel_name, self.nonce)
+
         # Get current transaction record
         current_trade = Channel.query_trade(self.channel_name, nonce)
         if current_trade.commitment and current_trade.delay_commitment:
@@ -749,24 +766,10 @@ class HtlcResponsesMessage(HtlcBase):
                 start=5
             )
 
-            # generate the htlc trade
-            htlc_trade = Channel.htlc_trade(
-                type=EnumTradeType.TRADE_TYPE_HTLC, role=EnumTradeRole.TRADE_ROLE_FOUNDER, asset_type=self.asset_type,
-                balance=payer_balance, peer_balance=payee_balance, payment=payment, hashcode=self.hashcode,
-                delay_block=self.delay_block, commitment=commitment, delay_commitment=delay_commitment)
-
-            # Remove the channel from the dict to avoid re-write previous correct value
-            htlc_trade.pop('channel')
-
-            # delete the transaction with self.nonce ????
-            if 1 < nonce < self.nonce:
-                # to get the the channel info of router from old trade
-                old_trade = Channel.query_trade(self.channel_name, self.nonce)
-                htlc_trade.update({'channel': old_trade.channel})
-                Channel.delete_trade(self.channel_name, self.nonce)
-
             # update the transaction info
-            Channel.update_trade(self.channel_name, nonce, **htlc_trade)
+            Channel.update_trade(
+                self.channel_name, nonce, commitment=commitment, delay_commitment=delay_commitment
+            )
 
         # peer has already sign the new transaction with nonce
         if self.commitment and self.delay_commitment:

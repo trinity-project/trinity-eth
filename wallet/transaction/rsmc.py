@@ -431,14 +431,26 @@ class RsmcResponsesMessage(RsmcBase):
         # use this nonce for following message of current transaction
         nonce = self.nego_nonce or self.nonce
 
+        # if negotiated nonce by peer, delete the transaction with self.nonce
+        if nonce != self.nonce:
+            # generate the rsmc trade part
+            rsmc_trade = Channel.rsmc_trade(
+                type=EnumTradeType.TRADE_TYPE_RSMC, role=EnumTradeRole.TRADE_ROLE_FOUNDER,
+                asset_type=self.asset_type, balance=payer_balance, peer_balance=payee_balance, payment=payment,
+                hashcode=sign_hashcode, rcode=sign_rcode
+            )
+            self.record_transaction(nonce, **rsmc_trade)
+
+            if nonce < self.nonce:
+                Channel.delete_trade(self.channel_name, self.nonce)
+
         # query the trade by nonce
-        try:
-            current_trade = Channel.query_trade(self.channel_name, nonce)
-            if current_trade.commitment:
-                # It means that the transaction is already signed during resign
-                # previous transaction record.
-                commitment = current_trade.commitment
-        except Exception as error:
+        current_trade = Channel.query_trade(self.channel_name, nonce)
+        if current_trade.commitment:
+            # It means that the transaction is already signed during resign
+            # previous transaction record.
+            commitment = current_trade.commitment
+        else:
             # start to sign this new transaction and save it
             # check balance
             self.check_balance(self.channel_name, self.asset_type, self.payer_address, payer_balance,
@@ -450,19 +462,8 @@ class RsmcResponsesMessage(RsmcBase):
                                                     self.payee_address, payee_balance, sign_hashcode, sign_rcode]
             )
 
-            # generate the rsmc trade part
-            rsmc_trade = Channel.rsmc_trade(
-                type=EnumTradeType.TRADE_TYPE_RSMC, role=EnumTradeRole.TRADE_ROLE_FOUNDER,
-                asset_type=self.asset_type, balance=payer_balance, peer_balance=payee_balance, payment=payment,
-                hashcode=sign_hashcode, rcode=sign_rcode, commitment=commitment
-            )
-
             # update the transaction
-            Channel.update_trade(self.channel_name, nonce, **rsmc_trade)
-
-            # if negotiated nonce by peer, delete the transaction with self.nonce
-            if nonce != self.nonce:
-                Channel.delete_trade(self.channel_name, self.nonce)
+            Channel.update_trade(self.channel_name, nonce, commitment=commitment)
 
         # peer has already sign the new transaction with nonce
         if self.commitment:
