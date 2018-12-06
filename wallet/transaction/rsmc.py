@@ -432,12 +432,13 @@ class RsmcResponsesMessage(RsmcBase):
         nonce = self.nego_nonce or self.nonce
 
         # query the trade by nonce
-        current_trade = Channel.query_trade(self.channel_name, nonce)
-        if current_trade.commitment:
-            # It means that the transaction is already signed during resign
-            # previous transaction record.
-            commitment = current_trade.commitment
-        else:
+        try:
+            current_trade = Channel.query_trade(self.channel_name, nonce)
+            if current_trade.commitment:
+                # It means that the transaction is already signed during resign
+                # previous transaction record.
+                commitment = current_trade.commitment
+        except Exception as error:
             # start to sign this new transaction and save it
             # check balance
             self.check_balance(self.channel_name, self.asset_type, self.payer_address, payer_balance,
