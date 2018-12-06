@@ -759,7 +759,7 @@ class HtlcResponsesMessage(HtlcBase):
             htlc_trade.pop('channel')
 
             # delete the transaction with self.nonce ????
-            if nonce != self.nonce:
+            if 1 < nonce < self.nonce:
                 # to get the the channel info of router from old trade
                 old_trade = Channel.query_trade(self.channel_name, self.nonce)
                 htlc_trade.update({'channel': old_trade.channel})
