@@ -738,7 +738,8 @@ class HtlcResponsesMessage(HtlcBase):
             self.record_transaction(nonce, **htlc_trade)
 
             # delete old one
-            Channel.delete_trade(self.channel_name, self.nonce)
+            if nonce < self.nonce:
+                Channel.delete_trade(self.channel_name, self.nonce)
 
         # Get current transaction record
         current_trade = Channel.query_trade(self.channel_name, nonce)
