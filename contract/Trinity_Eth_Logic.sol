@@ -92,9 +92,13 @@ contract VerifyTrinitySignature{
 
         bytes32 data_hash;
         address recover_addr;
-        data_hash=keccak256(channelId, sender, receiver, lockPeriod, lockAmount,lockHash);
+        //data_hash=keccak256(channelId, sender, receiver, lockPeriod, lockAmount,lockHash);
+        data_hash = keccak256(abi.encodePacked(channelId, sender, receiver, lockPeriod, lockAmount,lockHash));        
         recover_addr=_recoverAddressFromSignature(signature,data_hash);
         return recover_addr;
+        
+
+        
     }
     
      /*
@@ -148,7 +152,8 @@ contract VerifyTrinitySignature{
 
         bytes32 data_hash;
         address recover_addr;
-        data_hash=keccak256(channelId, nonce, addressA, balanceA, addressB, balanceB, lockHash, secret);
+        data_hash=keccak256(abi.encodePacked(channelId, nonce, addressA, balanceA, addressB, balanceB, lockHash, secret));
+        
         recover_addr=_recoverAddressFromSignature(signature,data_hash);
         return recover_addr;
     }    
@@ -186,7 +191,7 @@ contract VerifyTrinitySignature{
 
         bytes32 data_hash;
         address recover_addr;
-        data_hash=keccak256(channelId, nonce, addressA, balanceA, addressB, balanceB);
+        data_hash=keccak256(abi.encodePacked(channelId, nonce, addressA, balanceA, addressB, balanceB));
         recover_addr=_recoverAddressFromSignature(signature,data_hash);
         return recover_addr;
     }
@@ -414,6 +419,7 @@ contract TrinityContractCore is Owner, VerifyTrinitySignature, TrinityEvent{
                                bytes closerSignature,
                                bytes partnerSignature) external whenNotPaused{
 
+        uint256 depositTotalBalance = 0;
         uint256 closeTotalBalance = 0;
         bool  mutex = false;
  
@@ -435,24 +441,50 @@ contract TrinityContractCore is Owner, VerifyTrinitySignature, TrinityEvent{
         require(getChannelStatus(channelId) == OPENING, "check channel status");
         
         require(mutex == false);
-        mutex = true;        
+        mutex = true;          
         
         //sum of both balance should not larger than total deposited assets
+        depositTotalBalance = getChannelBalance(channelId);
         closeTotalBalance = funderBalance.add256(partnerBalance);
-        require(closeTotalBalance == getChannelBalance(channelId),"check channel balance");
- 
-        bool callResult = address(trinityDataContract).call(bytes4(keccak256("quickCloseChannel(bytes32,address,uint256,address,uint256)")),
-                                                channelId,
-                                                funder,
-                                                funderBalance,
-                                                partner,
-                                                partnerBalance);
-
-        require(callResult == true, "call result");
+        require(closeTotalBalance <= depositTotalBalance,"check channel balance");
+        
+        handleQuickCloseChannel(msg.sender,channelId, funder, funderBalance, partner, partnerBalance, depositTotalBalance);
         
         mutex = false;
+        emit QuickCloseChannel(channelId, funder, funderBalance, partner, partnerBalance); 
+    }
+
+    function handleQuickCloseChannel(address invoker,
+                                bytes32 channelId,
+                                address funder,
+                                uint256 funderBalance,
+                                address partner,
+                                uint256 partnerBalance,
+                                uint256 depositTotalBalance) internal{
+        uint256 peerBalance = 0;
+        bool callResult = false;
         
-        emit QuickCloseChannel(channelId, funder, funderBalance, partner, partnerBalance);
+        if (invoker == funder){
+            
+            peerBalance = depositTotalBalance.sub256(funderBalance);
+            callResult = address(trinityDataContract).call(bytes4(keccak256("quickCloseChannel(bytes32,address,uint256,address,uint256)")),
+                                            channelId,
+                                            funder,
+                                            funderBalance,
+                                            partner,
+                                            peerBalance);            
+        }
+        else{
+            peerBalance = depositTotalBalance.sub256(partnerBalance);
+            callResult = address(trinityDataContract).call(bytes4(keccak256("quickCloseChannel(bytes32,address,uint256,address,uint256)")),
+                                            channelId,
+                                            funder,
+                                            peerBalance,
+                                            partner,
+                                            partnerBalance);              
+        }
+        
+        require(callResult == true, "call result");
     }
 
     /*
@@ -527,8 +559,9 @@ contract TrinityContractCore is Owner, VerifyTrinitySignature, TrinityEvent{
                                 address partner,
                                 uint256 partnerBalance) internal{
         
-        uint256 closeTotalBalance;
-        uint256 remaingBalance;
+        uint256 closeTotalBalance = 0;
+        uint256 depositTotalBalance = 0;
+        uint256 remaingBalance = 0;
         bool  mutex = false;
         
         require(mutex == false);
@@ -539,11 +572,12 @@ contract TrinityContractCore is Owner, VerifyTrinitySignature, TrinityEvent{
 
         //sum of both balance should not larger than total deposited assets
         closeTotalBalance = founderBalance.add256(partnerBalance);
-        require(closeTotalBalance <= getChannelBalance(channelId), "check total balance"); 
+        depositTotalBalance = getChannelBalance(channelId);
+        require(closeTotalBalance <= depositTotalBalance, "check total balance"); 
         
         if (invoker == founder){
             //sender want close channel actively, withdraw partner balance firstly
-            remaingBalance = getChannelBalance(channelId).sub256(founderBalance);
+            remaingBalance = depositTotalBalance.sub256(founderBalance);
             require(address(trinityDataContract).call(bytes4(keccak256("closeChannel(bytes32,uint256,address,uint256,address,uint256)")),
                                                 channelId,
                                                 nonce,
@@ -554,7 +588,7 @@ contract TrinityContractCore is Owner, VerifyTrinitySignature, TrinityEvent{
         }
         else if(invoker == partner)
         {
-            remaingBalance = getChannelBalance(channelId).sub256(partnerBalance);
+            remaingBalance = depositTotalBalance.sub256(partnerBalance);
             require(address(trinityDataContract).call(bytes4(keccak256("closeChannel(bytes32,uint256,address,uint256,address,uint256)")),
                                                 channelId,
                                                 nonce,
@@ -612,7 +646,7 @@ contract TrinityContractCore is Owner, VerifyTrinitySignature, TrinityEvent{
 
         require(nonce != 0, "check nonce");
 
-        if (lockHash == keccak256(secret)){
+        if (lockHash == keccak256(abi.encodePacked(secret))){
             // update HTLC transaction
             
             handleHTLCUpdateTx(msg.sender, channelId, lockHash);
@@ -648,13 +682,13 @@ contract TrinityContractCore is Owner, VerifyTrinitySignature, TrinityEvent{
         uint256 closingNonce;
         uint256 closerBalance;
         uint256 settlerBalance;
-        bool callResult;
         
         (closingNonce, ,channelCloser,channelSettler,closerBalance,settlerBalance) = trinityDataContract.getClosingSettle(channelId);
         // if updated nonce is less than (or equal to) closer provided nonce, folow closer provided balance allocation
+        
   
         // if updated nonce is equal to nonce+1 that closer provided nonce, folow partner provided balance allocation
-        if (nonce == (closingNonce + 1)){
+        if ((nonce == closingNonce) || (nonce == (closingNonce + 1))){
             if (invoker == partnerA){
                 closerBalance = updateBalanceB;
                 settlerBalance = getChannelBalance(channelId).sub256(updateBalanceB);                
@@ -671,7 +705,7 @@ contract TrinityContractCore is Owner, VerifyTrinitySignature, TrinityEvent{
             settlerBalance = getChannelBalance(channelId);
         }        
         
-        callResult = address(trinityDataContract).call(bytes4(keccak256("closingSettle(bytes32,address,uint256,address,uint256)")),
+        bool callResult = address(trinityDataContract).call(bytes4(keccak256("closingSettle(bytes32,address,uint256,address,uint256)")),
                                                 channelId,
                                                 channelCloser,
                                                 closerBalance,
@@ -795,7 +829,7 @@ contract TrinityContractCore is Owner, VerifyTrinitySignature, TrinityEvent{
         
         if (lockTime > block.number){
             require(invoker == receiver, "only receiver can apply before expiration");
-            require(lockHash == keccak256(secret), "verify hash");
+            require(lockHash == keccak256(abi.encodePacked(secret)), "verify hash");
             withdrawer = receiver;
             verifier =  sender;
         }
