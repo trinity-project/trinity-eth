@@ -29,5 +29,40 @@ SOFTWARE.
 # import System or 3rd-party libs
 import logging
 
+# import Trinity SW package libs
+import daemon
+
 
 LOG = logging.getLogger(__name__)
+
+
+class DaemonProcess(object):
+    """
+    Description: Trinity Daemon process class.
+
+
+    """
+    def __init__(self):
+        pass
+
+    def register_service(self):
+        pass
+
+    def deregister_service(self):
+        pass
+
+    def register_main_entry(self, entry=None, *args, **kwargs):
+        """
+        Description
+        :param entry:
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        pass
+
+    def start(self):
+        pass
+
+    def run(self, target, ):
+        pass
