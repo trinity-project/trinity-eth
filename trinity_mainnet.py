@@ -50,7 +50,7 @@ DATABASE_CONFIG = {
 GWEI_COEFFICIENT = 20
 
 # Asset Type configuration
-SUPPORTED_ASSET_TYPE = {'TNC': '0xC9Ad73D11d272C95B5A2C48780A55b6b3C726Cac'}
+SUPPORTED_ASSET_TYPE = {'TNC': '0x67fbA6D5eed1f20F8454Ab93Aed3a010F36F549d'}
 IS_SUPPORTED_ASSET_TYPE = lambda asset_type: \
     isinstance(asset_type, str) and \
     (asset_type.upper() in ['TNC'] or \
