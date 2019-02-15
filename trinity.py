@@ -65,7 +65,7 @@ else:
 
 # WebSocket server configuration
 EVENT_WS_SERVER = {
-    'uri': 'ws://47.104.81.20:9000',
+    'uri': 'ws://47.254.66.224:9000',
     'timeout': None
 }
 
